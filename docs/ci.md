@@ -63,9 +63,11 @@ desenvolve.
    dispara o CI nela.
 4. Confira cada imagem na aba de arquivos do PR antes do merge.
 
-Se o repositório não deixar o Actions abrir PR (*Settings > Actions > General >
-Allow GitHub Actions to create and approve pull requests*), a branch sobe do mesmo
-jeito e o resumo da rodada traz o link para abrir o PR.
+Desde 26/11/2026 o repositório deixa o Actions abrir PR (*Settings > Actions >
+General > Allow GitHub Actions to create and approve pull requests*). As permissões
+padrão do `GITHUB_TOKEN` continuam só de leitura: cada workflow pede no próprio YAML
+o que precisa. Se a opção for desligada, a branch sobe do mesmo jeito e o resumo da
+rodada traz o link para abrir o PR à mão, como foi no #5.
 
 Quando não há referência nenhuma para um tamanho de tela (antes da primeira rodada
 desse workflow), os prints daquele tamanho são pulados com um aviso. Faltando só

@@ -25,6 +25,12 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 - Plataforma: favicon, imagem de compartilhamento (Open Graph), `robots.txt` e
   `sitemap.xml` ([#2](https://github.com/GustavoJannuzzi/rpa-transparencia/pull/2)).
 
+### Alterado
+
+- O GitHub Actions pode abrir PR neste repositório, para o workflow de prints
+  abrir o dele sozinho. As permissões padrão do `GITHUB_TOKEN` continuam só de
+  leitura.
+
 ### Corrigido
 
 - O que a conferência deixou em revisão aparece na página do parlamentar, logo
