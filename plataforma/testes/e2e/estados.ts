@@ -85,4 +85,7 @@ export async function abrir(page: Page, estado: Estado) {
   expect(resposta?.status(), `status de ${estado.rota}`).toBe(estado.nome === "pagina-nao-encontrada" ? 404 : 200);
   await page.evaluate(() => document.fonts.ready);
   if (estado.preparar) await estado.preparar(page);
+  // o axe e o print medem a tela parada: espera as animações de entrada (a ficha que
+  // sobe, o carimbo que bate), senão o axe pega a cor no meio do fade e acusa contraste
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== "running"), null, { timeout: 5_000 });
 }
