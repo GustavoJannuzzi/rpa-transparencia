@@ -323,16 +323,21 @@ class Cldf(FonteAssembleia):
             try:
                 valor, nota_valor = ler_valor(l.get("valor"))
             except ValorIlegivel as e:
-                res.pendencias.append(Pendencia(fonte=self.id, chave=chave, motivo=f"valor ilegível: {e}", texto_original=texto, procedencia=proc))
+                res.pendencias.append(Pendencia(fonte=self.id, chave=chave, motivo="valor ilegível (texto no lugar do número, ou separadores trocados)",
+                                                texto_original=f"{texto} ({e})", procedencia=proc))
                 continue
             try:
                 quando = ler_data(l.get("data"), fmt)
             except ValueError as e:
-                res.pendencias.append(Pendencia(fonte=self.id, chave=chave, motivo=f"data ilegível: {e}", texto_original=texto, procedencia=proc))
+                motivo = ("data vazia na fonte" if "vazia" in str(e) else
+                          "data ambígua: a planilha mistura dia/mês e mês/dia" if "ambígua" in str(e) else
+                          "data ilegível (formato desconhecido)")
+                res.pendencias.append(Pendencia(fonte=self.id, chave=chave, motivo=motivo, texto_original=f"{texto} ({e})", procedencia=proc))
                 continue
             if quando.year != ano:
-                res.pendencias.append(Pendencia(fonte=self.id, chave=chave, procedencia=proc, texto_original=texto,
-                                                motivo=f"data do comprovante ({quando.isoformat()}) fora do ano do arquivo ({ano})"))
+                res.pendencias.append(Pendencia(fonte=self.id, chave=chave, procedencia=proc,
+                                                texto_original=f"{texto} (data {quando.isoformat()}, arquivo de {ano})",
+                                                motivo="data do comprovante fora do ano do arquivo"))
                 continue
             documento = l.get("cnpj") if so_digitos(l.get("cnpj")) else l.get("cpf_fornecedor")
             fora_do_outro = None

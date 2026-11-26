@@ -122,7 +122,8 @@ class Almg(FonteAssembleia):
                         valor = decimal_ponto(n["valorReembolsado"])
                         valor_despesa = decimal_ponto(n["valorDespesa"]) if n.get("valorDespesa") is not None else None
                     except ValorIlegivel as e:
-                        res.pendencias.append(Pendencia(fonte=self.id, chave=chave, motivo=f"valor ilegível: {e}", texto_original=texto, procedencia=proc))
+                        res.pendencias.append(Pendencia(fonte=self.id, chave=chave, motivo="valor ilegível", texto_original=f"{texto} ({e})",
+                                                        procedencia=proc))
                         continue
                     soma += valor
                     lidas += 1

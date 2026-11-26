@@ -18,7 +18,7 @@ from pathlib import Path
 from .. import config, entidades
 from ..fontes import FONTES
 from ..nucleo.banco import agora
-from ..nucleo.texto import cpfs_expostos, mascarar_cpf, slug
+from ..nucleo.texto import cpfs_expostos, mascarar_cpf, normalizar_nome, slug
 from . import cobertura as cob
 from .grafo import layout
 
@@ -299,7 +299,7 @@ def publicar(con: sqlite3.Connection) -> list[str]:
         indice.append({"id": pid, "nome": p["nome"], "casa": p["casa"], "uf": p["uf"], "partido": p["partido_atual"],
                        "total": _d(total), "linhas": cab["linhas"], "gabinete": bool(cab["gabinete"]),
                        **({"municipio": p["municipio"]} if p["municipio"] else {})})
-    indice.sort(key=lambda x: x["nome"])
+    indice.sort(key=lambda x: (normalizar_nome(x["nome"]), x["id"]))
     tamanho += _escrever(destino / "parlamentares.json", indice)
 
     # ---------- partidos ----------

@@ -20,6 +20,7 @@ from pathlib import Path
 
 from .. import entidades
 from ..fontes import FONTES
+from ..nucleo.texto import normalizar_nome
 
 PASTA = Path(__file__).resolve().parents[1] / "cobertura"
 DATA_LEVANTAMENTO = "2026-11-26"
@@ -85,12 +86,14 @@ def casas(con: sqlite3.Connection, indice: list[dict], coleta: dict[str, str], m
             continue
         ids = [f.id for f in fontes]
         p = _p(ids, coleta)
-        pessoas = sorted(membros.get(cid, []), key=lambda m: m["nome"])
+        pessoas = sorted(membros.get(cid, []), key=lambda m: (normalizar_nome(m["nome"]), m["id"]))
         em_revisao = sum(rev_linhas.get(f, 0) + pend.get(f, 0) for f in ids)
         fechou = all(equacao.get(f, {}).get("resultado", "confere") == "confere" for f in ids)
         sem_erro = all(erros.get(f, {}).get("resultado", "confere") == "confere" for f in ids)
         linhas = casa_linhas.get(cid, 0)
-        situacao = "coletada" if linhas and fechou and sem_erro else "em_revisao"
+        # coletada = a conta fechou e não sobrou erro; casa sem diária de vereador (a fonte só tem
+        # diária de servidor) também é coletada: o que ela publica está aqui
+        situacao = "coletada" if fechou and sem_erro else "em_revisao"
         de, ate = cobertura_casa.get(cid, (0, 0))
         resumo = {
             "id": cid, "nome": casa.nome, "tipo": casa.tipo, "esfera": casa.esfera, "uf": casa.uf, "municipio": casa.municipio,

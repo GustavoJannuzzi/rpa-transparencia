@@ -72,6 +72,14 @@ def registros(texto: io.TextIOBase, chave: str = "despesas") -> Iterator[dict]:
         yield obj
 
 
+def nome_exibivel(nome: str) -> str:
+    """'ADALBERTO FREITAS' -> 'Adalberto Freitas'; nome já em caixa mista fica como veio."""
+    if not nome.isupper():
+        return nome
+    minusculas = {"da", "de", "do", "das", "dos", "e"}
+    return " ".join(p.lower() if i and p.lower() in minusculas else p[:1] + p[1:].lower() for i, p in enumerate(nome.split()))
+
+
 class Alesp(FonteAssembleia):
     o_que_tem = ("Despesas de gabinete de cada deputado estadual, somadas pela própria fonte por fornecedor, tipo e mês, "
                  "com o CNPJ do fornecedor.")
@@ -112,17 +120,19 @@ class Alesp(FonteAssembleia):
         meta.write_text(json.dumps({"versao": versao, "sha256": h}, ensure_ascii=False), encoding="utf-8")
         return caminho, h
 
-    async def _partidos(self) -> tuple[dict[str, str], str, str]:
+    async def _deputados(self) -> tuple[dict[str, dict], str, str]:
+        """Matrícula -> partido e nome, da lista de deputados em exercício."""
         url = self.ent.extra["deputados"]
         r, h = await self.baixar(url)
         j = r.json()
         lista = j.get("deputados") if isinstance(j, dict) else None
         if not isinstance(lista, list):
             raise PortalMudou("lista de deputados da ALESP em outro formato")
-        return {str(d.get("matricula")): d.get("siglaPartido") for d in lista if d.get("matricula")}, url, h
+        return {str(d.get("matricula")): {"partido": d.get("siglaPartido"), "nome": (d.get("nomeDeputado") or "").strip()}
+                for d in lista if d.get("matricula")}, url, h
 
     async def coletar_item(self, item: ItemInventario) -> Resultado:
-        partidos, url_dep, h_dep = await self._partidos()
+        deputados, url_dep, h_dep = await self._deputados()
         caminho, h = await self._baixar(item.parametros["versao"])
         res = Resultado()
         no_arquivo = no_periodo = 0
@@ -151,14 +161,14 @@ class Alesp(FonteAssembleia):
                                                     texto_original=texto_original, procedencia=proc))
                     continue
                 if not 1 <= mes <= 12:
-                    res.pendencias.append(Pendencia(fonte=self.id, chave=chave, motivo=f"mês ilegível ({x.get('mes')!r})",
+                    res.pendencias.append(Pendencia(fonte=self.id, chave=chave, motivo="mês ilegível",
                                                     texto_original=texto_original, procedencia=proc))
                     continue
                 try:
                     valor = decimal_ponto(x["valor"])
                 except ValorIlegivel as e:
-                    res.pendencias.append(Pendencia(fonte=self.id, chave=chave, motivo=f"valor ilegível: {e}",
-                                                    texto_original=texto_original, procedencia=proc))
+                    res.pendencias.append(Pendencia(fonte=self.id, chave=chave, motivo="valor ilegível",
+                                                    texto_original=f"{texto_original} ({e})", procedencia=proc))
                     continue
                 mat = str(x["matricula"])
                 nomes.setdefault(mat, (x.get("deputado") or "").strip())
@@ -178,9 +188,10 @@ class Alesp(FonteAssembleia):
         ]
         proc_dep = self.procedencia(url_dep, h_dep, "lista de deputados")
         for mat, nome in sorted(nomes.items()):
+            d = deputados.get(mat, {})
             res.pessoas.append(PessoaFonte(
-                fonte=self.id, ref=f"mat:{mat}", periodo=f"{self.de}-{self.ate}", nome=nome, matricula=mat, uf="SP",
-                partido=partidos.get(mat), casa=self.ent.casa,
-                extra={"partido_de": "lista de deputados em exercício da ALESP" if mat in partidos else None},
+                fonte=self.id, ref=f"mat:{mat}", periodo=f"{self.de}-{self.ate}", nome=d.get("nome") or nome_exibivel(nome),
+                matricula=mat, uf="SP", partido=d.get("partido"), casa=self.ent.casa,
+                extra={"partido_de": "lista de deputados em exercício da ALESP" if d else None, "nome_no_arquivo": nome},
                 procedencia=proc_dep))
         return res
