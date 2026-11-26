@@ -29,3 +29,9 @@ Thumbs.db
 .impeccable/questions/
 .impeccable/mocks/
 .impeccable/review/
+
+# Testes de navegador da plataforma (relatórios e resultados de cada rodada)
+plataforma/testes/resultados/
+plataforma/testes/relatorio-playwright/
+plataforma/testes/lighthouse/
+plataforma/.lighthouseci/

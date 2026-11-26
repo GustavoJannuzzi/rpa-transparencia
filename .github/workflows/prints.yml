@@ -1,0 +1,84 @@
+# Atualizar prints de referência: gera de novo, no runner Linux, as imagens que o
+# teste visual (plataforma/testes/e2e/visual.spec.ts) compara, sobe numa branch
+# nova e abre um PR para revisão. Roda só à mão (Actions > "Atualizar prints de
+# referência" > Run workflow), depois de uma mudança de tela que foi de propósito.
+#
+# A imagem só vale no mesmo sistema e navegador do CI: por isso este job usa o
+# mesmo runner (ubuntu-24.04) e o mesmo Playwright do package-lock.json. Nunca
+# gere as referências no Windows ou no macOS.
+name: Atualizar prints de referência
+
+on:
+  workflow_dispatch:
+    inputs:
+      motivo:
+        description: O que mudou na tela (vai na descrição do PR)
+        required: false
+        default: ""
+
+permissions: {}
+
+jobs:
+  prints:
+    name: Gerar prints no Linux e abrir o PR
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write # sobe a branch com as imagens
+      pull-requests: write # abre o PR
+      actions: write # dispara o CI na branch nova (push feito pelo GITHUB_TOKEN não dispara workflow)
+    defaults:
+      run:
+        working-directory: plataforma
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: plataforma/package-lock.json
+      - run: npm ci
+      - name: Build (export estático em out/)
+        run: npm run build
+      - name: Chromium do Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Gera os prints que mudaram ou faltam
+        run: npx playwright test --project=visual-desktop --project=visual-celular --update-snapshots=changed
+
+      - name: Sobe a branch e abre o PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ github.ref_name }}
+          BRANCH: prints/atualizar-${{ github.run_number }}
+          MOTIVO: ${{ inputs.motivo }}
+          RODADA: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          git add testes/e2e/prints
+          if git diff --cached --quiet; then
+            echo "Nenhum print mudou: as referências já batem com a tela." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git diff --cached --stat
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git commit -q -m "Prints de referência gerados de novo no runner Linux" -m "${MOTIVO:-Atualização pedida à mão.}" -m "Rodada: $RODADA"
+          git push -q origin "$BRANCH"
+          gh workflow run ci.yml --ref "$BRANCH"
+          {
+            echo "Prints de referência gerados de novo no runner Linux (ubuntu-24.04), pela rodada $RODADA."
+            echo
+            echo "${MOTIVO:-Atualização pedida à mão.}"
+            echo
+            echo "Antes do merge, abra cada imagem na aba de arquivos e confira que a mudança é a esperada. O CI desta branch foi disparado pelo próprio workflow."
+            echo
+            git diff --stat HEAD~1 HEAD
+          } > ../corpo-pr.md
+          if gh pr create --base "$BASE" --head "$BRANCH" --title "Prints de referência atualizados" --body-file ../corpo-pr.md; then
+            echo "PR aberto para a branch \`$BRANCH\`." >> "$GITHUB_STEP_SUMMARY"
+          else
+            # O repositório pode não permitir que o Actions abra PR (Settings > Actions >
+            # General > "Allow GitHub Actions to create and approve pull requests").
+            # A branch já subiu: o PR fica a um clique.
+            echo "A branch \`$BRANCH\` subiu, mas o Actions não tem permissão para abrir PR neste repositório. Abra por aqui: ${{ github.server_url }}/${{ github.repository }}/compare/$BASE...$BRANCH?expand=1" >> "$GITHUB_STEP_SUMMARY"
+          fi
