@@ -84,7 +84,7 @@ function lerUrl(): EstadoUrl {
   };
 }
 
-export default function Grafo() {
+export default function Grafo({ regras }: { regras: Record<Vista, { regra: string; tecnica?: string }> }) {
   const estreita = useMidia(TELA_ESTREITA);
   const [iniciado, setIniciado] = useState(false);
   const [vista, setVista] = useState<Vista>("brasil");
@@ -704,17 +704,15 @@ export default function Grafo() {
 
       <div className="px-4 pb-4 pt-3 sm:px-8">
         <p className="sr-only">Legenda: cor do ponto = partido.</p>
-        {dados && (
-          <div className="max-w-[80ch] text-[0.82rem] leading-relaxed text-tinta-3">
-            <p>{dados.regra}</p>
-            {dados.regra_tecnica && (
-              <details className="mt-1">
-                <summary className="cursor-pointer underline decoration-tinta-3/50 underline-offset-2 hover:text-tinta-2">a conta, em detalhe</summary>
-                <p className="mt-1">{dados.regra_tecnica}</p>
-              </details>
-            )}
-          </div>
-        )}
+        <div className="max-w-[80ch] text-[0.82rem] leading-relaxed text-tinta-3">
+          <p>{regras[vista].regra}</p>
+          {regras[vista].tecnica && (
+            <details className="mt-1">
+              <summary className="cursor-pointer underline decoration-tinta-3/50 underline-offset-2 hover:text-tinta-2">a conta, em detalhe</summary>
+              <p className="mt-1">{regras[vista].tecnica}</p>
+            </details>
+          )}
+        </div>
       </div>
     </div>
   );
