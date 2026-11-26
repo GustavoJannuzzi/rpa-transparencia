@@ -1,0 +1,34 @@
+# Atualização de dependências com PR (e o CI rodando em cada uma). Toda versão é
+# fixada no projeto, então cada PR troca um número exato.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+      day: tuesday
+    open-pull-requests-limit: 5
+    groups:
+      ferramentas-python:
+        patterns: ["ruff", "mypy", "types-*", "pytest", "pytest-*"]
+
+  - package-ecosystem: npm
+    directory: /plataforma
+    schedule:
+      interval: weekly
+      day: tuesday
+    open-pull-requests-limit: 5
+    groups:
+      testes-de-navegador:
+        patterns: ["@playwright/test", "@axe-core/playwright", "@lhci/cli"]
+      tipos:
+        patterns: ["@types/*", "typescript"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: tuesday
+    groups:
+      actions:
+        patterns: ["*"]
