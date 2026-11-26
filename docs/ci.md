@@ -30,11 +30,15 @@ pontos: a alternativa de teclado é a lista.
 regra, a um trecho de HTML e às telas em que aparece. Quando o conserto entrar,
 apague a exceção: o teste também reprova se uma exceção não cobrir mais nada.
 
+Hoje a lista está vazia. Ela começou com três exceções, que saíram com o conserto
+de acessibilidade da plataforma
+([#2](https://github.com/GustavoJannuzzi/rpa-transparencia/pull/2)):
+
 | Regra | Onde | Por quê |
 |---|---|---|
 | `color-contrast` | carimbo sépia na inicial | 3,33:1 sobre a manilha |
 | `nested-interactive` | busca aberta | `<button>` dentro de `role=option` |
-| `target-size` | busca aberta, só no celular | a lista cobre as abas e o "Ver em lista" |
+| `target-size` | busca aberta, só no celular | a lista cobria as abas e o "Ver em lista" |
 
 ### Prints de referência (`plataforma/testes/e2e/visual.spec.ts`)
 
@@ -85,11 +89,17 @@ uma margem. Faixa entre as três rodadas de cada página:
 | `/como-os-dados-chegam-aqui/` | 100 | 100 | 96 | 100 | 902–903 | 36–59 | 0 | 145 KB |
 | `/sobre/` | 100 | 100 | 96 | 100 | 752 | 44–52 | 0 | 145 KB |
 
+Depois do conserto de acessibilidade
+([#2](https://github.com/GustavoJannuzzi/rpa-transparencia/pull/2)), acessibilidade
+e boas práticas foram a 100 em todas as páginas, e os pisos subiram junto. Na
+mesma medição, a inicial ficou com desempenho de 70 a 90 e TBT de 399 ms a 4,4 s
+(uma das três rodadas fora da curva, e por isso vale a melhor).
+
 | Orçamento | Inicial (`/`) | Demais páginas |
 |---|---:|---:|
 | Desempenho, mínimo | 75 | 90 |
-| Acessibilidade, mínimo | 94 (o carimbo sépia, até o conserto) | 98 |
-| Boas práticas, mínimo | 92 | 92 |
+| Acessibilidade, mínimo | 98 | 98 |
+| Boas práticas, mínimo | 95 | 95 |
 | SEO, mínimo | 95 | 95 |
 | TBT, máximo | 1.200 ms | 300 ms |
 | LCP, máximo | 1.500 ms | 1.500 ms |
@@ -114,9 +124,12 @@ do Elotech e da Câmara dos Deputados, e os arquivos do TSE e da Câmara.
 
 - Roda às 06:17 de segunda-feira (horário de Brasília) e quando alguém pede, em
   *Actions > Contrato com os portais > Run workflow*.
-- Se algum teste reprovar, abre uma issue com o rótulo `portal-mudou`, ou comenta
-  na que já estiver aberta, com a tabela por fonte e o link da rodada. Quando o
-  contrato volta a passar, comenta e fecha a issue.
+- O que reprovar na primeira tentativa roda de novo 5 minutos depois, só aquelas
+  fontes (`pytest --last-failed`). Portal lento ou fora do ar por alguns minutos
+  não é portal que mudou.
+- Se reprovar também na segunda, abre uma issue com o rótulo `portal-mudou`, ou
+  comenta na que já estiver aberta, com a tabela por fonte e o link da rodada.
+  Quando o contrato volta a passar, comenta e fecha a issue.
 - O robô continua educado: uma rodada por semana, uma requisição por vez, com o
   User-Agent de cada fonte. O Betha devolve 403 para "HeadlessChrome", e o
   navegador do robô já se apresenta de outro jeito. Nenhum captcha é contornado.
@@ -128,9 +141,14 @@ do Elotech e da Câmara dos Deputados, e os arquivos do TSE e da Câmara.
 | Quando | Como | Resultado |
 |---|---|---|
 | 26/11/2026, 19:37 UTC | [PR #1](https://github.com/GustavoJannuzzi/rpa-transparencia/pull/1), runner do GitHub | 6 de 6 passaram, em 34 s |
+| 26/11/2026, 19:49 UTC | PR #1, segundo push | 6 de 6 passaram |
+| 26/11/2026, 20:01 UTC | PR #1, terceiro push | 6 de 6 passaram |
+| 26/11/2026, 20:04 UTC | PR #1, depois do rebase | 5 de 6: o portal da Prefeitura não terminou de abrir em 30 s (`Page.goto` com tempo esgotado). Foi isso que levou à segunda tentativa 5 minutos depois. |
 
 As seis fontes responderam aos IPs do GitHub, inclusive o Betha, que recusa
-"HeadlessChrome". Por isso nenhuma fica fora do agendado. Se um portal passar a
+"HeadlessChrome". Por isso nenhuma fica fora do agendado. A falha do portal da
+Prefeitura foi de tempo, não de layout: a mesma fonte passou em 8 s nas rodadas
+anteriores. Se um portal passar a
 bloquear o runner, a saída é tirar aquela fonte do agendado, com um aviso aqui, em
 vez de deixar um alarme falso toda semana. Contornar o bloqueio não é saída.
 
