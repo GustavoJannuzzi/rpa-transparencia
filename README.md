@@ -21,7 +21,7 @@ procedência de cada valor a um clique.
 ![O robô passando pelo portal legado da Câmara, pelo portal da Prefeitura e pelo Betha](docs/robo.gif)
 
 *O robô (Playwright) nos três sistemas que só se leem pelo navegador, gravado pela
-própria coleta (`coletar --gravar-video`, 26/11/2026), um quadro por segundo. As
+própria coleta (`coletar --gravar-video`, 26/11/2026), em trechos escolhidos. As
 tabelas que listam servidores aparecem borradas, e a página da Prefeitura está
 recortada acima da grade: nome de servidor não é publicado, nem em imagem.*
 
