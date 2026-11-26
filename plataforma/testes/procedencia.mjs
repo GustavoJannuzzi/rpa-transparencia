@@ -30,7 +30,8 @@ if (!existsSync(path.join(OUT, "index.html"))) {
 
 // 1. HTML: cada R$ dentro de um <button class="valor ..." data-fonte="..." data-coleta="...">
 for (const arq of arquivos(OUT, ".html")) {
-  if (arq.endsWith("conferencia.html")) continue; // o relatório da coleta tem a sua própria procedência por linha
+  // o relatório da coleta tem a sua própria procedência por linha
+  if (arq.endsWith("conferencia.html") || arq.endsWith(path.join("conferencia", "index.html"))) continue;
   paginas++;
   const html = readFileSync(arq, "utf-8").replace(/<script[\s\S]*?<\/script>/g, "");
   let i = html.indexOf("R$");

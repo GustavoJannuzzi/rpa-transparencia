@@ -4,6 +4,7 @@ import Barras, { type ItemBarra } from "@/componentes/Barras";
 import Valor from "@/componentes/Valor";
 import { categorias, dataDaColeta, partido, partidos } from "@/lib/dados";
 import { mes, proporcao } from "@/lib/formato";
+import { metadadosDaPagina } from "@/lib/site";
 import type { Procedencia } from "@/lib/tipos";
 
 export const dynamicParams = false;
@@ -14,7 +15,12 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  return { title: partido(slug).sigla };
+  const p = partido(slug);
+  return metadadosDaPagina({
+    title: p.sigla,
+    description: `Despesas conferidas dos parlamentares do ${p.sigla} no mês em que estavam no partido, com a fonte de cada número.`,
+    caminho: `/partidos/${slug}/`,
+  });
 }
 
 export default async function PaginaPartido({ params }: { params: Promise<{ slug: string }> }) {

@@ -2,14 +2,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { indice } from "@/lib/dados";
 import { inteiro } from "@/lib/formato";
+import { metadadosDaPagina } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Parlamentares" };
+export const metadata: Metadata = metadadosDaPagina({
+  title: "Parlamentares",
+  description: "Deputados federais da 57ª legislatura e vereadores de Curitiba, em ordem alfabética, com as despesas conferidas de cada um.",
+  caminho: "/parlamentares/",
+});
 
 export default function Parlamentares() {
   const todos = indice();
   const grupos = [
-    { titulo: "Vereadores de Curitiba", itens: todos.filter((i) => i.casa === "cmc") },
-    { titulo: "Deputados federais (57ª legislatura)", itens: todos.filter((i) => i.casa === "camara-deputados") },
+    { id: "vereadores", titulo: "Vereadores de Curitiba", itens: todos.filter((i) => i.casa === "cmc") },
+    { id: "deputados", titulo: "Deputados federais (57ª legislatura)", itens: todos.filter((i) => i.casa === "camara-deputados") },
   ];
   return (
     <div className="mx-auto max-w-[1180px] px-4 py-8 sm:px-8 sm:py-10">
@@ -18,8 +23,8 @@ export default function Parlamentares() {
         Em ordem alfabética. Esta lista é o mesmo índice do grafo, para quem prefere navegar sem ele.
       </p>
       {grupos.map((g) => (
-        <section key={g.titulo} className="mt-10" aria-labelledby={g.titulo}>
-          <h2 id={g.titulo} className="font-titulo text-xl font-medium">
+        <section key={g.id} className="mt-10" aria-labelledby={g.id}>
+          <h2 id={g.id} className="font-titulo text-xl font-medium">
             {g.titulo} <span className="num text-tinta-3">({inteiro(g.itens.length)})</span>
           </h2>
           <ul className="mt-4 columns-1 gap-8 sm:columns-2 lg:columns-3">
