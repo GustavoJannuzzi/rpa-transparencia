@@ -92,3 +92,56 @@ async def test_betha_diarias_tabela_e_contador():
     finally:
         await nav.close()
         await pw.stop()
+
+
+# ---------------------------------------------------------------- casas novas (um teste por fornecedor)
+def test_elotech_generico_entidades_e_diarias():
+    from coleta import entidades
+    from coleta.fontes.elotech.fonte import CAMPOS_DIARIA as CAMPOS
+
+    e = next(x for x in entidades.elotech() if x.fonte == "elotech_maringa")
+    with httpx.Client(headers=H, timeout=60) as c:
+        lista = c.get(f"{e.api}/api/entidades", headers={**H, "Accept": "application/json"}).json()
+        camara = next(x for x in lista if str(x["id"]) == str(e.entidade))
+        assert "".join(ch for ch in camara["cnpj"] if ch.isdigit()) == e.cnpj
+        j = c.get(f"{e.api}/api/diarias?exercicio=2025&dataInicial=2025-01-01&dataFinal=2025-12-31&page=0&size=5",
+                  headers={**H, "entidade": str(e.entidade), "exercicio": "2025"}).json()
+        assert {"totalElements", "content"} <= set(j) and CAMPOS <= set(j["content"][0])
+
+
+def test_cldf_conjunto_lista_recursos_por_ano():
+    import re
+
+    from coleta import entidades
+    from coleta.fontes.cldf.fonte import RE_DOWNLOAD, RE_RECURSO
+
+    url = entidades.assembleias()["cldf"].extra["conjunto"]
+    with httpx.Client(headers=H, timeout=60, follow_redirects=True) as c:
+        html = c.get(url).text
+        recursos = RE_RECURSO.findall(html)
+        assert recursos and RE_DOWNLOAD.findall(html)
+        assert any(re.search(r"20\d\d", t) for _, _, t in recursos)
+
+
+def test_almg_api_lista_e_datas():
+    from coleta import entidades
+
+    api = entidades.assembleias()["almg"].extra["api"]
+    with httpx.Client(headers=H, timeout=60) as c:
+        lista = c.get(f"{api}/deputados/em_exercicio?formato=json").json()["list"]
+        assert len(lista) >= 70 and {"id", "nome", "partido"} <= set(lista[0])
+        datas = c.get(f"{api}/prestacao_contas/verbas_indenizatorias/deputados/{lista[0]['id']}/datas?formato=json").json()
+        assert "listaFechamentoVerba" in datas
+
+
+def test_alesp_arquivo_e_campos():
+    from coleta import entidades
+    from coleta.fontes.alesp.fonte import CAMPOS
+
+    a = entidades.assembleias()["alesp"].extra
+    with httpx.Client(headers=H, timeout=60) as c:
+        h = c.head(a["arquivo"])
+        assert h.status_code == 200 and h.headers.get("last-modified")
+        inicio = c.get(a["arquivo"], headers={**H, "Range": "bytes=0-2000"}).text
+        assert inicio.lstrip().startswith('{"despesas":[')
+        assert all(f'"{campo}"' in inicio for campo in CAMPOS)

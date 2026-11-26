@@ -1,0 +1,37 @@
+[
+ {
+  "id": 1,
+  "nome": "PREFEITURA DO MUNICIPIO DE MARINGA",
+  "cnpj": "76282656000106"
+ },
+ {
+  "id": 3,
+  "nome": "MARINGA PREVIDENCIA - PREVIDENCIA DOS SERVIDORES PUBLICOS MUNICIPAIS DE MARINGA",
+  "cnpj": "78074804000122"
+ },
+ {
+  "id": 4,
+  "nome": "INSTITUTO AMBIENTAL DE MARINGA - IAM",
+  "cnpj": "46077256000106"
+ },
+ {
+  "id": 6,
+  "nome": "CAMARA MUNICIPAL DE MARINGA",
+  "cnpj": "77926509000194"
+ },
+ {
+  "id": 9,
+  "nome": "AGENCIA MARINGAENSE DE REGULACAO - AMR",
+  "cnpj": "16969845000120"
+ },
+ {
+  "id": 10,
+  "nome": "TERMINAIS AEREOS DE MARINGA - SBMG S/A",
+  "cnpj": "03869208000130"
+ },
+ {
+  "id": 15,
+  "nome": "IPPLAM - INSTITUTO DE PESQUISA E PLANEJAMENTO URBANO DE MARINGA",
+  "cnpj": "32192146000172"
+ }
+]

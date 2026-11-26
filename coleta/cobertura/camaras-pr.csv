@@ -1,0 +1,403 @@
+# Fornecedor do portal de transparência de cada câmara municipal do PR, como o levantamento de 26/11/2026 achou.
+# fornecedor vazio = não identificado no levantamento (não quer dizer que não exista). barreira: robots, cloudflare,
+# robots+cloudflare, anti_robo, sistema_interno. base = onde o levantamento viu.
+ibge,municipio,fornecedor,portal,barreira,base,populacao
+4100103,Abatiá,,,,,
+4100202,Adrianópolis,betha,,,lista de portais do Betha,
+4100301,Agudos do Sul,betha,,,lista de portais do Betha,
+4100400,Almirante Tamandaré,betha,https://camaraalmirantetamandare.atende.net/,,censo dos 100 maiores,127031
+4100459,Altamira do Paraná,elotech,,,API de entidades do Elotech,
+4100608,Alto Paraná,betha,,,lista de portais do Betha,
+4128625,Alto Paraíso,,,,,
+4100707,Alto Piquiri,,,,,
+4100509,Altônia,,,,,
+4100806,Alvorada do Sul,,,,,
+4100905,Amaporã,elotech,,,API de entidades do Elotech,
+4101002,Ampére,,,,censo dos 100 maiores,20479
+4101051,Anahy,,,,,
+4101101,Andirá,elotech,https://andira.eloweb.net/portaltransparencia/4/,,censo dos 100 maiores,19944
+4101200,Antonina,,,,,
+4101309,Antônio Olinto,,,,,
+4101408,Apucarana,ipm,https://camaraapucarana.atende.net/,robots+cloudflare,censo dos 100 maiores,135481
+4101507,Arapongas,ipm,,robots+cloudflare,censo dos 100 maiores,125767
+4101606,Arapoti,,,robots,censo dos 100 maiores,26321
+4101655,Arapuã,,,,,
+4101705,Araruna,,,,,
+4101804,Araucária,ipm,https://camaraaraucaria.atende.net/,robots+cloudflare,censo dos 100 maiores,164291
+4101853,Ariranha do Ivaí,,,,,
+4101903,Assaí,betha,,,lista de portais do Betha,
+4102000,Assis Chateaubriand,,,,censo dos 100 maiores,38591
+4102109,Astorga,elotech,https://astorga.oxy.elotech.com.br/portaltransparencia/4/,,censo dos 100 maiores,26262
+4102208,Atalaia,betha,,,lista de portais do Betha,
+4102307,Balsa Nova,elotech,,,API de entidades do Elotech,
+4102406,Bandeirantes,betha,,,censo dos 100 maiores,31690
+4102505,Barbosa Ferraz,elotech,,,API de entidades do Elotech,
+4102703,Barra do Jacaré,,,,,
+4102604,Barracão,betha,,,lista de portais do Betha,
+4102752,Bela Vista da Caroba,,,,,
+4102802,Bela Vista do Paraíso,,,,,
+4102901,Bituruna,,,,,
+4103008,Boa Esperança,elotech,,,API de entidades do Elotech,
+4103024,Boa Esperança do Iguaçu,,,,,
+4103040,Boa Ventura de São Roque,,,,,
+4103057,Boa Vista da Aparecida,,,,,
+4103107,Bocaiúva do Sul,,,,,
+4103156,Bom Jesus do Sul,,,,,
+4103206,Bom Sucesso,betha,,,lista de portais do Betha,
+4103222,Bom Sucesso do Sul,,,,,
+4103305,Borrazópolis,,,,,
+4103354,Braganey,elotech,,,API de entidades do Elotech,
+4103370,Brasilândia do Sul,,,,,
+4103404,Cafeara,,,,,
+4103453,Cafelândia,inga,http://www.ingadigital.com.br/transparencia/?id_cliente=45,robots,censo dos 100 maiores,20411
+4103479,Cafezal do Sul,,,,,
+4103503,Califórnia,elotech,,,API de entidades do Elotech,
+4103602,Cambará,elotech,https://cambara.oxy.elotech.com.br/portaltransparencia/2/,,censo dos 100 maiores,23352
+4103800,Cambira,,,,,
+4103701,Cambé,econtab,https://transparencia.cambe.pr.gov.br:8443/portal/,sistema_interno,censo dos 100 maiores,111553
+4104006,Campina Grande do Sul,elotech,http://campinagrandedosul.oxy.elotech.com.br/portaltransparencia/?entidade=5,,censo dos 100 maiores,51154
+4103909,Campina da Lagoa,,,,,
+4103958,Campina do Simão,,,,,
+4104055,Campo Bonito,pronim,,,levantamento (link de transparência),
+4104204,Campo Largo,ipm,https://camaracampolargo.atende.net/?pg=transparencia,robots+cloudflare,censo dos 100 maiores,146002
+4104253,Campo Magro,betha,https://transparencia.betha.cloud/#/BngSjcKJ-kc0fhz1-STQUg==,,censo dos 100 maiores,32227
+4104303,Campo Mourão,,,robots,censo dos 100 maiores,104881
+4104105,Campo do Tenente,,,,,
+4104428,Candói,,,,,
+4104451,Cantagalo,,,,,
+4104501,Capanema,equiplano,,,censo dos 100 maiores,21208
+4104600,Capitão Leônidas Marques,betha,,,lista de portais do Betha,
+4104659,Carambeí,ipm,https://camaracarambei.atende.net/transparencia/item/legislacao-municipal,robots+cloudflare,censo dos 100 maiores,24721
+4104709,Carlópolis,,,,,
+4104808,Cascavel,ipm,https://camaracascavel.atende.net,robots+cloudflare,censo dos 100 maiores,372026
+4104907,Castro,ipm,https://camaracastro.atende.net/transparencia/item/licitacoes-gerais,robots+cloudflare,censo dos 100 maiores,76015
+4105003,Catanduvas,,,,,
+4105102,Centenário do Sul,,,,,
+4105201,Cerro Azul,betha,,,lista de portais do Betha,
+4105409,Chopinzinho,pronim,https://webapp1-chopinzinho.cidade360.cloud/pronimtb_cm/index.html,,censo dos 100 maiores,21690
+4105508,Cianorte,elotech,https://cianorte.oxy.elotech.com.br/portaltransparencia/1/diario-oficial,,censo dos 100 maiores,83579
+4105607,Cidade Gaúcha,pronim,,,lista inicial do levantamento,
+4105706,Clevelândia,,,,,
+4105805,Colombo,ipm,https://camaracolombo.atende.net/transparencia/,robots+cloudflare,censo dos 100 maiores,242698
+4105904,Colorado,,,robots,censo dos 100 maiores,23347
+4106001,Congonhinhas,betha,,,lista de portais do Betha,
+4106100,Conselheiro Mairinck,,,,,
+4106209,Contenda,elotech,https://contenda.oxy.elotech.com.br/portaltransparencia/2/,,censo dos 100 maiores,20205
+4106308,Corbélia,,,,,
+4106407,Cornélio Procópio,betha,https://transparencia.betha.cloud/#/1XnW9RIsContu-ezQxEtlw==,,censo dos 100 maiores,45614
+4106456,Coronel Domingos Soares,,,,,
+4106506,Coronel Vivida,conexaogov,https://web.conexaogov.com.br/coronelvivida/transparencia-nova/visao-geral?ano=2026,,censo dos 100 maiores,24107
+4106555,Corumbataí do Sul,,,,,
+4106803,Cruz Machado,betha,,,lista de portais do Betha,
+4106571,Cruzeiro do Iguaçu,,,,,
+4106605,Cruzeiro do Oeste,,,,censo dos 100 maiores,25071
+4106704,Cruzeiro do Sul,,,,,
+4106852,Cruzmaltina,,,,,
+4106902,Curitiba,betha,https://transparencia.betha.cloud/#/pYH4AbLiIyAHwETflX8gpQ==/consultas/82560,,censo dos 100 maiores,1832183
+4107009,Curiúva,,,,,
+4104402,Cândido de Abreu,equiplano,,,lista inicial do levantamento,
+4105300,Céu Azul,,,,,
+4107157,Diamante D'Oeste,,,,,
+4107108,Diamante do Norte,,,,,
+4107124,Diamante do Sul,,,,,
+4107207,Dois Vizinhos,,,,censo dos 100 maiores,48127
+4107256,Douradina,,,,,
+4107306,Doutor Camargo,,,,,
+4128633,Doutor Ulysses,,,,,
+4107504,Engenheiro Beltrão,elotech,,,API de entidades do Elotech,
+4107538,Entre Rios do Oeste,,,,,
+4107405,Enéas Marques,,,,,
+4107520,Esperança Nova,elotech,,,API de entidades do Elotech,
+4107546,Espigão Alto do Iguaçu,,,,,
+4107553,Farol,elotech,,,API de entidades do Elotech,
+4107603,Faxinal,,,,,
+4107652,Fazenda Rio Grande,betha,https://transparencia.betha.cloud/#/-l6BWho9dyNHziT0yzQPaA==/agrupador/90985,,censo dos 100 maiores,170123
+4107736,Fernandes Pinheiro,,,,,
+4107751,Figueira,betha,,,lista de portais do Betha,
+4107850,Flor da Serra do Sul,betha,,,lista de portais do Betha,
+4107801,Floraí,betha,,,lista de portais do Betha,
+4107900,Floresta,,,,,
+4108007,Florestópolis,,,,,
+4108106,Flórida,,,,,
+4108205,Formosa do Oeste,pronim,,,levantamento (link de transparência),
+4108304,Foz do Iguaçu,elotech,https://foz.oxy.elotech.com.br/portaltransparencia/2/,,censo dos 100 maiores,299112
+4108452,Foz do Jordão,,,,,
+4108320,Francisco Alves,elotech,,,API de entidades do Elotech,
+4108403,Francisco Beltrão,equiplano,https://franciscobeltraopr.equiplano.com.br:7035/transparencia/,,censo dos 100 maiores,103424
+4107702,Fênix,elotech,,,API de entidades do Elotech,
+4108502,General Carneiro,,,,,
+4108551,Godoy Moreira,elotech,,,API de entidades do Elotech,
+4108601,Goioerê,betha,https://transparencia.betha.cloud/#/ykA6FHb_bv4Y-hW7su8ciw==/consultas/63863,,censo dos 100 maiores,28895
+4108650,Goioxim,,,,,
+4108700,Grandes Rios,elotech,,,API de entidades do Elotech,
+4108908,Guairaçá,,,,,
+4108957,Guamiranga,,,,,
+4109005,Guapirama,,,,,
+4109104,Guaporema,,,,,
+4109203,Guaraci,elotech,,,API de entidades do Elotech,
+4109302,Guaraniaçu,,,,,
+4109401,Guarapuava,ipm,https://camaraguarapuava.atende.net/transparencia/,robots+cloudflare,censo dos 100 maiores,190542
+4109500,Guaraqueçaba,elotech,,,API de entidades do Elotech,
+4109609,Guaratuba,elotech,https://guaratuba.oxy.elotech.com.br/portaltransparencia/2/,,censo dos 100 maiores,45529
+4108809,Guaíra,ipm,https://camaraguaira.atende.net,robots+cloudflare,censo dos 100 maiores,33145
+4109658,Honório Serpa,,,,,
+4109708,Ibaiti,,,,censo dos 100 maiores,29465
+4109757,Ibema,,,,,
+4109807,Ibiporã,elotech,https://ibipora.oxy.elotech.com.br/portaltransparencia/2/,robots,censo dos 100 maiores,53486
+4109906,Icaraíma,,,,,
+4110003,Iguaraçu,,,,,
+4110052,Iguatu,,,,,
+4110078,Imbaú,,,,,
+4110102,Imbituva,,,,censo dos 100 maiores,30940
+4110300,Inajá,betha,,,lista de portais do Betha,
+4110409,Indianópolis,,,,,
+4110201,Inácio Martins,equiplano,,,lista inicial do levantamento,
+4110508,Ipiranga,,,,,
+4110607,Iporã,,,,,
+4110656,Iracema do Oeste,betha,,,lista de portais do Betha,
+4110706,Irati,elotech,https://irati.eloweb.net/portaltransparencia/2/,,censo dos 100 maiores,61192
+4110805,Iretama,,,,,
+4110904,Itaguajé,,,,,
+4110953,Itaipulândia,elotech,,,API de entidades do Elotech,
+4111001,Itambaracá,,,,,
+4111100,Itambé,,,,,
+4111209,Itapejara d'Oeste,pronim,,,lista inicial do levantamento,
+4111258,Itaperuçu,cr2,https://cr2.co/lei-da-transparencia-municipal/,,censo dos 100 maiores,33763
+4111308,Itaúna do Sul,,,,,
+4111506,Ivaiporã,elotech,https://ivaipora.eloweb.net/portaltransparencia/3/empenhos/cf,,censo dos 100 maiores,33619
+4111605,Ivatuba,,,,,
+4111555,Ivaté,elotech,,,API de entidades do Elotech,
+4111407,Ivaí,elotech,,,API de entidades do Elotech,
+4111704,Jaboti,,,,,
+4111803,Jacarezinho,pronim,,,censo dos 100 maiores,41571
+4111902,Jaguapitã,,,,,
+4112009,Jaguariaíva,betha,https://transparencia.betha.cloud/#/0WL-B2wft5zRigXvxt9igQ==,,censo dos 100 maiores,36575
+4112108,Jandaia do Sul,elotech,https://jandaiadosul.oxy.elotech.com.br/portaltransparencia/4/,,censo dos 100 maiores,22000
+4112207,Janiópolis,,,,,
+4112306,Japira,,,,,
+4112405,Japurá,,,,,
+4112504,Jardim Alegre,,,,,
+4112603,Jardim Olinda,,,,,
+4112702,Jataizinho,equiplano,,,lista inicial do levantamento,
+4112751,Jesuítas,,,,,
+4112801,Joaquim Távora,,,,,
+4112900,Jundiaí do Sul,,,,,
+4112959,Juranda,,,,,
+4113007,Jussara,,,,,
+4113106,Kaloré,,,,,
+4113205,Lapa,ipm,http://camaralapa.atende.net/transparencia/,robots+cloudflare,censo dos 100 maiores,45877
+4113254,Laranjal,,,,,
+4113304,Laranjeiras do Sul,,,,censo dos 100 maiores,33267
+4113403,Leópolis,,,,,
+4113429,Lidianópolis,,,,,
+4113452,Lindoeste,,,,,
+4113502,Loanda,,,robots,censo dos 100 maiores,24090
+4113601,Lobato,betha,,,lista de portais do Betha,
+4113700,Londrina,softcam,https://www.cml.pr.gov.br/imprensa/transparencia/Diarias/1/2026,robots,censo dos 100 maiores,584465
+4113734,Luiziana,,,,,
+4113759,Lunardelli,elotech,,,API de entidades do Elotech,
+4113809,Lupionópolis,,,,,
+4113908,Mallet,betha,,,lista de portais do Betha,
+4114005,Mamborê,,,,,
+4114203,Mandaguari,elotech,https://mandaguari.eloweb.net/portaltransparencia/6/,,censo dos 100 maiores,38564
+4114104,Mandaguaçu,betha,https://transparencia.betha.cloud/#/JWdaAC6qJ2iKSa5SDAOx2w==/incorporacao/Njk3,,censo dos 100 maiores,35253
+4114302,Mandirituba,betha,https://transparencia.betha.cloud/#/t_cfYwPxqZMTDe9wi0SUvw==,,censo dos 100 maiores,29437
+4114351,Manfrinópolis,,,,,
+4114401,Mangueirinha,betha,,,lista de portais do Betha,
+4114500,Manoel Ribas,equiplano,,,lista inicial do levantamento,
+4114609,Marechal Cândido Rondon,ipm,https://camaramcr.atende.net/,robots+cloudflare,censo dos 100 maiores,59291
+4114708,Maria Helena,elotech,,,API de entidades do Elotech,
+4114807,Marialva,elotech,https://marialva.oxy.elotech.com.br/portaltransparencia/3/licitacoes/?entidade=3,,censo dos 100 maiores,45360
+4115002,Marilena,,,,,
+4115101,Mariluz,elotech,,,API de entidades do Elotech,
+4114906,Marilândia do Sul,betha,,,lista de portais do Betha,
+4115200,Maringá,elotech,https://maringa.oxy.elotech.com.br/portaltransparencia/6/,,censo dos 100 maiores,432635
+4115358,Maripá,,,,,
+4115309,Mariópolis,,,,,
+4115408,Marmeleiro,,,,,
+4115457,Marquinho,,,,,
+4115507,Marumbi,,,,,
+4115606,Matelândia,elotech,https://matelandia.oxy.elotech.com.br/portaltransparencia/2/,,censo dos 100 maiores,19368
+4115705,Matinhos,ipm,,robots+cloudflare,censo dos 100 maiores,42671
+4115739,Mato Rico,elotech,,,API de entidades do Elotech,
+4115754,Mauá da Serra,,,,,
+4115804,Medianeira,elotech,https://medianeira.oxy.elotech.com.br/portaltransparencia/2/,,censo dos 100 maiores,58681
+4115853,Mercedes,,,,,
+4115903,Mirador,,,,,
+4116000,Miraselva,,,,,
+4116059,Missal,,,,,
+4116109,Moreira Sales,,,,,
+4116208,Morretes,elotech,,,API de entidades do Elotech,
+4116307,Munhoz de Melo,betha,,,lista de portais do Betha,
+4116406,Nossa Senhora das Graças,,,,,
+4116505,Nova Aliança do Ivaí,,,,,
+4116604,Nova América da Colina,betha,,,lista de portais do Betha,
+4116703,Nova Aurora,betha,,,lista de portais do Betha,
+4116802,Nova Cantu,,,,,
+4116901,Nova Esperança,elotech,https://novaesperanca.oxy.elotech.com.br/portaltransparencia/2/,,censo dos 100 maiores,27140
+4116950,Nova Esperança do Sudoeste,,,,,
+4117008,Nova Fátima,betha,,,lista de portais do Betha,
+4117057,Nova Laranjeiras,,,,,
+4117107,Nova Londrina,,,,,
+4117206,Nova Olímpia,,,,,
+4117255,Nova Prata do Iguaçu,,,,,
+4117214,Nova Santa Bárbara,betha,,,lista de portais do Betha,
+4117222,Nova Santa Rosa,,,,,
+4117271,Nova Tebas,elotech,,,API de entidades do Elotech,
+4117297,Novo Itacolomi,elotech,,,API de entidades do Elotech,
+4117305,Ortigueira,betha,,,censo dos 100 maiores,24808
+4117404,Ourizona,betha,,,lista de portais do Betha,
+4117453,Ouro Verde do Oeste,,,,,
+4117503,Paiçandu,,,,censo dos 100 maiores,49694
+4117602,Palmas,betha,,,censo dos 100 maiores,50564
+4117701,Palmeira,elotech,http://palmeira.eloweb.net/portaltransparencia/?entidade=20,,censo dos 100 maiores,35054
+4117800,Palmital,,,,,
+4117909,Palotina,,,robots,censo dos 100 maiores,37431
+4118105,Paranacity,elotech,,,API de entidades do Elotech,
+4118204,Paranaguá,,,anti_robo,censo dos 100 maiores,150436
+4118303,Paranapoema,,,,,
+4118402,Paranavaí,ipm,,robots+cloudflare,censo dos 100 maiores,96870
+4118006,Paraíso do Norte,,,,,
+4118451,Pato Bragado,,,,,
+4118501,Pato Branco,pronim,https://webapp1-patobranco.cidade360.cloud/pronimtb_cm/index.asp,,censo dos 100 maiores,99041
+4118600,Paula Freitas,,,,,
+4118709,Paulo Frontin,betha,,,lista de portais do Betha,
+4118808,Peabiru,,,,,
+4118857,Perobal,,,,,
+4119152,Pinhais,ipm,,robots+cloudflare,censo dos 100 maiores,131857
+4119251,Pinhal de São Bento,,,,,
+4119202,Pinhalão,betha,,,lista de portais do Betha,
+4119301,Pinhão,elotech,https://pinhao.oxy.elotech.com.br/portaltransparencia/2/,,censo dos 100 maiores,30431
+4119509,Piraquara,elotech,https://piraquara.oxy.elotech.com.br/portaltransparencia/2/,,censo dos 100 maiores,129035
+4119400,Piraí do Sul,elotech,https://piraidosul.oxy.elotech.com.br/portaltransparencia/2/,,censo dos 100 maiores,23991
+4119608,Pitanga,elotech,https://pitanga.oxy.elotech.com.br/portaltransparencia-api/api/files/arquivo/143692,,censo dos 100 maiores,34583
+4119657,Pitangueiras,betha,,,lista de portais do Betha,
+4119103,Piên,equiplano,,,lista inicial do levantamento,
+4119707,Planaltina do Paraná,,,,,
+4119806,Planalto,,,,,
+4119905,Ponta Grossa,elotech,https://cmpg.oxy.elotech.com.br/portaltransparencia/contratos,,censo dos 100 maiores,378527
+4119954,Pontal do Paraná,elotech,https://pontaldoparana.oxy.elotech.com.br/portaltransparencia/2/,,censo dos 100 maiores,33730
+4120002,Porecatu,,,,,
+4120101,Porto Amazonas,,,,,
+4120150,Porto Barreiro,,,,,
+4120200,Porto Rico,elotech,,,API de entidades do Elotech,
+4120309,Porto Vitória,,,,,
+4120333,Prado Ferreira,,,,,
+4120358,Pranchita,,,,,
+4120408,Presidente Castelo Branco,,,,,
+4120507,Primeiro de Maio,,,,,
+4120606,Prudentópolis,inga,http://www.ingadigital.com.br/transparencia/?id_cliente=106,robots,censo dos 100 maiores,50988
+4118907,Pérola,pronim,,,lista inicial do levantamento,
+4119004,Pérola d'Oeste,,,,,
+4120655,Quarto Centenário,,,,,
+4120705,Quatiguá,,,,,
+4120804,Quatro Barras,,,,censo dos 100 maiores,25663
+4120853,Quatro Pontes,,,,,
+4120903,Quedas do Iguaçu,,,,censo dos 100 maiores,31431
+4121000,Querência do Norte,,,,,
+4121109,Quinta do Sol,elotech,,,API de entidades do Elotech,
+4121208,Quitandinha,,,,,
+4121257,Ramilândia,,,,,
+4121307,Rancho Alegre,,,,,
+4121356,Rancho Alegre D'Oeste,,,,,
+4121406,Realeza,,,,censo dos 100 maiores,20276
+4121505,Rebouças,elotech,,,API de entidades do Elotech,
+4121604,Renascença,elotech,,,API de entidades do Elotech,
+4121703,Reserva,,,robots,censo dos 100 maiores,24856
+4121752,Reserva do Iguaçu,,,,,
+4121802,Ribeirão Claro,,,,,
+4121901,Ribeirão do Pinhal,,,,,
+4122008,Rio Azul,,,,,
+4122107,Rio Bom,,,,,
+4122156,Rio Bonito do Iguaçu,equiplano,,,lista inicial do levantamento,
+4122172,Rio Branco do Ivaí,elotech,,,API de entidades do Elotech,
+4122206,Rio Branco do Sul,ipm,https://camarariobrancodosul.atende.net/transparencia/,robots+cloudflare,censo dos 100 maiores,40745
+4122305,Rio Negro,ipm,https://camararionegro.atende.net/transparencia/item/ato-que-aprecia-as-contas-do-chefe-do-poder-executivo#con,robots+cloudflare,censo dos 100 maiores,31954
+4122404,Rolândia,,,robots,censo dos 100 maiores,76671
+4122503,Roncador,,,,,
+4122602,Rondon,,,,,
+4122651,Rosário do Ivaí,elotech,,,API de entidades do Elotech,
+4122701,Sabáudia,betha,,,lista de portais do Betha,
+4122800,Salgado Filho,,,,,
+4122909,Salto do Itararé,betha,,,lista de portais do Betha,
+4123006,Salto do Lontra,pronim,,,lista inicial do levantamento,
+4123105,Santa Amélia,,,,,
+4123204,Santa Cecília do Pavão,,,,,
+4123303,Santa Cruz de Monte Castelo,,,,,
+4123402,Santa Fé,elotech,,,API de entidades do Elotech,
+4123501,Santa Helena,ipm,https://camarasantahelena.atende.net/transparencia/,robots+cloudflare,censo dos 100 maiores,26601
+4123600,Santa Inês,,,,,
+4123709,Santa Isabel do Ivaí,,,,,
+4123808,Santa Izabel do Oeste,,,,,
+4123824,Santa Lúcia,,,,,
+4123857,Santa Maria do Oeste,,,,,
+4123907,Santa Mariana,,,,,
+4123956,Santa Mônica,,,,,
+4124020,Santa Tereza do Oeste,elotech,,,API de entidades do Elotech,
+4124053,Santa Terezinha de Itaipu,,,,censo dos 100 maiores,25510
+4124004,Santana do Itararé,betha,,,lista de portais do Betha,
+4124103,Santo Antônio da Platina,ipm,https://camarasantoantoniodaplatina.atende.net,robots+cloudflare,censo dos 100 maiores,45730
+4124202,Santo Antônio do Caiuá,betha,,,lista de portais do Betha,
+4124301,Santo Antônio do Paraíso,betha,,,lista de portais do Betha,
+4124400,Santo Antônio do Sudoeste,equiplano,https://santoantoniodosudoestepr.equiplano.com.br:7058/transparencia/,,censo dos 100 maiores,25273
+4124509,Santo Inácio,,,,,
+4126207,Sapopema,,,,,
+4126256,Sarandi,elotech,https://sarandi.oxy.elotech.com.br/portaltransparencia/3/,,censo dos 100 maiores,130211
+4126272,Saudade do Iguaçu,,,,,
+4126306,Sengés,,,,,
+4126355,Serranópolis do Iguaçu,elotech,,,API de entidades do Elotech,
+4126405,Sertaneja,betha,,,lista de portais do Betha,
+4126504,Sertanópolis,elotech,,,API de entidades do Elotech,
+4126603,Siqueira Campos,betha,,,censo dos 100 maiores,24299
+4126652,Sulina,,,,,
+4124608,São Carlos do Ivaí,elotech,,,API de entidades do Elotech,
+4124707,São Jerônimo da Serra,betha,,,lista de portais do Betha,
+4125209,São Jorge d'Oeste,,,,,
+4125308,São Jorge do Ivaí,betha,,,lista de portais do Betha,
+4125357,São Jorge do Patrocínio,elotech,,,API de entidades do Elotech,
+4125407,São José da Boa Vista,betha,,,lista de portais do Betha,
+4125456,São José das Palmeiras,,,,,
+4125506,São José dos Pinhais,elotech,https://transparencia.cmsjp.pr.gov.br/diarias/,robots,censo dos 100 maiores,353874
+4124806,São João,,,,,
+4124905,São João do Caiuá,elotech,,,API de entidades do Elotech,
+4125001,São João do Ivaí,,,,,
+4125100,São João do Triunfo,,,,,
+4125555,São Manoel do Paraná,,,,,
+4125605,São Mateus do Sul,elotech,https://saomateusdosul.oxy.elotech.com.br/portaltransparencia/2/,,censo dos 100 maiores,43558
+4125704,São Miguel do Iguaçu,elotech,https://saomigueldoiguacu.oxy.elotech.com.br/portaltransparencia/1/diario-oficial,,censo dos 100 maiores,30624
+4125753,São Pedro do Iguaçu,betha,,,lista de portais do Betha,
+4125803,São Pedro do Ivaí,elotech,,,API de entidades do Elotech,
+4125902,São Pedro do Paraná,,,,,
+4126009,São Sebastião da Amoreira,,,,,
+4126108,São Tomé,,,,,
+4126678,Tamarana,betha,,,lista de portais do Betha,
+4126702,Tamboara,,,,,
+4126801,Tapejara,,,,,
+4126900,Tapira,,,,,
+4127007,Teixeira Soares,equiplano,,,lista inicial do levantamento,
+4127106,Telêmaco Borba,ipm,https://camaratelemacoborba.atende.net/transparencia/item/licitacoes-gerais#conteudo,robots+cloudflare,censo dos 100 maiores,77798
+4127205,Terra Boa,,,,,
+4127304,Terra Rica,equiplano,,,lista inicial do levantamento,
+4127403,Terra Roxa,,,,,
+4127502,Tibagi,elotech,https://tibagi.oxy.elotech.com.br/portaltransparencia/2/esic,,censo dos 100 maiores,20408
+4127601,Tijucas do Sul,,,,,
+4127700,Toledo,,,,censo dos 100 maiores,162658
+4127809,Tomazina,betha,,,lista de portais do Betha,
+4127858,Três Barras do Paraná,,,,,
+4127882,Tunas do Paraná,,,,,
+4127908,Tuneiras do Oeste,,,,,
+4127957,Tupãssi,,,,,
+4127965,Turvo,,,,,
+4128005,Ubiratã,elotech,https://cmubirata.cr2.site,,censo dos 100 maiores,25928
+4128104,Umuarama,elotech,https://servicos.umuarama.pr.gov.br/portaltransparencia/2/,,censo dos 100 maiores,124077
+4128302,Uniflor,,,,,
+4128203,União da Vitória,betha,http://transparencia.betha.cloud/#/B11BMKtmX7wo1InHUshDwg==%22,,censo dos 100 maiores,56701
+4128401,Uraí,,,,,
+4128534,Ventania,,,,,
+4128559,Vera Cruz do Oeste,betha,,,lista de portais do Betha,
+4128609,Verê,,,,,
+4128658,Virmond,,,,,
+4128708,Vitorino,betha,,,lista de portais do Betha,
+4128500,Wenceslau Braz,betha,,,censo dos 100 maiores,19392
+4128807,Xambrê,,,,,
+4101150,Ângulo,elotech,,,API de entidades do Elotech,

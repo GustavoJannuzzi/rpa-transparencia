@@ -78,8 +78,10 @@ class Fonte(ABC):
         assert self.ctx is not None
         return self.ctx.con
 
-    async def baixar(self, url: str, *, metodo: str = "GET", tipo: str = "json", **kw) -> tuple[httpx.Response, str]:
-        """Requisição educada com robots, pausa e original guardado com hash."""
+    async def baixar(self, url: str, *, metodo: str = "GET", tipo: str = "json", aceitar: tuple[int, ...] = (),
+                     **kw) -> tuple[httpx.Response, str]:
+        """Requisição educada com robots, pausa e original guardado com hash.
+        `aceitar`: códigos 4xx que a fonte usa como resposta (e a fonte trata)."""
         assert self.http is not None
         await self.educacao.verificar_robots(url, self.http)
         async with self.educacao.vez(url):
@@ -89,7 +91,8 @@ class Fonte(ABC):
                 raise FalhaTransitoria(f"{type(e).__name__} em {url}") from e
         if r.status_code >= 500 or r.status_code == 429:
             raise FalhaTransitoria(f"HTTP {r.status_code} em {url}")
-        r.raise_for_status()
+        if r.status_code not in aceitar:
+            r.raise_for_status()
         h = guardar_original(self.con, self.id, r.content, str(r.request.url), tipo)
         return r, h
 

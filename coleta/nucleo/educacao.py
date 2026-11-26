@@ -1,5 +1,9 @@
 """Coleta educada: uma requisição por vez em cada portal, pausa entre elas e
-respeito ao robots.txt. Vale para httpx e para o navegador."""
+respeito ao robots.txt. Vale para httpx e para o navegador.
+
+A pausa de cada domínio é a maior entre o piso do projeto (ou o da fonte) e o
+Crawl-delay que o robots.txt daquele domínio pede. O robots.txt é lido antes da
+primeira requisição ao domínio, então a primeira já espera o que ele pede."""
 
 from __future__ import annotations
 
@@ -21,7 +25,12 @@ class Educacao:
         self._travas: dict[str, asyncio.Lock] = {}
         self._ultima: dict[str, float] = {}
         self._robots: dict[str, urllib.robotparser.RobotFileParser | None] = {}
+        self._pausa_host: dict[str, float] = {}
         self.politicas: dict[str, str] = {}
+
+    def pausa_de(self, url: str) -> float:
+        """A pausa que vale para o domínio de `url`: o piso ou o Crawl-delay, o maior."""
+        return self._pausa_host.get(self._host(url), self.pausa)
 
     def _host(self, url: str) -> str:
         p = urlsplit(url)
@@ -61,7 +70,12 @@ class Educacao:
             return None
         rp = urllib.robotparser.RobotFileParser()
         rp.parse(r.text.splitlines())
-        self.politicas[host] = "robots.txt lido e respeitado"
+        atraso = rp.crawl_delay(self.ua)
+        if atraso is not None and float(atraso) > self.pausa:
+            self._pausa_host[host] = float(atraso)
+            self.politicas[host] = f"robots.txt lido e respeitado; Crawl-delay de {float(atraso):g} s"
+        else:
+            self.politicas[host] = "robots.txt lido e respeitado"
         return rp
 
 
@@ -71,7 +85,8 @@ class _Vez:
 
     async def __aenter__(self):
         await self.trava.acquire()
-        espera = self.ed._ultima.get(self.host, 0) + self.ed.pausa - time.monotonic()
+        pausa = self.ed._pausa_host.get(self.host, self.ed.pausa)
+        espera = self.ed._ultima.get(self.host, 0) + pausa - time.monotonic()
         if espera > 0:
             await asyncio.sleep(espera)
 

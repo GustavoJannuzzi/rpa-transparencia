@@ -19,11 +19,33 @@ PASTA = Path(__file__).parent
 # parlamentar mantém nome. É de propósito mais estreita que a tabela de cargos;
 # cargo que não casa aqui perde o nome na hora e, se for parlamentar com um nome
 # de cargo novo, cai na revisão por "cargo sem de-para".
-RE_CARGO_PARLAMENTAR = re.compile(r"(VEREADORA?|PRESIDENTE|PRESIDENTE DA CAMARA( MUNICIPAL)?( DE CURITIBA)?)")
+# "PRESIDENTE" sozinho, numa diária da Câmara, é o presidente da Câmara; qualquer
+# outro complemento que não seja "da Câmara" (comissão, conselho) não passa.
+RE_CARGO_PARLAMENTAR = re.compile(
+    r"(VEREADORA?|VEREADORA? PRESIDENTE|PRESIDENTE|PRESIDENTE (D[AE] )?CAMARA( MUNICIPAL)?( DE [A-Z]+( [A-Z]+){0,3})?)")
+# O que parece cargo de vereador escrito de outro jeito (erro de digitação, abreviação):
+# não guarda nome e vai para revisão, em vez de virar servidor.
+RE_PARECE_PARLAMENTAR = re.compile(r"\bV[EA]?R[EIA]{0,2}A?DOR|\bVEREA|\bVER\b|\bPRESID|\bEDIL")
+# Fontes com a tabela de cargos revisada à mão (cargos.csv). Nas outras, cargo que
+# não é de parlamentar e não se parece com um é de servidor: entra só no agregado.
+FONTES_COM_TABELA = frozenset({"cmc_legado", "cmc_elotech", "cmc_prefeitura", "cmc_betha"})
 
 
 def eh_cargo_parlamentar(cargo: str | None) -> bool:
     return bool(RE_CARGO_PARLAMENTAR.fullmatch(normalizar_nome(cargo)))
+
+
+def papel_por_regra(original: str | None) -> str | None:
+    """Papel pelo texto do cargo, para fontes sem tabela revisada. None = não dá para
+    saber (cargo vazio, ou parecido com o de vereador sem ser): vai para revisão."""
+    n = normalizar_nome(original)
+    if not n:
+        return None
+    if eh_cargo_parlamentar(original):
+        return "vereador"
+    if RE_PARECE_PARLAMENTAR.search(n):
+        return None
+    return "servidor"
 
 
 @cache
@@ -39,7 +61,9 @@ def cargo(fonte: str, original: str | None) -> str | None:
     t = _tabela("cargos.csv")
     n = normalizar_nome(original)
     linha = t.get((fonte, n)) or t.get(("*", n))
-    return linha["papel"] if linha else None
+    if linha:
+        return linha["papel"]
+    return None if fonte in FONTES_COM_TABELA else papel_por_regra(original)
 
 
 def categoria(fonte: str, original: str | None) -> tuple[str, str] | None:

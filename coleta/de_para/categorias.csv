@@ -25,3 +25,77 @@ cmc_legado,Diária,diaria,Diárias
 cmc_elotech,Diária,diaria,Diárias
 cmc_prefeitura,Diárias,diaria,Diárias
 cmc_betha,Diária,diaria,Diárias
+*,Diária,diaria,Diárias
+almg,COMBUSTIVEL E LUBRIFICANTE,combustivel,Combustível
+almg,PASSAGENS HOSPEDAGEM E ALIMENTACAO,viagens,"Viagem: passagens, hospedagem e alimentação"
+almg,LOCACAO DE IMOVEL E DESPESAS A ELE CONCERNENTES,imovel,Imóvel: locação e manutenção
+almg,LOCACAO E FRETAMENTO DE VEICULOS,locacao_veiculos,Locação de veículos
+almg,DIVULGACAO DA ATIVIDADE PARLAMENTAR,divulgacao,Divulgação da atividade
+almg,SERVICOS DE CONSULTORIA ASSESSORIA E PESQUISA,consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+almg,MATERIAL DE EXPEDIENTE E INFORMATICA E LOCACAO DE MOVEIS E EQUIPAMENTOS PARA ESCRITORIO,material_escritorio,Material de escritório e informática
+almg,PROMOCAO E PARTICIPACAO EM EVENTOS,eventos,Promoção e participação em eventos
+almg,MANUTENCAO E DESPESAS GERAIS COM VEICULOS,manutencao_veiculos,Manutenção de veículos
+almg,ASSINATURA DE PUBLICACOES PERIODICOS E CLIPPINGS,publicacoes,Assinatura de publicações
+alesp,A COMBUSTIVEIS E LUBRIFICANTES,combustivel,Combustível
+alesp,I HOSPEDAGEM ALIMENTACAO E DESPESAS DE LOCOMOCAO,viagens,"Viagem: passagens, hospedagem e alimentação"
+alesp,G ASSINATURAS DE PERIODICOS PUBLICACOES INTERNET E SOFTWARES,assinaturas,"Assinaturas, internet e software"
+alesp,H SERV UTIL PUBLICA,utilidades,"Telefone, internet, energia e água"
+alesp,K LOCACAO DE BENS MOVEIS,bens_moveis,Locação de móveis e equipamentos
+alesp,E MATERIAIS DE ESCRITORIO E OUTROS MATERIAIS DE CONSUMO,material_escritorio,Material de escritório e informática
+alesp,L LOCACAO DE BENS IMOVEIS,imovel,Imóvel: locação e manutenção
+alesp,P DIVULGACAO DA ATIVIDADE PARLAMENTAR,divulgacao,Divulgação da atividade
+alesp,M MANUTENCAO DE BENS MOVEIS IMOVEIS CONDOMINIOS E OUTROS,manutencao,"Manutenção de bens, imóveis e condomínio"
+alesp,D MATERIAIS E SERVICOS GRAFICOS DE COPIAS E REPRODUCAO DE DOCS,grafica,Gráfica e cópias
+alesp,O LOCACAO DE VEICULO DE REPRESENTACAO,locacao_veiculos,Locação de veículos
+alesp,F SERVICOS TECNICOS PROFISSIONAIS,consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+alesp,N MORADIA,moradia,Moradia
+alesp,J SERVICOS DE COMUNICACAO,comunicacao,Serviços de comunicação
+alesp,B PEDAGIOS,pedagio,Pedágios
+alesp,C MATERIAIS E SERVICOS DE MANUT E CONSERV DE VEICULOS PEDAGIOS,manutencao_veiculos,Manutenção de veículos
+alesp,C MATERIAIS E SERVICOS DE MANUT E CONSERV DE VEICULOS,manutencao_veiculos,Manutenção de veículos
+alesp,Q LOCACAO DE VEICULO DE APOIO,locacao_veiculos,Locação de veículos
+cldf,COMBUSTIVEIS E LUBRIFICANTES,combustivel,Combustível
+cldf,COMBUSTIVEIS E LUBRIFICANTE,combustivel,Combustível
+cldf,COMBUSTIVEL E LUBRIFICANTES,combustivel,Combustível
+cldf,COMBUSTIVEL E LUBRIFICANTE,combustivel,Combustível
+cldf,COMBUSTIVEL,combustivel,Combustível
+cldf,COMBUSTIVEIS,combustivel,Combustível
+cldf,DIVULGACAO DE ATIVIDADE PARLAMENTAR,divulgacao,Divulgação da atividade
+cldf,DIVULGACAO ATIVIDADE PARLAMENTAR,divulgacao,Divulgação da atividade
+cldf,DIVULGACAO PARLAMENTAR,divulgacao,Divulgação da atividade
+cldf,DIVULGACAO A P,divulgacao,Divulgação da atividade
+cldf,VIII DIVULGACAO DE ATIVIDADE PARLAMENTAR,divulgacao,Divulgação da atividade
+cldf,DIVULCAO PARLAMENTAR,divulgacao,Divulgação da atividade
+cldf,DIVUGACAO PARLAMENTAR,divulgacao,Divulgação da atividade
+cldf,LOCACAO E MANUTENCAO DE IMOVEIS,imovel,Imóvel: locação e manutenção
+cldf,LOCACAO E MANUTECAO DE IMOVEIS,imovel,Imóvel: locação e manutenção
+cldf,I LOCACAO E MANUTENCAO DE IMOVEIS,imovel,Imóvel: locação e manutenção
+cldf,LOCACAO E MANUTENCAO IMOVEL,imovel,Imóvel: locação e manutenção
+cldf,LOCACAO E MANUTENCAO DE BENS IMOVEIS,imovel,Imóvel: locação e manutenção
+cldf,LOCACAO DE IMOVEL,imovel,Imóvel: locação e manutenção
+cldf,LOCACAO DE IMOVEIS,imovel,Imóvel: locação e manutenção
+cldf,ALUGUEL DE IMOVEL,imovel,Imóvel: locação e manutenção
+cldf,MANUTENCAO DE IMOVEIS,imovel,Imóvel: locação e manutenção
+cldf,CONDOMINIO,imovel,Imóvel: locação e manutenção
+cldf,LOCACAO DE VEICULO,locacao_veiculos,Locação de veículos
+cldf,LOCACAO DE VEICULOS,locacao_veiculos,Locação de veículos
+cldf,ALUGUEL DE VEICULO,locacao_veiculos,Locação de veículos
+cldf,ASSESSORIA CONSULTORIA JURIDICA,consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+cldf,ASSESSORIA JURIDICA,consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+cldf,CONSULTORIA JURIDICA,consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+cldf,CONSULTORIA ESPECIALIZADA,consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+cldf,ASSESSORIA ESPECIALIZADA,consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+cldf,ASSESSORIA CONSULTORIA ESPECIALIZADA,consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+cldf,VII ASSESSORIA CONSULTORIA ESPECIALIZADA,consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+cldf,CONSULTORIA,consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+cldf,LOCACAO DE BENS MOVEIS MAQUINAS E EQUIPAMENTOS,bens_moveis,Locação de móveis e equipamentos
+cldf,II LOCACAO DE BENS MOVEIS MAQUINAS E EQUIPAMENTOS,bens_moveis,Locação de móveis e equipamentos
+cldf,LOCACAO DE MAQUINAS E EQUIPAMENTOS,bens_moveis,Locação de móveis e equipamentos
+cldf,ENERGIA,utilidades,"Telefone, internet, energia e água"
+cldf,AGUA,utilidades,"Telefone, internet, energia e água"
+cldf,CAESB,utilidades,"Telefone, internet, energia e água"
+cldf,INTERNET,utilidades,"Telefone, internet, energia e água"
+cldf,ASSESSORIA COMUNICACAO,comunicacao,Serviços de comunicação
+cldf,ASSESSORIA DE COMUNICACAO,comunicacao,Serviços de comunicação
+cldf,ASS COMUNICACAO,comunicacao,Serviços de comunicação
+cldf,COMUNICACAO SOCIAL,comunicacao,Serviços de comunicação

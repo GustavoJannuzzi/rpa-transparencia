@@ -1,0 +1,242 @@
+{
+ "list": [
+  {
+   "idDeputado": 12193,
+   "dataReferencia": {
+    "@class": "sql-timestamp",
+    "$": "2025-09-01"
+   },
+   "codTipoDespesa": 32,
+   "valor": 1666.05,
+   "descTipoDespesa": "Combustível e lubrificante",
+   "listaDetalheVerba": [
+    {
+     "id": 6,
+     "idDeputado": 12193,
+     "dataReferencia": {
+      "@class": "sql-timestamp",
+      "$": "2025-09-01"
+     },
+     "valorReembolsado": 230.52,
+     "dataEmissao": {
+      "@class": "sql-timestamp",
+      "$": "2025-09-09"
+     },
+     "cpfCnpj": "42927464000198",
+     "valorDespesa": 230.52,
+     "nomeEmitente": "Auto Posto do Alemão Ltda.",
+     "descDocumento": "381786",
+     "codTipoDespesa": 32,
+     "descTipoDespesa": "Combustível e lubrificante"
+    },
+    {
+     "id": 3,
+     "idDeputado": 12193,
+     "dataReferencia": {
+      "@class": "sql-timestamp",
+      "$": "2025-09-01"
+     },
+     "valorReembolsado": 240.15,
+     "dataEmissao": {
+      "@class": "sql-timestamp",
+      "$": "2025-09-22"
+     },
+     "cpfCnpj": "05917870000143",
+     "valorDespesa": 240.15,
+     "nomeEmitente": "Auto Posto Dona Nena Ltda.",
+     "descDocumento": "11397",
+     "codTipoDespesa": 32,
+     "descTipoDespesa": "Combustível e lubrificante"
+    },
+    {
+     "id": 8,
+     "idDeputado": 12193,
+     "dataReferencia": {
+      "@class": "sql-timestamp",
+      "$": "2025-09-01"
+     },
+     "valorReembolsado": 212.15,
+     "dataEmissao": {
+      "@class": "sql-timestamp",
+      "$": "2025-09-06"
+     },
+     "cpfCnpj": "19791177000181",
+     "valorDespesa": 212.15,
+     "nomeEmitente": "Posto Paulista Ltda.",
+     "descDocumento": "686423",
+     "codTipoDespesa": 32,
+     "descTipoDespesa": "Combustível e lubrificante"
+    },
+    {
+     "id": 2,
+     "idDeputado": 12193,
+     "dataReferencia": {
+      "@class": "sql-timestamp",
+      "$": "2025-09-01"
+     },
+     "valorReembolsado": 266.88,
+     "dataEmissao": {
+      "@class": "sql-timestamp",
+      "$": "2025-09-22"
+     },
+     "cpfCnpj": "37842300000128",
+     "valorDespesa": 266.88,
+     "nomeEmitente": "Posto Santo Inácio de Loyola Ltda.",
+     "descDocumento": "383617",
+     "codTipoDespesa": 32,
+     "descTipoDespesa": "Combustível e lubrificante"
+    },
+    {
+     "id": 1,
+     "idDeputado": 12193,
+     "dataReferencia": {
+      "@class": "sql-timestamp",
+      "$": "2025-09-01"
+     },
+     "valorReembolsado": 253.22,
+     "dataEmissao": {
+      "@class": "sql-timestamp",
+      "$": "2025-09-29"
+     },
+     "cpfCnpj": "20415295000921",
+     "valorDespesa": 253.22,
+     "nomeEmitente": "Rede Dom Pedro de Postos Ltda.",
+     "descDocumento": "808791",
+     "codTipoDespesa": 32,
+     "descTipoDespesa": "Combustível e lubrificante"
+    },
+    {
+     "id": 7,
+     "idDeputado": 12193,
+     "dataReferencia": {
+      "@class": "sql-timestamp",
+      "$": "2025-09-01"
+     },
+     "valorReembolsado": 206.56,
+     "dataEmissao": {
+      "@class": "sql-timestamp",
+      "$": "2025-09-06"
+     },
+     "cpfCnpj": "16614363000157",
+     "valorDespesa": 206.56,
+     "nomeEmitente": "Sao Lucas Combustiveis Ltda.",
+     "descDocumento": "111973",
+     "codTipoDespesa": 32,
+     "descTipoDespesa": "Combustível e lubrificante"
+    },
+    {
+     "id": 5,
+     "idDeputado": 12193,
+     "dataReferencia": {
+      "@class": "sql-timestamp",
+      "$": "2025-09-01"
+     },
+     "valorReembolsado": 256.57,
+     "dataEmissao": {
+      "@class": "sql-timestamp",
+      "$": "2025-09-09"
+     },
+     "cpfCnpj": "05890738000195",
+     "valorDespesa": 256.57,
+     "nomeEmitente": "Vilmar Pereira & Cia. Ltda.",
+     "descDocumento": "101841",
+     "codTipoDespesa": 32,
+     "descTipoDespesa": "Combustível e lubrificante"
+    }
+   ]
+  },
+  {
+   "idDeputado": 12193,
+   "dataReferencia": {
+    "@class": "sql-timestamp",
+    "$": "2025-09-01"
+   },
+   "codTipoDespesa": 36,
+   "valor": 3382.67,
+   "descTipoDespesa": "Divulgação da atividade parlamentar",
+   "listaDetalheVerba": [
+    {
+     "id": 10,
+     "idDeputado": 12193,
+     "dataReferencia": {
+      "@class": "sql-timestamp",
+      "$": "2025-09-01"
+     },
+     "valorReembolsado": 3382.67,
+     "dataEmissao": {
+      "@class": "sql-timestamp",
+      "$": "2025-09-02"
+     },
+     "cpfCnpj": "13347016000117",
+     "valorDespesa": 3382.67,
+     "nomeEmitente": "Facebook Serviços Online do Brasil Ltda.",
+     "descDocumento": "117044588",
+     "codTipoDespesa": 36,
+     "descTipoDespesa": "Divulgação da atividade parlamentar"
+    }
+   ]
+  },
+  {
+   "idDeputado": 12193,
+   "dataReferencia": {
+    "@class": "sql-timestamp",
+    "$": "2025-09-01"
+   },
+   "codTipoDespesa": 34,
+   "valor": 10500.0,
+   "descTipoDespesa": "Locação e fretamento de veículos",
+   "listaDetalheVerba": [
+    {
+     "id": 9,
+     "idDeputado": 12193,
+     "dataReferencia": {
+      "@class": "sql-timestamp",
+      "$": "2025-09-01"
+     },
+     "valorReembolsado": 10500.0,
+     "dataEmissao": {
+      "@class": "sql-timestamp",
+      "$": "2025-09-30"
+     },
+     "cpfCnpj": "12305622000107",
+     "valorDespesa": 10500.0,
+     "nomeEmitente": "Pontual Loc Car Ltda.",
+     "descDocumento": "031472",
+     "codTipoDespesa": 34,
+     "descTipoDespesa": "Locação e fretamento de veículos"
+    }
+   ]
+  },
+  {
+   "idDeputado": 12193,
+   "dataReferencia": {
+    "@class": "sql-timestamp",
+    "$": "2025-09-01"
+   },
+   "codTipoDespesa": 35,
+   "valor": 8000.0,
+   "descTipoDespesa": "Serviços de consultoria, assessoria e pesquisa",
+   "listaDetalheVerba": [
+    {
+     "id": 4,
+     "idDeputado": 12193,
+     "dataReferencia": {
+      "@class": "sql-timestamp",
+      "$": "2025-09-01"
+     },
+     "valorReembolsado": 8000.0,
+     "dataEmissao": {
+      "@class": "sql-timestamp",
+      "$": "2025-09-30"
+     },
+     "cpfCnpj": "29898565000110",
+     "valorDespesa": 8000.0,
+     "nomeEmitente": "Agencia Imagens Ltda.",
+     "descDocumento": "2025/9",
+     "codTipoDespesa": 35,
+     "descTipoDespesa": "Serviços de consultoria, assessoria e pesquisa"
+    }
+   ]
+  }
+ ]
+}

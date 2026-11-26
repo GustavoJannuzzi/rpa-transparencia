@@ -14,11 +14,32 @@ from decimal import Decimal
 from itertools import pairwise
 from typing import Any
 
-from .. import de_para
+from .. import de_para, entidades
+from ..modelo import Casa
 from .banco import agora, js, transacao
 from .texto import normalizar_nome, slug
 
 ELEICOES_CMC = [2012, 2016, 2020, 2024]
+ELEICOES_MUNICIPAIS = ELEICOES_CMC
+
+
+def fontes_por_casa() -> dict[str, list[str]]:
+    """Casa -> fontes de despesa e de pessoas dela (o TSE entra à parte, pelo município)."""
+    from ..fontes import FONTES
+
+    out: dict[str, list[str]] = defaultdict(list)
+    for f in FONTES:
+        if f.id != "tse":
+            out[f.sistema.casa].append(f.id)
+    return dict(out)
+
+
+def eh_elotech(fonte: str) -> bool:
+    return fonte == "cmc_elotech" or fonte.startswith("elotech_")
+
+
+def prefixo_vereador(casa: Casa) -> str:
+    return "ver-cwb-" if casa.id == "cmc" else f"ver-{casa.id.removeprefix('cm-')}-"
 
 # Situações de uma despesa
 OK = "ok"                      # publicada e somada
@@ -59,7 +80,45 @@ def _titulo(nome: str) -> str:
 
 def identidades(con: sqlite3.Connection, rv: Revisor) -> None:
     _deputados(con, rv)
-    _vereadores(con, rv)
+    por_casa = fontes_por_casa()
+    for casa in entidades.casas().values():
+        if casa.tipo == "camara_municipal" and por_casa.get(casa.id):
+            _vereadores(con, rv, casa, por_casa[casa.id])
+        elif casa.tipo == "assembleia" and por_casa.get(casa.id):
+            _estaduais(con, rv, casa, por_casa[casa.id])
+
+
+def _estaduais(con, rv: Revisor, casa: Casa, fontes: list[str]) -> None:
+    """Deputado estadual: a identidade é a da própria fonte (id da ALMG, matrícula da
+    ALESP; na CLDF, o nome, com as grafias já ligadas na leitura pelo CPF, que não é
+    gravado)."""
+    uf = casa.uf.lower()
+    for fonte in fontes:
+        pessoas: dict[str, list] = defaultdict(list)
+        for r in con.execute("SELECT ref, periodo, nome, nome_parlamentar, partido, extra FROM pessoas_fonte WHERE fonte=? ORDER BY periodo",
+                             (fonte,)):
+            pessoas[r["ref"]].append(r)
+        refs = {r[0] for r in con.execute("SELECT DISTINCT ref_parlamentar FROM despesas WHERE fonte=? AND ref_parlamentar IS NOT NULL", (fonte,))}
+        for ref in sorted(set(pessoas) | refs):
+            regs = pessoas.get(ref)
+            if not regs:
+                rv.revisao(fonte, "identidade", ref, "deputado nas despesas mas fora da lista de deputados da fonte")
+                continue
+            tipo, _, valor = ref.partition(":")
+            pid = f"est-{uf}-{valor if tipo in ('id', 'mat') else slug(valor)}"
+            ult = regs[-1]
+            nome = ult["nome_parlamentar"] or ult["nome"]
+            civil = ult["nome"] if ult["nome_parlamentar"] and ult["nome"] != ult["nome_parlamentar"] else None
+            partido = ult["partido"]
+            extra = json.loads(ult["extra"] or "{}")
+            con.execute("INSERT OR REPLACE INTO parlamentares(id, nome, nome_civil, casa, uf, municipio, partido_atual, extra) VALUES(?,?,?,?,?,?,?,?)",
+                        (pid, nome, civil, casa.id, casa.uf, None, partido,
+                         js({"ref_fonte": ref, "grafias_na_fonte": extra.get("grafias_na_fonte")})))
+            con.execute("INSERT OR REPLACE INTO parlamentar_ids(fonte, ref, parlamentar_id, metodo) VALUES(?,?,?,?)",
+                        (fonte, ref, pid, {"id": "id da API", "mat": "matrícula na fonte"}.get(tipo, "nome (grafias ligadas na leitura)")))
+            if partido:
+                con.execute("INSERT INTO filiacoes(parlamentar_id, partido, desde, ate, fonte, base) VALUES(?,?,?,?,?,?)",
+                            (pid, partido, None, None, fonte, extra.get("partido_de") or "partido informado pela fonte"))
 
 
 def _deputados(con, rv: Revisor) -> None:
@@ -120,8 +179,9 @@ def _tokens_nome(n: str) -> set[str]:
     return {t for t in normalizar_nome(n).split() if len(t) > 2}
 
 
-def _vereadores(con, rv: Revisor) -> None:
-    """Pessoa = componente ligado de matrículas e nomes que aparecem juntos.
+def _vereadores(con, rv: Revisor, casa: Casa, fontes: list[str]) -> None:
+    """Pessoa = componente ligado de matrículas e nomes que aparecem juntos, dentro
+    de uma câmara (a mesma matrícula em duas câmaras é de pessoas diferentes).
 
     A matrícula muda de um mandato para outro (a mesma pessoa tem 1127 e 1184),
     então ela não é a identidade: é um elo entre nomes. Os relatórios de 2013–2014
@@ -135,7 +195,9 @@ def _vereadores(con, rv: Revisor) -> None:
         tipo, _, valor = ref.partition(":")
         return ("m:" if tipo == "mat" else "n:") + (valor if tipo == "mat" else normalizar_nome(valor))
 
-    for r in con.execute("SELECT fonte, ref, nome, nome_parlamentar, matricula FROM pessoas_fonte WHERE casa='cmc'"):
+    marcas = ",".join("?" * len(fontes))
+    municipio = normalizar_nome(casa.municipio)
+    for r in con.execute("SELECT fonte, ref, nome, nome_parlamentar, matricula FROM pessoas_fonte WHERE casa=?", (casa.id,)):
         toks = [] if r["ref"].startswith("gab:") else [token_ref(r["ref"])]
         if r["nome"]:
             toks.append("n:" + normalizar_nome(r["nome"]))
@@ -150,15 +212,15 @@ def _vereadores(con, rv: Revisor) -> None:
         for t in toks:
             u.achar(t)
     refs = {(r[0], r[1]) for r in con.execute(
-        "SELECT DISTINCT fonte, ref_parlamentar FROM despesas WHERE fonte LIKE 'cmc_%' AND ref_parlamentar IS NOT NULL")}
-    refs |= {(r[0], r[1]) for r in con.execute("SELECT DISTINCT fonte, ref FROM pessoas_fonte WHERE casa='cmc' AND ref NOT LIKE 'gab:%'")}
+        f"SELECT DISTINCT fonte, ref_parlamentar FROM despesas WHERE fonte IN ({marcas}) AND ref_parlamentar IS NOT NULL", fontes)}
+    refs |= {(r[0], r[1]) for r in con.execute("SELECT DISTINCT fonte, ref FROM pessoas_fonte WHERE casa=? AND ref NOT LIKE 'gab:%'", (casa.id,))}
 
     for _, ref in refs:
         u.achar(token_ref(ref))
 
     # Liga nome civil e nome de urna da mesma candidatura, só para quem aparece nas fontes da Câmara
     cands = defaultdict(list)
-    for r in con.execute("SELECT ano_eleicao, nome_norm, nome_urna, partido, situacao FROM candidaturas"):
+    for r in con.execute("SELECT ano_eleicao, nome_norm, nome_urna, partido, situacao FROM candidaturas WHERE municipio=?", (municipio,)):
         cands[(r["ano_eleicao"], r["nome_norm"])].append(r)
         urna = normalizar_nome(r["nome_urna"])
         if urna and urna != r["nome_norm"]:
@@ -180,13 +242,13 @@ def _vereadores(con, rv: Revisor) -> None:
         # nomes longos que não se parecem entre si: duas pessoas ligadas por engano
         longos = [n for n in nomes if len(n.split()) >= 3 and n not in so_apelido]
         suspeito = any(len(_tokens_nome(a) & _tokens_nome(b)) < 2 for i, a in enumerate(longos) for b in longos[i + 1:])
-        pid = f"ver-cwb-{slug(canon)}"
+        pid = f"{prefixo_vereador(casa)}{slug(canon)}"
         for t in grupo:
             pid_de[t] = pid
         info[pid] = {"canon": canon, "nomes": set(nomes), "anos": set(), "suspeito": suspeito,
                      "matriculas": sorted(t[2:] for t in grupo if t.startswith("m:"))}
         if suspeito:
-            rv.revisao("cmc", "identidade", pid, "nomes diferentes ligados à mesma pessoa pelas matrículas",
+            rv.revisao(casa.id, "identidade", pid, "nomes diferentes ligados à mesma pessoa pelas matrículas",
                        {"nomes": nomes, "matriculas": info[pid]["matriculas"]})
 
     for fonte, ref in sorted(refs):
@@ -201,29 +263,31 @@ def _vereadores(con, rv: Revisor) -> None:
         con.execute("INSERT OR REPLACE INTO parlamentar_ids(fonte, ref, parlamentar_id, metodo) VALUES(?,?,?,?)", (fonte, ref, pid, metodo))
 
     # gabinetes ("gab:NOME CIVIL"): a pessoa dona do gabinete
-    for (ref,) in con.execute("SELECT DISTINCT ref_parlamentar FROM gabinetes WHERE ref_parlamentar IS NOT NULL"):
+    for (ref,) in con.execute(f"SELECT DISTINCT ref_parlamentar FROM gabinetes WHERE ref_parlamentar IS NOT NULL AND fonte IN ({marcas})", fontes):
         dono = pid_de.get("n:" + normalizar_nome(ref[4:]))
         if dono and not info[dono]["suspeito"]:
-            con.execute("INSERT OR REPLACE INTO parlamentar_ids(fonte, ref, parlamentar_id, metodo) VALUES(?,?,?,?)", ("gabinete", ref, dono, "lotação do gabinete"))
+            con.execute("INSERT OR REPLACE INTO parlamentar_ids(fonte, ref, parlamentar_id, metodo) VALUES(?,?,?,?)",
+                        (f"gabinete:{casa.id}", ref, dono, "lotação do gabinete"))
         else:
-            rv.revisao("cmc", "identidade", ref, "gabinete sem vereador identificado", {"lotacao": ref})
+            rv.revisao(casa.id, "identidade", ref, "gabinete sem vereador identificado", {"lotacao": ref})
 
-    for r in con.execute("""SELECT pi.parlamentar_id pid, d.ano FROM despesas d JOIN parlamentar_ids pi
-                            ON pi.fonte=d.fonte AND pi.ref=d.ref_parlamentar WHERE d.fonte LIKE 'cmc_%' GROUP BY 1, 2"""):
+    for r in con.execute(f"""SELECT pi.parlamentar_id pid, d.ano FROM despesas d JOIN parlamentar_ids pi
+                             ON pi.fonte=d.fonte AND pi.ref=d.ref_parlamentar WHERE d.fonte IN ({marcas}) GROUP BY 1, 2""", fontes):
         info[r["pid"]]["anos"].add(int(r["ano"]))
     for r in con.execute("""SELECT pi.parlamentar_id pid, p.periodo FROM pessoas_fonte p JOIN parlamentar_ids pi
-                            ON pi.fonte=p.fonte AND pi.ref=p.ref WHERE p.casa='cmc'"""):
+                            ON pi.fonte=p.fonte AND pi.ref=p.ref WHERE p.casa=?""", (casa.id,)):
         if r["periodo"].isdigit():
             info[r["pid"]]["anos"].add(int(r["periodo"]))
         elif r["periodo"] == "atual":
             info[r["pid"]]["anos"].add(int(agora()[:4]))
 
-    usados = sorted({r[0] for r in con.execute("SELECT DISTINCT parlamentar_id FROM parlamentar_ids WHERE parlamentar_id LIKE 'ver-%'")})
+    usados = sorted({r[0] for r in con.execute("SELECT DISTINCT parlamentar_id FROM parlamentar_ids WHERE parlamentar_id LIKE ?",
+                                                (prefixo_vereador(casa) + "%",))})
     for pid in usados:
         i = info[pid]
         civil = _titulo(i["canon"])
         apelido = next((apelidos[n] for n in i["nomes"] if n in apelidos), None)
-        eleicoes = sorted({max([e for e in ELEICOES_CMC if e < a] or [0]) for a in i["anos"]} - {0})
+        eleicoes = sorted({max([e for e in ELEICOES_MUNICIPAIS if e < a] or [0]) for a in i["anos"]} - {0})
         partido_atual = None
         urna_exib: str | None = None
         for e in eleicoes:
@@ -240,10 +304,10 @@ def _vereadores(con, rv: Revisor) -> None:
                            {"vereador": civil, "eleicao": e, "partidos": sorted(partidos)})
             else:
                 rv.revisao("tse", "partido", f"{pid}:{e}", "nome não encontrado entre os candidatos a vereador da eleição",
-                           {"vereador": civil, "eleicao": e, "nomes_tentados": sorted(i["nomes"])})
+                           {"vereador": civil, "eleicao": e, "municipio": casa.municipio, "nomes_tentados": sorted(i["nomes"])})
         nome_exib = _titulo(apelido) if apelido else (_titulo(urna_exib) if urna_exib else civil)
         con.execute("INSERT INTO parlamentares(id, nome, nome_civil, casa, uf, municipio, partido_atual, extra) VALUES(?,?,?,?,?,?,?,?)",
-                    (pid, nome_exib, civil, "cmc", "PR", "Curitiba", partido_atual,
+                    (pid, nome_exib, civil, casa.id, casa.uf, casa.municipio, partido_atual,
                      js({"anos": sorted(i["anos"]), "eleicoes": eleicoes, "matriculas": i["matriculas"],
                          "nome_exibido_de": "gabinete" if apelido else ("tse" if urna_exib else "nome civil")})))
 
@@ -314,20 +378,22 @@ def situacoes(con: sqlite3.Connection, rv: Revisor) -> None:
                        "confere" if r["valor"] == "confere" else "diverge",
                        "dois caminhos independentes de consulta no portal, que não publica total")
     prefeitura_fixo = frozenset(prefeitura_divergente)
+    estaduais = _divergencias_estaduais(con, rv)
     lote = []
     cur = con.execute("""SELECT chave, fonte, tipo, ref_parlamentar, beneficiario_tipo, cargo_original, categoria_original,
-                                valor, ano, competencia, fornecedor_nome, extra FROM despesas""")
+                                valor, ano, competencia, fornecedor_nome, fornecedor_doc, granularidade, extra FROM despesas""")
     while True:
         linhas = cur.fetchmany(20000)
         if not linhas:
             break
         for d in linhas:
-            lote.append(_situacao(d, ids, divergentes, legado, rv, prefeitura_fixo))
+            lote.append(_situacao(d, ids, divergentes, legado, rv, prefeitura_fixo, estaduais))
         con.executemany("INSERT OR REPLACE INTO despesa_situacao(chave, situacao, motivo, parlamentar_id, categoria) VALUES(?,?,?,?,?)", lote)
         lote.clear()
 
 
-def _situacao(d, ids, divergentes, legado, rv: Revisor, prefeitura_divergente: frozenset = frozenset()):
+def _situacao(d, ids, divergentes, legado, rv: Revisor, prefeitura_divergente: frozenset = frozenset(),
+              divergentes_estaduais: frozenset = frozenset()):
     fonte = d["fonte"]
     extra = json.loads(d["extra"] or "{}")
     valor = Decimal(d["valor"])
@@ -351,7 +417,24 @@ def _situacao(d, ids, divergentes, legado, rv: Revisor, prefeitura_divergente: f
     if d["beneficiario_tipo"] == "parlamentar" and pid is None:
         rev("parlamentar sem identidade resolvida")
 
-    if d["tipo"] == "cota_federal":
+    if d["tipo"] == "verba_estadual":
+        if not (d["fornecedor_nome"] or "").strip() and not (d["fornecedor_doc"] or "").strip():
+            rev("despesa sem fornecedor")
+        if not (d["categoria_original"] or "").strip():
+            motivos[:] = [m for m in motivos if m != "categoria sem de-para"]
+            rev("a fonte não classifica a despesa (classificação vazia)")
+        if valor < 0:
+            rev("valor negativo: a fonte não explica o sinal", valor=str(valor))
+        elif valor == 0 and situacao == OK:
+            situacao = FORA_DA_SOMA
+            motivos.append("valor reembolsado zero na fonte" if fonte == "almg" else "valor zero na fonte")
+        if extra.get("fora_do_outro_arquivo"):
+            rev(f"a nota está no arquivo principal do ano, mas não em '{extra['fora_do_outro_arquivo']}', que a fonte também publica para o mesmo ano")
+        if (fonte, d["chave"]) in divergentes_estaduais:
+            rev("a soma das notas não fecha com o total que a própria fonte dá para o tipo de despesa no mês", escopo=True)
+        # agregado (ALESP) não ganha motivo por linha: a granularidade é coluna da despesa e vai no
+        # cabeçalho do parlamentar; repetida em 82 mil linhas, pesaria ~6 MB no que vai para o ar
+    elif d["tipo"] == "cota_federal":
         if not (d["fornecedor_nome"] or "").strip():
             rev("despesa sem fornecedor")
         if valor < 0:
@@ -367,7 +450,13 @@ def _situacao(d, ids, divergentes, legado, rv: Revisor, prefeitura_divergente: f
             rev("arquivo anual e API divergem nesta categoria e ano (ver conferência)", escopo=True)
     else:
         papel = de_para.cargo(fonte, d["cargo_original"])
-        if papel is None:
+        if extra.get("nota_cargo") and d["beneficiario_tipo"] == "parlamentar":
+            # cargo vazio na fonte, nome igual ao de um vereador no cadastro de pessoal do mesmo ano
+            papel = "vereador"
+            motivos.append("cargo vazio na fonte; vereador pelo cadastro de pessoal da Câmara")
+        if papel is None and not (d["cargo_original"] or "").strip():
+            rev("a fonte não informa o cargo, e o nome não está no cadastro de vereadores da Câmara no mesmo ano; o nome foi descartado na leitura")
+        elif papel is None:
             rev("cargo sem de-para", cargo_original=d["cargo_original"])
         elif papel == "vereador" and d["beneficiario_tipo"] != "parlamentar":
             rev("cargo de vereador escrito de um jeito que a guarda de privacidade não reconhece; o nome foi descartado na leitura", cargo_original=d["cargo_original"])
@@ -383,7 +472,7 @@ def _situacao(d, ids, divergentes, legado, rv: Revisor, prefeitura_divergente: f
                 elif situacao == OK:
                     situacao = s
                     motivos.append(m)
-        elif fonte == "cmc_elotech":
+        elif eh_elotech(fonte):
             sem_diaria = valor == 0 and extra.get("quantidade") in (0, None)
             if "cancelada" in marcas:
                 if Decimal(extra.get("valor_anulado") or "0") == Decimal(extra.get("valor_empenho") or "-1") and situacao == OK:
@@ -410,6 +499,36 @@ def _situacao(d, ids, divergentes, legado, rv: Revisor, prefeitura_divergente: f
         rv.revisao(fonte, "despesa", d["chave"], "; ".join(m for m in motivos if m), {"ano": d["ano"], "cargo": d["cargo_original"],
                    "categoria": d["categoria_original"], "valor": d["valor"], **detalhes})
     return (d["chave"], situacao, "; ".join(motivos) or None, pid, cat[0] if cat else None)
+
+
+def _divergencias_estaduais(con, rv: Revisor) -> frozenset[tuple[str, str]]:
+    """Conferências das assembleias contra o que a própria fonte diz de si. Devolve
+    (fonte, chave) das notas que ficam em revisão por causa de um recorte."""
+    fora: set[tuple[str, str]] = set()
+    # ALMG: a soma das notas de cada tipo no mês tem de dar o total do tipo
+    fecham = tipos = 0
+    for r in con.execute("SELECT valor FROM totais_oficiais WHERE fonte='almg' AND metrica='tipos_que_fecham'"):
+        a, _, b = str(r[0]).partition("/")
+        fecham += int(a or 0)
+        tipos += int(b or 0)
+    if tipos:
+        rv.conferencia("almg", "soma_das_notas_x_total_do_tipo", "todos os meses", f"{tipos} tipos de despesa × mês", f"{fecham} fecham",
+                       "confere" if fecham == tipos else "parcial",
+                       "a API dá o total de cada tipo de despesa no mês e as notas dele; a soma das notas tem de dar o total")
+    for r in con.execute("SELECT escopo, texto_original FROM totais_oficiais WHERE fonte='almg' AND metrica='soma_do_tipo_diverge'"):
+        dep, ano, mes, cod = r["escopo"].split("-")
+        rv.revisao("almg", "total", r["escopo"], f"{mes}/{ano}, tipo {cod}: {r['texto_original']}")
+        for (chave,) in con.execute("""SELECT chave FROM despesas WHERE fonte='almg' AND ref_parlamentar=? AND competencia=?
+                                       AND json_extract(extra, '$.cod_tipo')=?""", (f"id:{dep}", f"{ano}-{mes}", int(cod))):
+            fora.add(("almg", chave))
+    # CLDF: o arquivo parcial do ano tem de estar contido no principal
+    for r in con.execute("SELECT escopo, valor, texto_original FROM totais_oficiais WHERE fonte='cldf' AND metrica='recurso_contido_no_principal'"):
+        rv.conferencia("cldf", "outro_arquivo_do_ano_contido_no_principal", r["escopo"], "todas as notas", r["texto_original"],
+                       "confere" if r["valor"] == "confere" else "diverge",
+                       "a fonte publica mais de um arquivo para o mesmo ano; o robô lê o do ano inteiro e confere os outros contra ele")
+    for r in con.execute("SELECT escopo, valor, texto_original FROM totais_oficiais WHERE fonte='cldf' AND metrica='recursos_no_conjunto'"):
+        rv.conferencia("cldf", "recursos_do_ano", r["escopo"], None, r["valor"], "observacao", r["texto_original"])
+    return frozenset(fora)
 
 
 def _regras_legado(con, rv: Revisor) -> dict[str, tuple[str, str]]:
@@ -557,8 +676,14 @@ def equacoes(con, rv: Revisor) -> None:
     def origem(fonte: str) -> tuple[int | None, str]:
         if fonte == "camara_deputados":
             return int(n("SELECT SUM(CAST(valor AS INTEGER)) FROM totais_oficiais WHERE fonte=? AND metrica='linhas_no_arquivo'", fonte)), "linhas da legislatura nos arquivos anuais"
-        if fonte == "cmc_elotech":
+        if eh_elotech(fonte):
             return int(n("SELECT SUM(CAST(valor AS INTEGER)) FROM totais_oficiais WHERE fonte=? AND metrica='registros' AND escopo LIKE 'diarias-%'", fonte)), "totalElements da API de diárias"
+        if fonte == "cldf":
+            return int(n("SELECT SUM(CAST(valor AS INTEGER)) FROM totais_oficiais WHERE fonte=? AND metrica='linhas_no_arquivo'", fonte)), "linhas do arquivo principal de cada ano"
+        if fonte == "almg":
+            return int(n("SELECT SUM(CAST(valor AS INTEGER)) FROM totais_oficiais WHERE fonte=? AND metrica='linhas_na_origem'", fonte)), "notas nas respostas da API, mês a mês"
+        if fonte == "alesp":
+            return int(n("SELECT SUM(CAST(valor AS INTEGER)) FROM totais_oficiais WHERE fonte=? AND metrica='linhas_na_origem'", fonte)), "registros do período no arquivo"
         if fonte == "cmc_betha":
             return int(n("SELECT SUM(CAST(valor AS INTEGER)) FROM totais_oficiais WHERE fonte=? AND metrica='registros' AND escopo LIKE 'diarias-%'", fonte)), "contador 'Registros encontrados' da tela"
         if fonte == "cmc_legado":
@@ -578,7 +703,8 @@ def equacoes(con, rv: Revisor) -> None:
         coletado = n("""SELECT COUNT(*) FROM despesas d JOIN despesa_situacao s USING(chave)
                         WHERE d.fonte=? AND s.situacao IN ('ok','fora_da_soma','conferencia_cruzada')""", fonte)
         em_rev = n("SELECT COUNT(*) FROM despesas d JOIN despesa_situacao s USING(chave) WHERE d.fonte=? AND s.situacao='revisao'", fonte)
-        pend_l = n("SELECT COUNT(*) FROM pendencias WHERE fonte=?", fonte)
+        # pendência de leitura que não é linha de despesa (subsídio ou gabinete ilegível) não entra na equação
+        pend_l = n("SELECT COUNT(*) FROM pendencias WHERE fonte=? AND item NOT LIKE 'servidores-%'", fonte)
         soma = coletado + em_rev + pend_l
         rv.conferencia(fonte, "origem_igual_coletado_mais_revisao", "todas as linhas", o, soma,
                        "confere" if soma == o else "diverge",
@@ -600,7 +726,19 @@ def contagens(con, rv: Revisor) -> None:
                        f"{com_despesa} com despesa; {fora} fora da lista", "confere" if fora == 0 else "diverge",
                        "todo deputado com despesa tem de estar na lista da legislatura; quem não gastou não aparece no arquivo")
     for r in con.execute("SELECT escopo, valor FROM totais_oficiais WHERE fonte='tse' AND metrica='eleitos'"):
-        rv.conferencia("tse", "eleitos", r["escopo"], None, r["valor"], "observacao", "vereadores eleitos em Curitiba no arquivo do TSE")
+        ano, _, mun = r["escopo"].partition(":")
+        rv.conferencia("tse", "eleitos", r["escopo"], None, r["valor"], "observacao", f"vereadores eleitos em {mun or 'Curitiba'} no arquivo do TSE")
+    # cadastro de pessoal da Câmara × eleitos em 2024: quantos vereadores ativos a fonte lista hoje
+    for e in entidades.elotech():
+        if e.fonte == "cmc_elotech":
+            continue
+        ativos = con.execute("""SELECT COUNT(DISTINCT ref) FROM pessoas_fonte WHERE fonte=? AND periodo=? AND ref LIKE 'mat:%'
+                                AND upper(json_extract(extra, '$.situacao'))='ATIVO'""", (e.fonte, agora()[:4])).fetchone()[0]
+        eleitos = con.execute("SELECT valor FROM totais_oficiais WHERE fonte='tse' AND metrica='eleitos' AND escopo=?", (f"2024:{e.municipio}",)).fetchone()
+        if ativos or eleitos:
+            rv.conferencia(e.fonte, "vereadores_ativos_x_eleitos_2024", agora()[:4], eleitos[0] if eleitos else None, ativos,
+                           "confere" if eleitos and str(ativos) == eleitos[0] else "observacao",
+                           "vereadores ativos no cadastro de pessoal da Câmara hoje × eleitos em 2024 no TSE (suplente em exercício muda a conta)")
     v = con.execute("SELECT valor FROM totais_oficiais WHERE fonte='cmc_betha' AND escopo='vereadores' AND metrica='registros'").fetchone()
     if v:
         lidos = con.execute("SELECT COUNT(*) FROM pessoas_fonte WHERE fonte='cmc_betha' AND periodo='atual'").fetchone()[0]

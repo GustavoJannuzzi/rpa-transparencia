@@ -77,7 +77,7 @@ async def descobrir(fonte: Fonte) -> int:
     return len(d.itens)
 
 
-def _gravar_resultado(con, fonte_id: str, chave_item: str, r: Resultado) -> None:
+def _gravar_resultado(con, fonte_id: str, chave_item: str, r: Resultado, casa: str | None = None) -> None:
     # Refazer um item apaga o que ele tinha gravado antes: rodar duas vezes não duplica.
     con.execute("DELETE FROM despesas WHERE fonte=? AND item=?", (fonte_id, chave_item))
     con.execute("DELETE FROM pendencias WHERE fonte=? AND item=?", (fonte_id, chave_item))
@@ -87,20 +87,32 @@ def _gravar_resultado(con, fonte_id: str, chave_item: str, r: Resultado) -> None
             "INSERT OR REPLACE INTO pendencias(chave, fonte, item, motivo, texto_original, url, hash_original, localizador, coletado_em) VALUES(?,?,?,?,?,?,?,?,?)",
             (pe.chave, pe.fonte, chave_item, pe.motivo, pe.texto_original, p.url, p.hash_original, p.localizador, p.coletado_em),
         )
+    linhas = []
     for d in r.despesas:
         p = d.procedencia
+        linhas.append((d.chave, d.fonte, chave_item, d.tipo, d.ref_parlamentar, d.beneficiario_tipo, d.nome_beneficiario,
+                       d.cargo_original, d.data.isoformat() if d.data else None, d.competencia, d.ano, d.categoria_original,
+                       d.fornecedor_doc, d.fornecedor_tipo, d.fornecedor_nome, str(d.valor), d.documento_url, d.descricao,
+                       p.url, p.hash_original, p.localizador, p.coletado_em, js(d.extra), d.casa or casa, d.granularidade))
+    con.executemany(
+        """INSERT INTO despesas(chave, fonte, item, tipo, ref_parlamentar, beneficiario_tipo, nome_beneficiario,
+             cargo_original, data, competencia, ano, categoria, categoria_original, fornecedor_doc, fornecedor_tipo,
+             fornecedor_nome, valor, documento_url, descricao, url, hash_original, localizador, coletado_em, extra,
+             casa, granularidade)
+           VALUES(?,?,?,?,?,?,?,?,?,?,?,NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+           ON CONFLICT(chave) DO UPDATE SET item=excluded.item, valor=excluded.valor,
+             url=excluded.url, hash_original=excluded.hash_original, coletado_em=excluded.coletado_em,
+             localizador=excluded.localizador, extra=excluded.extra, casa=excluded.casa,
+             granularidade=excluded.granularidade""",
+        linhas,
+    )
+    for m in r.remuneracoes:
+        p = m.procedencia
         con.execute(
-            """INSERT INTO despesas(chave, fonte, item, tipo, ref_parlamentar, beneficiario_tipo, nome_beneficiario,
-                 cargo_original, data, competencia, ano, categoria, categoria_original, fornecedor_doc, fornecedor_tipo,
-                 fornecedor_nome, valor, documento_url, descricao, url, hash_original, localizador, coletado_em, extra)
-               VALUES(?,?,?,?,?,?,?,?,?,?,?,NULL,?,?,?,?,?,?,?,?,?,?,?,?)
-               ON CONFLICT(chave) DO UPDATE SET item=excluded.item, valor=excluded.valor,
-                 url=excluded.url, hash_original=excluded.hash_original, coletado_em=excluded.coletado_em,
-                 localizador=excluded.localizador, extra=excluded.extra""",
-            (d.chave, d.fonte, chave_item, d.tipo, d.ref_parlamentar, d.beneficiario_tipo, d.nome_beneficiario,
-             d.cargo_original, d.data.isoformat() if d.data else None, d.competencia, d.ano, d.categoria_original,
-             d.fornecedor_doc, d.fornecedor_tipo, d.fornecedor_nome, str(d.valor), d.documento_url, d.descricao,
-             p.url, p.hash_original, p.localizador, p.coletado_em, js(d.extra)),
+            """INSERT OR REPLACE INTO remuneracoes(fonte, casa, ref_parlamentar, competencia, data_referencia, valor, rotulo,
+                 cargo_original, url, hash_original, localizador, coletado_em) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (m.fonte, m.casa, m.ref_parlamentar, m.competencia, m.data_referencia, str(m.valor), m.rotulo, m.cargo_original,
+             p.url, p.hash_original, p.localizador, p.coletado_em),
         )
     for pf in r.pessoas:
         p = pf.procedencia
@@ -187,14 +199,14 @@ async def coletar(fonte: Fonte, *, refazer: bool = False, parar_apos: int | None
             else:
                 await fonte.evidencia(config.evidencias(), sucesso=True)
                 with transacao(con):
-                    _gravar_resultado(con, fonte.id, item.chave, r)
+                    _gravar_resultado(con, fonte.id, item.chave, r, fonte.sistema.casa)
                     con.execute(
                         "UPDATE inventario SET situacao='ok', tentativas=tentativas+?, ultimo_erro=NULL, evidencia=NULL, atualizado_em=? WHERE fonte=? AND chave=?",
                         (tentativa, agora(), fonte.id, item.chave),
                     )
                 placar.ok += 1
                 ultimo_erro = None
-                n = (len(r.despesas) + len(r.pendencias)) or len(r.pessoas) or len(r.candidaturas) or len(r.gabinetes)
+                n = (len(r.despesas) + len(r.pendencias)) or len(r.pessoas) or len(r.candidaturas) or len(r.gabinetes) or len(r.remuneracoes)
                 eco(f"  {fonte.id} {item.chave}: ok ({n} registros{', ' + str(tentativa) + ' tentativas' if tentativa > 1 else ''})")
                 break
         if ultimo_erro is not None:
