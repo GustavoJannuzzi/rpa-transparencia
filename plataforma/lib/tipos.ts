@@ -34,7 +34,15 @@ export type Parlamentar = {
   id_camara: string | null;
   top_fornecedores: { doc: string; nome: string | null; linhas: number }[];
   p: { coleta: Record<string, string> };
+  /** O que ficou fora dos totais desta pessoa, por categoria e motivo. */
+  em_revisao: GrupoRevisao[];
+  /** Só vereador: anos de mandato que as fontes cobrem. */
+  anos_mandato?: number[];
+  /** Só vereador: anos inteiros de uma fonte em revisão, dentro do mandato. */
+  periodos_em_revisao?: { fonte: string; anos: number[]; motivo: string }[];
 };
+
+export type GrupoRevisao = { fonte: string; motivo: string; categoria: string; anos: number[]; linhas: number };
 
 export type ItemIndice = {
   id: string;
@@ -102,12 +110,24 @@ export type Fontes = {
   gerado_em: string;
   versao_robo: string;
   fontes: Fonte[];
-  cobertura_curitiba: { de: number; ate: number; fonte: string | null; rotulo: string; detalhe?: string }[];
-  diarias_camara_curitiba: { ano: number; vereadores: string; servidores: string; linhas: number }[];
+  cobertura_curitiba: { de: number; ate: number; fonte: string | null; rotulo: string; detalhe?: string; detalhe_tecnico?: string }[];
+  /** vereadores e servidores vêm nulos no ano que está inteiro em revisão */
+  diarias_camara_curitiba: { ano: number; vereadores: string | null; servidores: string | null; linhas: number; em_revisao: number }[];
+};
+
+export type GrupoFila = {
+  fonte: string;
+  tipo: string;
+  motivo: string;
+  /** itens na fila (uma linha, ou um recorte inteiro como uma categoria num ano) */
+  n: number;
+  /** linhas de despesa que este motivo tira dos totais; cada linha conta num motivo só */
+  linhas: number;
+  exemplos: { chave: string; detalhe: Record<string, unknown> }[];
 };
 
 export type Revisao = {
-  grupos: { fonte: string; tipo: string; motivo: string; n: number; exemplos: { chave: string; detalhe: Record<string, unknown> }[] }[];
+  grupos: GrupoFila[];
   linhas_em_revisao_por_fonte: Record<string, number>;
   gerado_em: string;
 };

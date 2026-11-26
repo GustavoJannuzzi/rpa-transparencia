@@ -99,6 +99,11 @@ def publicar(con: sqlite3.Connection) -> list[str]:
     for r in con.execute("SELECT * FROM filiacoes ORDER BY parlamentar_id, desde"):
         filiacoes[r["parlamentar_id"]].append({"partido": r["partido"], "desde": r["desde"], "ate": r["ate"], "base": r["base"], "fonte": r["fonte"]})
 
+    # o que ficou fora dos totais de cada um: a página mostra, em vez de calar
+    rev_parl = _revisao_por_parlamentar(con, cats_rotulo)
+    anos_rev_fonte = _anos_em_revisao(con)
+    ultimo_ano_cmc = max(f.sistema.cobre_ate for f in FONTES if f.id.startswith("cmc_"))
+
     # ---------- despesas publicáveis, por parlamentar ----------
     por_parl: dict[str, list] = defaultdict(list)
     tot_parl_cat: dict[str, Counter] = defaultdict(Counter)
@@ -218,7 +223,15 @@ def publicar(con: sqlite3.Connection) -> list[str]:
             "top_fornecedores": [{"doc": doc, "nome": nomes_forn.get(doc), "linhas": n}
                                  for doc, n in fornecedores_dep[pid].most_common(8)],
             "p": {"coleta": {f: (coleta.get(f) or "")[:10] for f in fontes_parl.get(pid, set())}},
+            "em_revisao": rev_parl.get(pid, []),
         }
+        if p["casa"] == "cmc":
+            # anos de mandato que as fontes cobrem: a página separa "sem diária" de "em revisão"
+            eleicoes: list[int] = json.loads(p["extra"] or "{}").get("eleicoes", [])
+            mandato = sorted({a for e in eleicoes for a in range(int(e) + 1, int(e) + 5) if a <= ultimo_ano_cmc})
+            cab["anos_mandato"] = mandato
+            cab["periodos_em_revisao"] = [{"fonte": f, "anos": [a for a in anos_f if a in mandato], "motivo": "consulta_prefeitura"}
+                                          for f, anos_f in sorted(anos_rev_fonte.items()) if any(a in mandato for a in anos_f)]
         tamanho += _escrever(destino / "parlamentares" / f"{pid}.json", cab)
         for a in anos:
             tamanho += _escrever(destino / "parlamentares" / pid / f"{a}.json", _arquivo_ano([l for l in linhas if l[1].startswith(str(a))]))
@@ -270,6 +283,65 @@ def publicar(con: sqlite3.Connection) -> list[str]:
     log.append(f"publicadas {n_pub} despesas de {len(indice)} parlamentares; {len(partidos)} partidos; {tamanho / 1e6:.1f} MB de JSON em {destino}")
     log.append(f"CSV em {pasta_csv}")
     return log
+
+
+# Motivo da revisão reduzido a uma chave que a plataforma traduz para o leitor.
+# A ordem importa: o primeiro trecho que aparece no motivo decide.
+MOTIVO_CURTO = (
+    ("arquivo anual e API divergem", "api_x_arquivo"),
+    ("consulta do ano inteiro", "consulta_prefeitura"),
+    ("valor líquido negativo", "sinal_negativo"),
+    ("sem identidade", "identidade"),
+    ("cancelada", "cancelada"),
+    ("não fecha", "conta_da_linha"),
+    ("não verificável", "conta_da_linha"),
+)
+
+
+def _motivo_curto(motivo: str | None) -> str:
+    for trecho, chave in MOTIVO_CURTO:
+        if trecho in (motivo or ""):
+            return chave
+    return "outro"
+
+
+def _rotulo_categoria(cat: str | None, original: str | None, cats_rotulo: dict, fonte: str) -> str:
+    """Rótulo da categoria como o leitor vê; na Câmara, o sufixo da origem distingue
+    as passagens (SIGEPA, RPA…), que somam juntas mas entram em revisão separadas."""
+    original = (original or "").strip().rstrip(".")
+    base = cats_rotulo.get(cat) if cat else None
+    if not base:
+        return original[:1].upper() + original[1:].lower() if original else "sem categoria"
+    if fonte == "camara_deputados" and " - " in original:
+        sufixo = original.split(" - ", 1)[1].strip()
+        sufixo = sufixo if (len(sufixo) <= 6 and " " not in sufixo) else sufixo[:1] + sufixo[1:].lower()
+        return f"{base} ({sufixo})"
+    return base
+
+
+def _revisao_por_parlamentar(con, cats_rotulo: dict) -> dict[str, list[dict]]:
+    """Por parlamentar: categoria, anos e quantas linhas ficaram em revisão, e por quê."""
+    grupos: dict[str, dict[tuple, list]] = defaultdict(lambda: defaultdict(lambda: [set(), 0]))
+    for r in con.execute("""SELECT s.parlamentar_id, d.fonte, d.ano, s.categoria, d.categoria_original, s.motivo, COUNT(*)
+                            FROM despesas d JOIN despesa_situacao s USING(chave)
+                            WHERE s.situacao='revisao' AND s.parlamentar_id IS NOT NULL
+                            GROUP BY 1, 2, 3, 4, 5, 6"""):
+        pid, fonte, ano, cat, original, motivo, n = r
+        g = grupos[pid][(fonte, _motivo_curto(motivo), _rotulo_categoria(cat, original, cats_rotulo, fonte))]
+        g[0].add(int(ano))
+        g[1] += n
+    return {pid: sorted(({"fonte": f, "motivo": m, "categoria": c, "anos": sorted(v[0]), "linhas": v[1]}
+                         for (f, m, c), v in gs.items()), key=lambda x: (-x["linhas"], x["categoria"]))
+            for pid, gs in grupos.items()}
+
+
+def _anos_em_revisao(con) -> dict[str, list[int]]:
+    """Anos inteiros em revisão numa fonte (hoje, o portal da Prefeitura quando as duas consultas não batem)."""
+    anos: dict[str, list[int]] = defaultdict(list)
+    for r in con.execute("""SELECT fonte, escopo FROM totais_oficiais
+                            WHERE metrica='ano_inteiro_x_mes_a_mes' AND valor='diverge' ORDER BY escopo"""):
+        anos[r[0]].append(int(r[1].split("-")[1]))
+    return dict(anos)
 
 
 def _arquivo_ano(linhas: list[tuple]) -> dict:
@@ -347,9 +419,12 @@ def _grafo_brasil(parl, fornecedores_dep, nomes_forn, coleta) -> dict:
         "arestas": [{"a": a, "b": b, "peso": round(w, 3), "fornecedores": [{"doc": d, "nome": nomes_forn.get(d)} for d in exemplo[(a, b)]]}
                     for (a, b), w in sorted(arestas.items())],
         "partidos": siglas,
-        "regra": (f"Ligação = fornecedores (CNPJ) em comum nas despesas conferidas. Cada fornecedor pesa log(N/n), em que n é o "
-                  f"número de deputados que o usaram; fornecedores usados por mais de {teto} deputados (8%) não ligam ninguém. "
-                  "Fornecedor pessoa física não entra. Cada deputado mostra até 5 ligações mais fortes."),
+        "regra": (f"Dois deputados ficam ligados quando pagaram as mesmas empresas. Empresas que quase todo mundo usa (mais de "
+                  f"{teto} deputados) não contam, e fornecedor pessoa física não entra. Cada deputado mostra até 5 ligações, "
+                  "as mais fortes."),
+        "regra_tecnica": (f"Ligação = fornecedores (CNPJ) em comum nas despesas conferidas. Cada fornecedor pesa log(N/n), em que n é o "
+                          f"número de deputados que o usaram e N = {n}; fornecedores usados por mais de {teto} deputados (8%) não ligam "
+                          "ninguém."),
         "p": {"fonte": "camara_deputados", "coleta": (coleta.get("camara_deputados") or "")[:10]},
     }
 
@@ -462,24 +537,64 @@ def _fontes(con, coleta, camara_cmc_ano) -> dict:
          "detalhe": "O sistema legado tem relatórios de despesa de 2010 a 2016, mas o de diárias começa em 2013."},
         {"de": 2013, "ate": 2016, "fonte": "cmc_legado", "rotulo": "Sistema legado — relatórios em PDF"},
         {"de": 2017, "ate": 2023, "fonte": "cmc_elotech", "rotulo": "Elotech — API pública"},
-        {"de": 2024, "ate": 2025, "fonte": "cmc_prefeitura", "rotulo": "Portal da Prefeitura — postback ASP.NET",
-         **({"detalhe": "Em revisão: " + "; ".join(
-             f"{r[0].split('-')[1]}: {r[1]}" for r in con.execute(
-                 "SELECT escopo, texto_original FROM totais_oficiais WHERE fonte='cmc_prefeitura' "
-                 "AND metrica='ano_inteiro_x_mes_a_mes' AND valor='diverge' AND escopo < 'diarias-2026' ORDER BY escopo"))
-             + ". O portal não publica total, então a diferença não tem como ser desempatada."}
+        {"de": 2024, "ate": 2025, "fonte": "cmc_prefeitura", "rotulo": "Portal da Prefeitura: um robô preenche o formulário de consulta",
+         **({"detalhe": "Em revisão: o portal devolve listas diferentes para o mesmo ano, conforme a consulta, e não publica "
+                        "total para desempatar.",
+             "detalhe_tecnico": "; ".join(
+                 f"{r[0].split('-')[1]}: {r[1]}" for r in con.execute(
+                     "SELECT escopo, texto_original FROM totais_oficiais WHERE fonte='cmc_prefeitura' "
+                     "AND metrica='ano_inteiro_x_mes_a_mes' AND valor='diverge' AND escopo < 'diarias-2026' ORDER BY escopo"))
+             + ". Consulta do ano inteiro × consulta mês a mês, por postback ASP.NET."}
             if con.execute("SELECT 1 FROM totais_oficiais WHERE fonte='cmc_prefeitura' AND metrica='ano_inteiro_x_mes_a_mes' "
                            "AND valor='diverge' AND escopo < 'diarias-2026'").fetchone() else {})},
-        {"de": 2026, "ate": 2026, "fonte": "cmc_betha", "rotulo": "Betha — aplicação Vue",
+        {"de": 2026, "ate": 2026, "fonte": "cmc_betha", "rotulo": "Betha: um robô abre a página como uma pessoa faria",
          "detalhe": "2026 também aparece no portal da Prefeitura; as duas listas são conferidas uma contra a outra."},
     ]
-    diarias_cmc = [{"ano": a, "vereadores": _d(v["vereadores"]), "servidores": _d(v["servidores"]), "linhas": v["linhas"]}
-                   for a, v in sorted(camara_cmc_ano.items())]
+    # linhas de diária em revisão por ano: o ano que está todo em revisão aparece na tabela, marcado
+    rev_cmc = {int(r[0]): r[1] for r in con.execute(
+        """SELECT d.ano, COUNT(*) FROM despesas d JOIN despesa_situacao s USING(chave)
+           WHERE s.situacao='revisao' AND d.fonte LIKE 'cmc_%' GROUP BY 1""")}
+    diarias_cmc = []
+    for a in sorted(set(camara_cmc_ano) | set(rev_cmc)):
+        v = camara_cmc_ano.get(a)
+        diarias_cmc.append({"ano": a, "vereadores": _d(v["vereadores"]) if v else None, "servidores": _d(v["servidores"]) if v else None,
+                            "linhas": v["linhas"] if v else 0, "em_revisao": rev_cmc.get(a, 0)})
     return {"gerado_em": agora(), "versao_robo": config.VERSAO_ROBO, "fontes": fontes, "cobertura_curitiba": cobertura,
             "diarias_camara_curitiba": diarias_cmc}
 
 
+def _linhas_por_grupo(con) -> dict[tuple, int]:
+    """Quantas linhas de despesa cada motivo da fila tira dos totais. Cada linha conta num
+    motivo só: o da própria linha, se ela tem um; senão, o do recorte (categoria e ano, ano
+    inteiro, mês) que a mandou para revisão. Assim a soma da coluna fecha com o total."""
+    por_linha: Counter[tuple[str, str, str]] = Counter()
+    for r in con.execute("""SELECT r.fonte, r.motivo, COUNT(*) FROM revisao r
+                            JOIN despesa_situacao s ON s.chave = r.chave AND s.situacao = 'revisao'
+                            WHERE r.tipo = 'despesa' GROUP BY 1, 2"""):
+        por_linha[(r[0], "despesa", r[1])] += r[2]
+    # linha da origem que o robô não conseguiu ler: cada pendência é uma linha
+    for r in con.execute("SELECT fonte, motivo, COUNT(*) FROM revisao WHERE tipo = 'leitura' GROUP BY 1, 2"):
+        por_linha[(r[0], "leitura", r[1])] += r[2]
+    recortes = {(r[0], r[1]): (r[2], r[3]) for r in con.execute(
+        "SELECT fonte, chave, tipo, motivo FROM revisao WHERE tipo NOT IN ('despesa', 'leitura')")}
+    for r in con.execute("""SELECT d.fonte, d.ano, d.competencia, d.categoria_original, COUNT(*) FROM despesas d
+                            JOIN despesa_situacao s USING(chave)
+                            WHERE s.situacao = 'revisao' AND NOT EXISTS (
+                              SELECT 1 FROM revisao r WHERE r.fonte = d.fonte AND r.tipo = 'despesa' AND r.chave = d.chave)
+                            GROUP BY 1, 2, 3, 4"""):
+        fonte, ano, comp, original, n = r
+        for chave in (f"{original}/{ano}", f"diarias-{ano}", comp):
+            if (fonte, chave) in recortes:
+                tipo, motivo = recortes[(fonte, chave)]
+                por_linha[(fonte, tipo, motivo)] += n
+                break
+        else:
+            por_linha[(fonte, "outro", "em revisão sem motivo agrupado")] += n
+    return dict(por_linha)
+
+
 def _revisao(con) -> dict:
+    linhas = _linhas_por_grupo(con)
     grupos = []
     for r in con.execute("""SELECT fonte, tipo, motivo, COUNT(*) n FROM revisao GROUP BY 1, 2, 3 ORDER BY n DESC"""):
         exemplos = []
@@ -487,7 +602,11 @@ def _revisao(con) -> dict:
             det = json.loads(e["detalhe"] or "{}")
             det.pop("texto_original", None) if r["tipo"] == "leitura" else None
             exemplos.append({"chave": e["chave"], "detalhe": det})
-        grupos.append({"fonte": r["fonte"], "tipo": r["tipo"], "motivo": r["motivo"], "n": r["n"], "exemplos": exemplos})
+        grupos.append({"fonte": r["fonte"], "tipo": r["tipo"], "motivo": r["motivo"], "n": r["n"],
+                       "linhas": linhas.pop((r["fonte"], r["tipo"], r["motivo"]), 0), "exemplos": exemplos})
+    # o que sobrar não some: vira uma linha própria da fila
+    for (fonte, tipo, motivo), n in sorted(linhas.items()):
+        grupos.append({"fonte": fonte, "tipo": tipo, "motivo": motivo, "n": 0, "linhas": n, "exemplos": []})
     linhas_fora = {r[0]: r[1] for r in con.execute(
         "SELECT d.fonte, COUNT(*) FROM despesas d JOIN despesa_situacao s USING(chave) WHERE s.situacao='revisao' GROUP BY 1")}
     return {"grupos": grupos, "linhas_em_revisao_por_fonte": linhas_fora, "gerado_em": agora()}
