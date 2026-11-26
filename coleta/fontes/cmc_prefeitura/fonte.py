@@ -16,12 +16,10 @@ a leitura.
 from __future__ import annotations
 
 import re
-from datetime import date
 
 from ... import config
 from ...de_para import eh_cargo_parlamentar
 from ...modelo import Descoberta, Despesa, ItemInventario, Pendencia, PessoaFonte, Resultado, SistemaOrigem, TotalOficial
-from ...nucleo.banco import agora
 from ...nucleo.erros import FalhaTransitoria, PortalMudou
 from ...nucleo.evidencia import guardar_original
 from ...nucleo.texto import ValorIlegivel, chave_hash, data_br, dinheiro_br, normalizar_nome
@@ -181,7 +179,7 @@ class CmcPrefeitura(FonteNavegador):
                                procedencia=self.procedencia(URL, h, "filtro de exercícios"))]
         return Descoberta(itens=itens, totais=totais)
 
-    async def _ler_consulta(self, ano: int, mes: int) -> tuple[list[tuple[list[str], dict, str, int]], int]:
+    async def _ler_consulta(self, ano: int, mes: int | None) -> tuple[list[tuple[list[str], dict, str, int]], int]:
         """Lê todas as páginas de um mês. Devolve [(células, mapa, hash da página, nº da página)] e o nº de páginas."""
         assert self.pagina is not None
         await self._pesquisar(ano, mes)
@@ -210,7 +208,7 @@ class CmcPrefeitura(FonteNavegador):
             else:
                 break
             async with self.educacao.vez(URL):
-                await self._postback(lambda: alvo.first.click())
+                await self._postback(lambda alvo=alvo: alvo.first.click())
             pagina_atual += 1
             if pagina_atual > 200:
                 raise PortalMudou("paginação não termina (mais de 200 páginas num mês)")

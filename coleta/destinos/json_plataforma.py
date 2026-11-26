@@ -38,7 +38,9 @@ def _d(v) -> str:
     """Decimal como texto exato, sem notação científica. Completa com zeros até
     duas casas (200.0 -> 200.00), o que não muda o valor; nunca corta casas."""
     d = Decimal(v)
-    if d.as_tuple().exponent > -2:
+    expoente = d.as_tuple().exponent
+    assert isinstance(expoente, int), f"valor não finito: {v!r}"  # dinheiro nunca é NaN nem infinito
+    if expoente > -2:
         d = d.quantize(Decimal("0.01"))
     return format(d, "f")
 
@@ -91,8 +93,8 @@ def publicar(con: sqlite3.Connection) -> list[str]:
 
     cats_rotulo = {}
     from .. import de_para
-    for (fonte, origem), linha in de_para._tabela("categorias.csv").items():
-        cats_rotulo[linha["categoria"]] = linha["rotulo"]
+    for cat_linha in de_para._tabela("categorias.csv").values():
+        cats_rotulo[cat_linha["categoria"]] = cat_linha["rotulo"]
 
     parl = {r["id"]: dict(r) for r in con.execute("SELECT * FROM parlamentares")}
     filiacoes = defaultdict(list)
@@ -170,17 +172,18 @@ def publicar(con: sqlite3.Connection) -> list[str]:
             por_parl[pid].append(linha)
             fontes_parl[pid].add(d["fonte"])
             if soma:
-                tot_parl_cat[pid][d["cat_unica"]] += valor
-                tot_parl_ano[pid][int(d["ano"])] += valor
+                # Counter somando Decimal: o typeshed só prevê contagem inteira
+                tot_parl_cat[pid][d["cat_unica"]] += valor  # type: ignore[assignment]
+                tot_parl_ano[pid][int(d["ano"])] += valor  # type: ignore[assignment]
                 for chave_rec, dic in (((pid, int(d["ano"])), rec_ano), ((pid, d["cat_unica"]), rec_cat)):
                     dic[chave_rec][0].add(d["fonte"])
                     dic[chave_rec][1] += 1
-                p = partido_em(pid, d["competencia"])
-                if p:
-                    tot_partido_cat[p][d["cat_unica"]] += valor
-                    tot_partido_mes[p][d["competencia"]] += valor
-                    fontes_partido[p].add(d["fonte"])
-                    for chave_rec, dic in (((p, d["competencia"]), rec_pmes), ((p, d["cat_unica"]), rec_pcat)):
+                sigla = partido_em(pid, d["competencia"])
+                if sigla:
+                    tot_partido_cat[sigla][d["cat_unica"]] += valor  # type: ignore[assignment]
+                    tot_partido_mes[sigla][d["competencia"]] += valor  # type: ignore[assignment]
+                    fontes_partido[sigla].add(d["fonte"])
+                    for chave_rec, dic in (((sigla, d["competencia"]), rec_pmes), ((sigla, d["cat_unica"]), rec_pcat)):
                         dic[chave_rec][0].add(d["fonte"])
                         dic[chave_rec][1] += 1
                 if d["fornecedor_tipo"] == "cnpj" and d["fornecedor_doc"]:
@@ -378,7 +381,7 @@ def _cor_indice(siglas: list[str]) -> dict[str, int]:
 def _grafo_brasil(parl, fornecedores_dep, nomes_forn, coleta) -> dict:
     deps = [pid for pid in parl if pid.startswith("dep-") and fornecedores_dep.get(pid)]
     n = len(deps)
-    df = Counter()
+    df: Counter[str] = Counter()
     for pid in deps:
         for doc in fornecedores_dep[pid]:
             df[doc] += 1
@@ -388,14 +391,14 @@ def _grafo_brasil(parl, fornecedores_dep, nomes_forn, coleta) -> dict:
         for doc in fornecedores_dep[pid]:
             if 2 <= df[doc] <= teto:
                 por_forn[doc].append(pid)
-    peso = Counter()
+    peso: Counter[tuple[str, str]] = Counter()
     exemplo: dict[tuple, list] = defaultdict(list)
     for doc, membros in por_forn.items():
         idf = math.log(n / df[doc])
         membros.sort()
         for i, a in enumerate(membros):
             for b in membros[i + 1:]:
-                peso[(a, b)] += idf
+                peso[(a, b)] += idf  # type: ignore[assignment]  # Counter somando float (peso log(N/n))
                 if len(exemplo[(a, b)]) < 3:
                     exemplo[(a, b)].append(doc)
     # cada deputado fica com as ligações mais fortes (até 5) para o grafo não virar novelo
@@ -405,7 +408,7 @@ def _grafo_brasil(parl, fornecedores_dep, nomes_forn, coleta) -> dict:
         vizinhos[b].append((w, a))
     arestas = {}
     for a, vs in vizinhos.items():
-        for w, b in sorted(vs, reverse=True)[:5]:
+        for _w, b in sorted(vs, reverse=True)[:5]:
             k = (min(a, b), max(a, b))
             arestas[k] = peso[k]
     nos = [{"id": pid, "rotulo": parl[pid]["nome"], "partido": parl[pid]["partido_atual"], "uf": parl[pid]["uf"],
@@ -444,11 +447,11 @@ def _layout_parana(nos: list[dict], arestas: list[dict]) -> dict[str, tuple[floa
     por_pessoa = defaultdict(set)
     for a in arestas:
         por_pessoa[a["a"]].add(a["b"])
-    peso = Counter()
+    peso: Counter[tuple[str, str]] = Counter()
     for ps in por_pessoa.values():
-        ps = sorted(ps)
-        for i, x in enumerate(ps):
-            for y in ps[i + 1:]:
+        ordem = sorted(ps)
+        for i, x in enumerate(ordem):
+            for y in ordem[i + 1:]:
                 peso[(x, y)] += 1
     base = layout(partidos, [(x, y, float(w)) for (x, y), w in peso.items()], iteracoes=600, espalhar=6.0, gravidade=1.0)
     raio = {p: 26 + 9 * math.sqrt(len(membros.get(p, []))) for p in partidos}

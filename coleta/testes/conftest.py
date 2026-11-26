@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -24,7 +25,7 @@ def dados_tmp(tmp_path, monkeypatch):
 
 
 @pytest.fixture
-def con(dados_tmp) -> sqlite3.Connection:
+def con(dados_tmp) -> Iterator[sqlite3.Connection]:
     c = conectar()
     yield c
     c.close()

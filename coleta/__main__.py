@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import io
 import sys
-from typing import Optional
 
 import typer
 
-from . import config
 from .fontes import FONTES, criar
 from .nucleo import execucao
 from .nucleo.banco import conectar
@@ -19,7 +18,7 @@ app = typer.Typer(add_completion=False, help="Robôs de transparência: coleta, 
 OpcFonte = typer.Option(None, "--fonte", "-f", help="Só estas fontes (pode repetir).")
 
 
-def _selecionar(fontes: Optional[list[str]]) -> list[str]:
+def _selecionar(fontes: list[str] | None) -> list[str]:
     ids = [f.id for f in FONTES]
     if not fontes:
         return ids
@@ -71,13 +70,13 @@ async def _rodar(etapa: str, ids: list[str], refazer: bool, gravar_video: bool) 
 
 
 @app.command()
-def descobrir(fonte: Optional[list[str]] = OpcFonte):
+def descobrir(fonte: list[str] | None = OpcFonte):
     """Inventário de cada fonte e os totais que a própria fonte mostra."""
     asyncio.run(_rodar("descobrir", _selecionar(fonte), False, False))
 
 
 @app.command()
-def coletar(fonte: Optional[list[str]] = OpcFonte,
+def coletar(fonte: list[str] | None = OpcFonte,
             refazer: bool = typer.Option(False, help="Coleta de novo até o que já está ok."),
             gravar_video: bool = typer.Option(False, help="Grava vídeo do navegador em dados/evidencias/videos.")):
     """Percorre o inventário e grava no modelo único. Rodar de novo só pega o que falta."""
@@ -119,7 +118,7 @@ def relatorio():
 
 
 @app.command()
-def tudo(fonte: Optional[list[str]] = OpcFonte,
+def tudo(fonte: list[str] | None = OpcFonte,
          refazer: bool = typer.Option(False),
          gravar_video: bool = typer.Option(False)):
     """descobrir, coletar, conferir, publicar e relatorio, em sequência."""
@@ -135,8 +134,9 @@ if __name__ == "__main__":
     if sys.platform == "win32":
         # o console do Windows não é UTF-8 por padrão
         try:
-            sys.stdout.reconfigure(encoding="utf-8")
-            sys.stderr.reconfigure(encoding="utf-8")
+            for saida in (sys.stdout, sys.stderr):
+                if isinstance(saida, io.TextIOWrapper):
+                    saida.reconfigure(encoding="utf-8")
         except Exception:
             pass
     app()

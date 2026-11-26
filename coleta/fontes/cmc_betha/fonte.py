@@ -9,7 +9,6 @@ conferência linha a linha (e completa a finalidade, que a tabela corta em
 
 from __future__ import annotations
 
-import json
 import re
 from collections import defaultdict
 from datetime import date
@@ -17,8 +16,7 @@ from decimal import Decimal
 
 from ... import config
 from ...de_para import eh_cargo_parlamentar
-from ...modelo import (Descoberta, Despesa, GabineteRetrato, ItemInventario, Pendencia, PessoaFonte, Resultado,
-                       SistemaOrigem, TotalOficial)
+from ...modelo import Descoberta, Despesa, GabineteRetrato, ItemInventario, Pendencia, PessoaFonte, Resultado, SistemaOrigem, TotalOficial
 from ...nucleo.banco import agora
 from ...nucleo.erros import FalhaTransitoria, PortalMudou
 from ...nucleo.evidencia import guardar_original
@@ -227,6 +225,7 @@ class CmcBetha(FonteNavegador):
         proc = self.procedencia(url, hashes[0], "todas as páginas, coluna Organograma")
         for org, valores in grupos.items():
             m = RE_GABINETE.match(org)
+            assert m is not None  # grupos só tem lotação que casou com RE_GABINETE, acima
             res.gabinetes.append(GabineteRetrato(
                 fonte=self.id, lotacao_original=org, competencia=data_ref[:7],
                 ref_parlamentar=f"gab:{normalizar_nome(m.group(1))}", data_referencia=data_ref,

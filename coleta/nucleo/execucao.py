@@ -143,8 +143,9 @@ async def coletar(fonte: Fonte, *, refazer: bool = False, parar_apos: int | None
     if placar.pulados:
         eco(f"  {fonte.id}: {placar.pulados} itens já coletados, retomando os {len(itens)} que faltam")
 
-    from ..modelo import ItemInventario
     import json
+
+    from ..modelo import ItemInventario
 
     feitos = 0
     for linha in itens:

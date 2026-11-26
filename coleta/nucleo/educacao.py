@@ -27,7 +27,7 @@ class Educacao:
         p = urlsplit(url)
         return f"{p.scheme}://{p.netloc}"
 
-    def vez(self, url: str) -> "_Vez":
+    def vez(self, url: str) -> _Vez:
         """Espera a vez de falar com o host de `url`. Uso: `async with educacao.vez(url):`."""
         host = self._host(url)
         trava = self._travas.setdefault(host, asyncio.Lock())

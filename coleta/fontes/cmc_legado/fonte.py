@@ -12,8 +12,7 @@ import asyncio
 import re
 
 from ... import config
-from ...modelo import (Descoberta, Despesa, ItemInventario, Pendencia, PessoaFonte, Resultado, SistemaOrigem,
-                       TotalOficial)
+from ...modelo import Descoberta, Despesa, ItemInventario, Pendencia, PessoaFonte, Resultado, SistemaOrigem, TotalOficial
 from ...nucleo.erros import FalhaTransitoria, PortalMudou
 from ...nucleo.evidencia import guardar_original
 from ...nucleo.texto import chave_hash, normalizar_nome
