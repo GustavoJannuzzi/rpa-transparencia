@@ -35,7 +35,28 @@ export const ESTADOS: Estado[] = [
     soAxe: true,
     preparar: async (page) => {
       await grafoPronto(page);
-      await page.getByRole("combobox").fill("car");
+      // a inicial tem duas buscas (a do topo e a de dentro do grafo): esta é a do topo
+      await page.getByRole("combobox", { name: "Buscar deputado ou vereador" }).fill("car");
+      await expect(page.getByRole("option").first()).toBeVisible();
+    },
+  },
+  {
+    // o estado vem da URL: vista, ponto escolhido e a ficha dele aberta
+    nome: "inicio-ponto-no-grafo",
+    rota: "/?vista=brasil&no=dep-220704",
+    soAxe: true,
+    preparar: async (page) => {
+      await grafoPronto(page);
+      await expect(page.getByRole("heading", { name: "Carol Dartora" })).toBeVisible();
+    },
+  },
+  {
+    nome: "inicio-busca-do-grafo",
+    rota: "/",
+    soAxe: true,
+    preparar: async (page) => {
+      await grafoPronto(page);
+      await page.getByRole("combobox", { name: "Achar alguém no grafo" }).fill("dartora");
       await expect(page.getByRole("option").first()).toBeVisible();
     },
   },
