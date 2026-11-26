@@ -112,7 +112,11 @@ export default function Busca({ aoEscolher, rotulo = "Buscar deputado ou vereado
             e.preventDefault();
             ir(achados[ativo]);
           }
-          if (e.key === "Escape") setAberta(false);
+          if (e.key === "Escape" && mostrar) {
+            // fecha só a lista (a ficha do ponto, se houver, fica aberta)
+            e.preventDefault();
+            setAberta(false);
+          }
           if (e.key === "Tab") setAberta(false);
         }}
         role="combobox"

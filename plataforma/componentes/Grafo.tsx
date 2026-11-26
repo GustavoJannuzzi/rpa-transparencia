@@ -154,7 +154,9 @@ export default function Grafo() {
     if (selecionado) q.set("no", selecionado);
     if (emLista) q.set("lista", "1");
     if (partidoFoco) q.set("partido", partidoFoco);
-    const url = q.size ? `/?${q.toString()}` : "/";
+    // toString(), e não q.size: o Safari 16 não tem size
+    const qs = q.toString();
+    const url = qs ? `/?${qs}` : "/";
     if (window.location.pathname + window.location.search !== url) window.history.replaceState(window.history.state, "", url);
   }, [iniciado, vista, selecionado, emLista, partidoFoco, padrao]);
 
