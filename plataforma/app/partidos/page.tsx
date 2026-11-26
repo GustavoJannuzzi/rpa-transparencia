@@ -24,7 +24,8 @@ export default function Partidos() {
           <tr className="border-b border-aco-2">
             <th scope="col" className="py-2 pr-4 font-medium">Partido</th>
             <th scope="col" className="py-2 pr-4 font-medium">Deputados federais</th>
-            <th scope="col" className="py-2 font-medium">Vereadores de Curitiba</th>
+            <th scope="col" className="py-2 pr-4 font-medium">Deputados estaduais</th>
+            <th scope="col" className="py-2 font-medium">Vereadores</th>
           </tr>
         </thead>
         <tbody>
@@ -36,6 +37,7 @@ export default function Partidos() {
                 </Link>
               </td>
               <td className="num py-2 pr-4 text-tinta-2">{p.federal || "—"}</td>
+              <td className="num py-2 pr-4 text-tinta-2">{p.estadual || "—"}</td>
               <td className="num py-2 text-tinta-2">{p.municipal || "—"}</td>
             </tr>
           ))}

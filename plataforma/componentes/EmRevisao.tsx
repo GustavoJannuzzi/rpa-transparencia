@@ -33,10 +33,19 @@ export function anosDoVereador(p: Parlamentar) {
   const mandato = p.anos_mandato ?? [];
   const emRevisao = new Set<number>([...(p.periodos_em_revisao ?? []).flatMap((x) => x.anos), ...p.em_revisao.flatMap((g) => g.anos)]);
   const comDiaria = new Set(p.anos);
+  const naoPublica = new Set(p.anos_sem_publicacao ?? []);
   return {
-    semFonte: mandato.filter((a) => a < 2013),
-    semDiaria: mandato.filter((a) => a >= 2013 && !comDiaria.has(a) && !emRevisao.has(a)),
+    // só Curitiba tem mandato antes de 2013 dentro do período das fontes
+    semFonte: p.casa === "cmc" ? mandato.filter((a) => a < 2013) : [],
+    semPublicacao: mandato.filter((a) => naoPublica.has(a)),
+    semDiaria: mandato.filter((a) => a >= 2013 && !comDiaria.has(a) && !emRevisao.has(a) && !naoPublica.has(a)),
   };
+}
+
+/** A fila de revisão de cada fonte: as de Curitiba e a federal ficam em "Como os dados chegam aqui"; as outras, na página da casa. */
+const NA_FILA_GERAL = new Set(["camara_deputados", "cmc_legado", "cmc_elotech", "cmc_prefeitura", "cmc_betha", "tse"]);
+export function linkDaFila(fonte: string, casa: string): string {
+  return NA_FILA_GERAL.has(fonte) ? `/como-os-dados-chegam-aqui/#revisao-${fonte}` : `/casas/${casa}/#em-revisao`;
 }
 
 /**
@@ -52,8 +61,8 @@ export function ForaDaSoma({ p }: { p: Parlamentar }) {
     ...porCategoria(p.em_revisao.filter((g) => !fontesPeriodo.has(g.fonte))).map(([c, v]) => `${c} (${anosTexto(v.anos)})`),
   ];
   const linhas = p.em_revisao.reduce((s, g) => s + g.linhas, 0);
-  const anos = p.casa === "cmc" ? anosDoVereador(p) : null;
-  if (!itens.length && !(anos && (anos.semDiaria.length || anos.semFonte.length))) return null;
+  const anos = p.anos_mandato ? anosDoVereador(p) : null;
+  if (!itens.length && !(anos && (anos.semDiaria.length || anos.semFonte.length || anos.semPublicacao.length))) return null;
 
   return (
     <div className="space-y-2 text-[0.92rem] leading-relaxed text-tinta-2 md:col-span-2">
@@ -76,6 +85,12 @@ export function ForaDaSoma({ p }: { p: Parlamentar }) {
       )}
       {anos && anos.semDiaria.length > 0 && (
         <p className="text-tinta-3">Nenhuma diária nas fontes conferidas em {anosTexto(anos.semDiaria)}.</p>
+      )}
+      {anos && anos.semPublicacao.length > 0 && (
+        <p className="text-tinta-3">
+          {anosTexto(anos.semPublicacao)}: a fonte não publica diária nenhuma da Câmara nesse ano, de ninguém. Não é zero gasto: é ano sem
+          publicação.
+        </p>
       )}
       {anos && anos.semFonte.length > 0 && (
         <p className="text-tinta-3">{anosTexto(anos.semFonte)}: as fontes da Câmara não trazem diária por pessoa antes de 2013.</p>
@@ -127,7 +142,7 @@ export function SecaoEmRevisao({ p }: { p: Parlamentar }) {
         {fontes.map((f, i) => (
           <span key={f}>
             {i > 0 && " · "}
-            <Link href={`/como-os-dados-chegam-aqui/#revisao-${f}`} className="text-carimbo-claro underline">
+            <Link href={linkDaFila(f, p.casa)} className="text-carimbo-claro underline">
               Fila de revisão: {FONTES[f]?.curto ?? f}
             </Link>
           </span>

@@ -2,7 +2,7 @@
 version: 1
 slug: "plataforma-app-page-tsx"
 primary_target: "plataforma/app/page.tsx"
-related_targets: ["plataforma/app/como-os-dados-chegam-aqui/page.tsx","plataforma/app/parlamentares","plataforma/app/partidos","plataforma/app/sobre/page.tsx"]
+related_targets: ["plataforma/app/como-os-dados-chegam-aqui/page.tsx","plataforma/app/parlamentares","plataforma/app/partidos","plataforma/app/sobre/page.tsx","plataforma/app/cobertura/page.tsx","plataforma/app/casas"]
 ---
 
 # Plataforma: grafo, partido, parlamentar, como os dados chegam aqui, sobre

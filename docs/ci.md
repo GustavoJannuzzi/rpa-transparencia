@@ -13,11 +13,11 @@ fixado pelo SHA do commit, com a versão ao lado; o Dependabot atualiza os dois.
 | **Python** | `ruff check .`, `mypy` (pacote `coleta`, com `check_untyped_defs`) e `pytest` | um aviso de lint ou de tipo, ou um teste quebrado. O `pytest` padrão deixa de fora os testes de contrato (`-m 'not contrato'` no `pyproject.toml`), que vão à internet. Os de resiliência abrem o Chromium do Playwright, sem rede. |
 | **Plataforma** | `npm run build` (export estático em `out/`), `tsc --noEmit` e `npm test` | o build ou os tipos quebram, ou um "R$" no HTML gerado sai sem fonte e data de coleta (`testes/procedencia.mjs`). O `out/` vai como artefato para os dois jobs abaixo. |
 | **Navegador** | axe-core e prints de referência, com o Playwright, no `out/` servido como na Vercel (`testes/servidor.mjs`) | uma violação de acessibilidade fora da lista de exceções, uma exceção que já não acha a violação dela, ou um print diferente da referência. |
-| **Lighthouse** | `lhci autorun` em seis páginas, três rodadas cada, no perfil de celular | uma nota ou métrica abaixo do orçamento em `plataforma/lighthouserc.js`. |
+| **Lighthouse** | `lhci autorun` em oito páginas, três rodadas cada, no perfil de celular | uma nota ou métrica abaixo do orçamento em `plataforma/lighthouserc.js`. |
 
 ### axe (`plataforma/testes/e2e/acessibilidade.spec.ts`)
 
-Regras WCAG 2.0, 2.1 e 2.2 (A e AA) e as de boas práticas, em 13 telas
+Regras WCAG 2.0, 2.1 e 2.2 (A e AA) e as de boas práticas, em 19 telas
 ([`estados.ts`](../plataforma/testes/e2e/estados.ts)): uma de cada tipo de página do
 export, mais a lista do grafo, a busca aberta, a ficha de procedência aberta e a
 página 404. Cada tela roda a 1366 px e no tamanho do Pixel 7.
@@ -42,7 +42,7 @@ de acessibilidade da plataforma
 
 ### Prints de referência (`plataforma/testes/e2e/visual.spec.ts`)
 
-`toHaveScreenshot` em 11 telas, no desktop e no celular, com animação desligada. O
+`toHaveScreenshot` em 13 telas, no desktop e no celular, com animação desligada. O
 desenho do grafo fica mascarado (é WebGL, e o runner não tem GPU); a casca em volta
 é comparada. As imagens ficam em `plataforma/testes/e2e/prints/`; as primeiras
 entraram pelo workflow abaixo, em
@@ -139,6 +139,11 @@ do Elotech e da Câmara dos Deputados, e os arquivos do TSE e da Câmara.
   navegador do robô já se apresenta de outro jeito. Nenhum captcha é contornado.
 - Num PR que mexa no workflow ou nos testes de contrato, ele roda para mostrar o
   resultado, mas não abre issue.
+- Os testes das casas novas (Elotech genérico, CLDF, ALMG e ALESP) são pulados, com o
+  motivo, quando o portal nem abre a conexão a partir do runner: em 26/11/2026 a
+  CLDF e a ALMG não responderam do GitHub (fora do Brasil). Isso é rede, não portal
+  que mudou; o que responder segue conferido, e na máquina de quem coleta eles
+  rodam inteiros.
 
 ### Rodadas registradas
 

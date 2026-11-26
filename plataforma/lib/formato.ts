@@ -74,10 +74,31 @@ export function contagem(n: number, singular: string, plural: string): string {
   return `${inteiro(n)} ${n === 1 ? singular : plural}`;
 }
 
-export function casaNome(casa: string): string {
-  return casa === "cmc" ? "Câmara Municipal de Curitiba" : "Câmara dos Deputados";
+/** Que tipo de casa é, pelo id: "camara-deputados", "cmc" (Curitiba), "cm-<município>", "al-<uf>". */
+export function tipoDaCasa(casa: string): "federal" | "estadual" | "municipal" {
+  if (casa === "camara-deputados" || casa === "senado") return "federal";
+  return casa.startsWith("al-") ? "estadual" : "municipal";
 }
 
-export function cargoNome(casa: string): string {
-  return casa === "cmc" ? "Vereador(a) de Curitiba" : "Deputado(a) federal";
+export function casaNome(casa: string, municipio?: string | null): string {
+  if (casa === "camara-deputados") return "Câmara dos Deputados";
+  if (casa === "al-df") return "Câmara Legislativa do DF";
+  if (casa.startsWith("al-")) return `Assembleia Legislativa (${casa.slice(3).toUpperCase()})`;
+  return `Câmara Municipal de ${municipio ?? (casa === "cmc" ? "Curitiba" : casa.slice(3))}`;
+}
+
+/** "Vereador(a) de Maringá", "Deputado(a) estadual · SP", "Deputado(a) federal". */
+export function cargoNome(casa: string, municipio?: string | null, uf?: string | null): string {
+  if (casa === "camara-deputados") return "Deputado(a) federal";
+  if (casa === "al-df") return "Deputado(a) distrital";
+  if (casa.startsWith("al-")) return `Deputado(a) estadual${uf ? ` · ${uf}` : ""}`;
+  return `Vereador(a) de ${municipio ?? (casa === "cmc" ? "Curitiba" : casa.slice(3))}`;
+}
+
+/** O rótulo curto de onde a pessoa tem mandato, para listas e para a busca. */
+export function ondeCurto(i: { casa: string; uf: string | null; municipio?: string | null }): string {
+  if (i.casa === "camara-deputados") return `federal · ${i.uf ?? ""}`;
+  if (i.casa === "al-df") return "distrital · DF";
+  if (i.casa.startsWith("al-")) return `estadual · ${i.uf ?? i.casa.slice(3).toUpperCase()}`;
+  return i.municipio ?? (i.casa === "cmc" ? "Curitiba" : i.casa.slice(3));
 }

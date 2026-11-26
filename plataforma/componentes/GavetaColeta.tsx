@@ -96,6 +96,11 @@ export default function GavetaColeta({ fontes }: { fontes: Fontes }) {
           Como os dados chegam aqui: os quatro sistemas de Curitiba, a conferência e a fila de revisão
         </Link>
       </p>
+      <p className="mt-2 text-sm">
+        <Link href="/cobertura/" className="text-carimbo-claro underline">
+          Cobertura: as outras casas (assembleias e câmaras do PR), em que sistema, e por que as que faltam ficaram de fora
+        </Link>
+      </p>
     </section>
   );
 }

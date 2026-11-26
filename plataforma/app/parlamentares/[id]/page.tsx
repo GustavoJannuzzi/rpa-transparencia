@@ -4,9 +4,9 @@ import Barras, { type ItemBarra } from "@/componentes/Barras";
 import { ForaDaSoma, SecaoEmRevisao } from "@/componentes/EmRevisao";
 import TabelaDespesas from "@/componentes/TabelaDespesas";
 import Valor from "@/componentes/Valor";
-import { categorias, indice, parlamentar, vistaNoGrafo } from "@/lib/dados";
+import { casaDe, categorias, indice, parlamentar, vistaNoGrafo } from "@/lib/dados";
 import { nomeFonte } from "@/lib/fontes";
-import { cargoNome, contagem, data, mes } from "@/lib/formato";
+import { cargoNome, casaNome, contagem, data, mes, tipoDaCasa } from "@/lib/formato";
 import { metadadosDaPagina } from "@/lib/site";
 import type { Procedencia } from "@/lib/tipos";
 
@@ -19,10 +19,10 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const p = parlamentar(id);
-  const quem = p.casa === "cmc" ? "vereador(a) de Curitiba" : `deputado(a) federal${p.uf ? ` pelo ${p.uf}` : ""}`;
+  const quem = cargoNome(p.casa, p.municipio, p.uf).toLowerCase();
   const [de, ate] = [Math.min(...p.anos), Math.max(...p.anos)];
   const periodo = !p.anos.length ? "" : de === ate ? `, ${de}` : `, de ${de} a ${ate}`;
-  const oque = p.casa === "cmc" ? "Diárias conferidas" : "Despesas conferidas";
+  const oque = tipoDaCasa(p.casa) === "municipal" ? "Diárias conferidas" : "Despesas conferidas";
   return metadadosDaPagina({
     title: p.nome,
     description: `${oque} de ${p.nome}, ${quem}${p.partido ? ` (${p.partido})` : ""}${periodo}, com a fonte de cada número e o que ficou em revisão.`,
@@ -37,7 +37,10 @@ function slug(s: string) {
 export default async function PaginaParlamentar({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const p = parlamentar(id);
-  const vereador = p.casa === "cmc";
+  const vereador = tipoDaCasa(p.casa) === "municipal";
+  const casa = casaDe(p.casa);
+  const agregado = p.granularidade === "agregado";
+  const unidade = vereador ? ["diária", "diárias"] : agregado ? ["linha agregada", "linhas agregadas"] : ["despesa", "despesas"];
   const noGrafo = vistaNoGrafo(p.id);
   const rot = categorias();
   const coleta = Object.values(p.p.coleta).sort().at(-1) ?? "";
@@ -62,13 +65,20 @@ export default async function PaginaParlamentar({ params }: { params: Promise<{ 
         <Link href="/parlamentares/" className="underline hover:text-tinta">
           Parlamentares
         </Link>{" "}
-        / {p.casa === "cmc" ? "Curitiba" : p.uf}
+        /{" "}
+        {casa && p.casa !== "camara-deputados" ? (
+          <Link href={`/casas/${p.casa}/`} className="underline hover:text-tinta">
+            {casa.nome}
+          </Link>
+        ) : (
+          (p.uf ?? casaNome(p.casa, p.municipio))
+        )}
       </p>
       <header className="mt-3 grid gap-6 border-b border-aco pb-8 md:grid-cols-[1fr_auto] md:items-end">
         <div>
           <h1 className="font-titulo text-[2.4rem] font-medium leading-[1.02] tracking-[-0.02em] sm:text-[3.2rem]">{p.nome}</h1>
           <p className="mt-2 text-tinta-2">
-            {cargoNome(p.casa)}
+            {cargoNome(p.casa, p.municipio, p.uf)}
             {p.casa === "camara-deputados" && p.uf ? ` · ${p.uf}` : ""}
             {p.partido ? (
               <>
@@ -77,8 +87,10 @@ export default async function PaginaParlamentar({ params }: { params: Promise<{ 
                   {p.partido}
                 </Link>
               </>
-            ) : (
+            ) : vereador || p.casa === "camara-deputados" ? (
               " · partido em revisão"
+            ) : (
+              " · a fonte não informa o partido"
             )}
             {p.nome_civil && p.nome_civil !== p.nome ? ` · nome civil: ${p.nome_civil}` : ""}
           </p>
@@ -99,11 +111,16 @@ export default async function PaginaParlamentar({ params }: { params: Promise<{ 
               </p>
               <Valor valor={p.total} p={proc} tamanho="grande" />
               <p className="num mt-1 text-sm text-tinta-3">
-                {contagem(p.linhas, vereador ? "diária" : "despesa", vereador ? "diárias" : "despesas")} · {p.fontes.map(nomeFonte).join(" · ")}
+                {contagem(p.linhas, unidade[0], unidade[1])} · {p.fontes.map(nomeFonte).join(" · ")}
               </p>
             </>
           ) : (
             <p className="font-titulo text-2xl text-tinta-3">{vereador ? "Nenhuma diária conferida" : "Nenhuma despesa conferida"}</p>
+          )}
+          {agregado && (
+            <p className="mt-2 max-w-[44ch] text-sm leading-relaxed text-tinta-3 md:ml-auto">
+              A fonte publica a despesa já somada por fornecedor, tipo e mês. Cada linha é uma soma feita pela fonte, não uma nota.
+            </p>
           )}
         </div>
         <ForaDaSoma p={p} />
@@ -132,20 +149,48 @@ export default async function PaginaParlamentar({ params }: { params: Promise<{ 
             </section>
           )}
           <SecaoEmRevisao p={p} />
+          {(p.subsidio?.length ?? 0) > 0 && (
+            <section aria-labelledby="subsidio">
+              <h2 id="subsidio" className="font-titulo text-lg font-medium">
+                Subsídio
+              </h2>
+              <p className="mt-1 text-sm text-tinta-3">
+                O que o cadastro de pessoal da Câmara diz que o vereador recebe, na data da coleta. Retrato de um dia, não a soma do ano.
+              </p>
+              <ul className="mt-3 space-y-3">
+                {p.subsidio!.map((s) => (
+                  <li key={`${s.fonte}-${s.competencia}`} className="border-t border-aco pt-3">
+                    <p className="text-sm text-tinta-2">
+                      {s.rotulo} · {data(s.data_referencia)}
+                    </p>
+                    <Valor
+                      valor={s.valor}
+                      tamanho="medio"
+                      p={{ fontes: [s.fonte], coleta: s.k, documento: s.src, local: s.loc, situacao: "conferido", nota: `${s.cargo ?? "vereador"} no cadastro de pessoal em ${data(s.data_referencia)}` }}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           {p.gabinete.length > 0 && (
             <section aria-labelledby="gabinete">
               <h2 id="gabinete" className="font-titulo text-lg font-medium">
                 Custo do gabinete
               </h2>
               <p className="mt-1 text-sm text-tinta-3">
-                Soma do que recebe quem está lotado no gabinete, sem o nome de ninguém. Os dois sistemas da Câmara medem coisas
-                diferentes, por isso aparecem os dois, cada um com o seu rótulo.
+                Soma do que recebe quem está lotado no gabinete, sem o nome de ninguém.
+                {p.gabinete.length > 1
+                  ? " Os dois sistemas da Câmara medem coisas diferentes, por isso aparecem os dois, cada um com o seu rótulo."
+                  : p.gabinete[0]?.nota
+                    ? ` ${p.gabinete[0].nota.charAt(0).toUpperCase()}${p.gabinete[0].nota.slice(1)}.`
+                    : ""}
               </p>
               <ul className="mt-3 space-y-3">
                 {p.gabinete.map((g) => (
                   <li key={g.fonte} className="border-t border-aco pt-3">
                     <p className="text-sm text-tinta-2">
-                      {g.rotulo} ({nomeFonte(g.fonte).split(" — ")[1]}) · {mes(g.competencia)}
+                      {g.rotulo} ({nomeFonte(g.fonte).split(" — ")[1] ?? nomeFonte(g.fonte)}) · {mes(g.competencia)}
                     </p>
                     <Valor
                       valor={g.custo}
@@ -175,7 +220,13 @@ export default async function PaginaParlamentar({ params }: { params: Promise<{ 
                 ))}
               </ul>
             ) : (
-              <p className="mt-2 text-sm text-tinta-3">Partido em revisão: o nome não fechou com o cadastro do TSE.</p>
+              <p className="mt-2 text-sm text-tinta-3">
+                {vereador
+                  ? "Partido em revisão: o nome não fechou com o cadastro do TSE."
+                  : p.casa === "camara-deputados"
+                    ? "Partido em revisão."
+                    : "A fonte desta casa não informa o partido do deputado."}
+              </p>
             )}
           </section>
           {p.top_fornecedores.length > 0 && (
@@ -187,7 +238,9 @@ export default async function PaginaParlamentar({ params }: { params: Promise<{ 
                 {p.top_fornecedores.map((f) => (
                   <li key={f.doc} className="flex justify-between gap-3 border-t border-aco pt-1.5">
                     <span className="text-tinta-2">{f.nome ?? f.doc}</span>
-                    <span className="num shrink-0 text-tinta-3">{f.linhas} notas</span>
+                    <span className="num shrink-0 text-tinta-3">
+                      {f.linhas} {agregado ? (f.linhas === 1 ? "linha" : "linhas") : f.linhas === 1 ? "nota" : "notas"}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -197,7 +250,7 @@ export default async function PaginaParlamentar({ params }: { params: Promise<{ 
 
         <section aria-labelledby="despesas" className="min-w-0 lg:col-start-1 lg:row-start-1">
           <h2 id="despesas" className="font-titulo text-2xl font-medium">
-            Despesas, uma a uma
+            {agregado ? "Despesas, como a fonte publica" : "Despesas, uma a uma"}
           </h2>
           <p className="mt-1 max-w-[70ch] text-sm text-tinta-3">
             Clique num valor para ver a ficha: fonte, data da coleta e o documento oficial. Linhas que a conferência mandou

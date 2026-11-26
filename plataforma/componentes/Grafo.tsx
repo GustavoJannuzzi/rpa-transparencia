@@ -451,7 +451,9 @@ export default function Grafo({ regras }: { regras: Record<Vista, { regra: strin
         return true;
       }
       const naOutra: Vista | null =
-        vista === "brasil" ? (item.casa === "cmc" || item.uf === "PR" ? "parana" : null) : item.casa === "camara-deputados" ? "brasil" : null;
+        vista === "brasil"
+          ? item.casa !== "camara-deputados" && !item.casa.startsWith("al-") ? "parana" : item.uf === "PR" ? "parana" : null
+          : item.casa === "camara-deputados" || item.casa.startsWith("al-") ? "brasil" : null;
       if (naOutra) {
         focarFicha.current = true;
         pendente.current = item.id;
@@ -642,7 +644,7 @@ export default function Grafo({ regras }: { regras: Record<Vista, { regra: strin
                   <p className="text-sm text-manilha-tinta-2">
                     {noSel.tipo === "partido"
                       ? "Partido"
-                      : `${noSel.partido ?? "sem partido"} · ${noSel.tipo === "vereador" ? "vereador(a) de Curitiba" : `deputado(a) · ${noSel.uf ?? "PR"}`}`}
+                      : `${noSel.partido ?? "sem partido"} · ${noSel.tipo === "vereador" ? `vereador(a) de ${noSel.municipio ?? "Curitiba"}` : noSel.casa ? `deputado(a) ${noSel.casa === "al-df" ? "distrital" : "estadual"} · ${noSel.uf}` : `deputado(a) · ${noSel.uf ?? "PR"}`}`}
                   </p>
                 </div>
                 <button
@@ -772,7 +774,7 @@ function Lista({ dados, escolher, vista }: { dados: DadosGrafo; escolher: (id: s
                 </Link>
               </td>
               <td className="px-4 py-1.5 text-tinta-2">{n.partido ?? "—"}</td>
-              <td className="px-4 py-1.5 text-tinta-2">{vista === "brasil" ? n.uf : n.tipo === "vereador" ? "Curitiba" : "Câmara dos Deputados"}</td>
+              <td className="px-4 py-1.5 text-tinta-2">{vista === "brasil" ? (n.casa ? `${n.uf} (${n.casa === "al-df" ? "distrital" : "estadual"})` : n.uf) : n.tipo === "vereador" ? (n.municipio ?? "Curitiba") : "Câmara dos Deputados"}</td>
               <td className="px-4 py-1.5">
                 {fora(n) ? (
                   <span className="text-tinta-3">sem fornecedor em comum acima do corte</span>

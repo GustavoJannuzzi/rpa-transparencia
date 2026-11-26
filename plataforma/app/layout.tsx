@@ -12,7 +12,7 @@ const archivo = Archivo({ subsets: ["latin"], weight: ["400", "500", "600"], var
 const franklin = Libre_Franklin({ subsets: ["latin"], weight: ["400", "500"], variable: "--fonte-franklin", display: "swap" });
 
 const DESCRICAO =
-  "Plataforma independente que junta despesas de deputados federais e vereadores de Curitiba vindas de sistemas diferentes, com a procedência de cada número.";
+  "Plataforma independente que junta despesas de deputados federais, deputados estaduais e vereadores vindas de muitos sistemas diferentes, com a procedência de cada número.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
@@ -62,7 +62,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <footer className="border-t border-aco">
           <div className="mx-auto flex max-w-[1600px] flex-col gap-2 px-4 py-6 text-sm text-tinta-3 sm:flex-row sm:justify-between sm:px-8">
             <p>
-              Plataforma independente, sem vínculo com a Câmara dos Deputados, a Câmara de Curitiba ou a Prefeitura. Dados
+              Plataforma independente, sem vínculo com nenhuma das casas legislativas, prefeituras ou tribunais citados. Dados
               públicos coletados em <span className="num">{data(coleta)}</span>.
             </p>
             <p>

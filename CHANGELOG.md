@@ -7,6 +7,15 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ### Adicionado
 
+- **Muitas casas** ([#9](https://github.com/GustavoJannuzzi/rpa-transparencia/pull/9) e o PR seguinte): um
+  adaptador por fornecedor, configurado por entidade em `coleta/entidades.toml`. O
+  Elotech passa a servir qualquer câmara (mais 12 do PR, 2023–2026, com o subsídio do
+  vereador); entram as assembleias do DF (CSV e planilha), de MG (API) e de SP (JSON
+  agregado por fornecedor × tipo × mês, marcado como agregado). A pausa de cada
+  portal vem do Crawl-delay do robots.txt. Na plataforma: página de cada casa,
+  parlamentar de qualquer casa, busca atravessando as casas e a página Cobertura, com
+  o mapa do PR por município, o do Brasil por UF e a tabela de todas as casas, com o
+  motivo de cada uma que ficou de fora.
 - **CI no GitHub Actions** a cada push: ruff, mypy e pytest no Python; build do
   export estático, `tsc --noEmit` e o teste de procedência na plataforma; axe-core
   (Playwright) em 13 telas, no desktop e no celular; prints de referência com

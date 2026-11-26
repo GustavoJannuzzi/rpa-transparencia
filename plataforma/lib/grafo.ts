@@ -5,7 +5,21 @@ import { ABA_DEMAIS, paletaPartidos } from "./cores";
 export type Vista = "brasil" | "parana";
 export const VISTAS: Vista[] = ["brasil", "parana"];
 
-export type No = { id: string; rotulo: string; partido: string | null; uf?: string; grau?: number; tipo?: string; total?: string; x: number; y: number };
+export type No = {
+  id: string;
+  rotulo: string;
+  partido: string | null;
+  uf?: string;
+  grau?: number;
+  tipo?: string;
+  total?: string;
+  /** só deputado estadual (vista Brasil): a casa, "al-<uf>" */
+  casa?: string;
+  /** só vereador (vista Paraná): o município da câmara */
+  municipio?: string;
+  x: number;
+  y: number;
+};
 export type Aresta = { a: string; b: string; peso?: number; atual?: boolean; periodo?: string; base?: string; f?: number[] };
 export type DadosGrafo = { nos: No[]; arestas: Aresta[]; partidos: string[]; regra: string; regra_tecnica?: string; fornecedores_em?: string };
 
