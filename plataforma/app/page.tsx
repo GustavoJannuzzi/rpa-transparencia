@@ -1,11 +1,25 @@
 import GavetaColeta from "@/componentes/GavetaColeta";
 import Grafo from "@/componentes/Grafo";
-import { fontes } from "@/lib/dados";
+import { fontes, grafo } from "@/lib/dados";
+import { TELA_ESTREITA } from "@/lib/telas";
 
 export default function Inicio() {
   const f = fontes();
+  // a regra de cada vista vai no HTML: o texto sob o quadro não chega depois e não muda o tamanho dele
+  const regras = {
+    brasil: { regra: grafo("brasil").regra, tecnica: grafo("brasil").regra_tecnica },
+    parana: { regra: grafo("parana").regra, tecnica: grafo("parana").regra_tecnica },
+  };
   return (
     <div className="mx-auto grid max-w-[1600px] lg:min-h-[calc(100dvh-4rem)] lg:grid-cols-[1fr_440px]">
+      {/* os dados e o desenho do grafo são pedidos logo depois da primeira pintura, antes de o
+          JavaScript da página chegar: a vista da URL, ou o Paraná no celular e o Brasil no
+          computador. Depois da pintura, e não durante a leitura do HTML, para não atrasar o texto. */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `(function(){try{var q=new URLSearchParams(location.search).get("vista");var v=q==="brasil"||q==="parana"?q:matchMedia(${JSON.stringify(TELA_ESTREITA)}).matches?"parana":"brasil";var g={vista:v,dados:null,desenho:null,pedir:function(){if(!g.dados){g.dados=fetch("/dados/grafo-"+v+".json").then(function(r){if(!r.ok)throw new Error(r.status);return r.json()});g.dados.catch(function(){})}return g.dados},pedirDesenho:function(){if(!g.desenho){g.desenho=fetch("/grafo/"+v+".svg").then(function(r){return r.ok?r.text():""});g.desenho.catch(function(){})}return g.desenho}};window.__grafoInicial=g;requestAnimationFrame(function(){requestAnimationFrame(function(){g.pedir();g.pedirDesenho().then(function(t){var d=document.getElementById("grafo-desenho");if(t&&d&&!d.firstChild)d.innerHTML=t})})})}catch(e){}})()`,
+        }}
+      />
       <section aria-labelledby="titulo" className="flex flex-col border-aco lg:border-r">
         <div className="px-4 pt-6 sm:px-8">
           <h1 id="titulo" className="max-w-[24ch] font-titulo text-[2.1rem] font-medium leading-[1.04] tracking-[-0.02em] sm:text-[2.6rem]">
@@ -17,7 +31,7 @@ export default function Inicio() {
           </p>
         </div>
         <div className="flex-1">
-          <Grafo />
+          <Grafo regras={regras} />
         </div>
       </section>
       <aside className="border-t border-aco lg:border-t-0">

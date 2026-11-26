@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { normalizar, type DadosGrafo, type Vista } from "./grafo";
 import type { Fontes, ItemIndice, ItemPartido, Parlamentar, Partido, Revisao } from "./tipos";
 
 const PASTA = path.join(process.cwd(), "public", "dados");
@@ -15,6 +16,20 @@ export const parlamentar = (id: string) => ler<Parlamentar>(path.join("parlament
 export const fontes = () => ler<Fontes>("fontes.json");
 export const revisao = () => ler<Revisao>("revisao.json");
 export const categorias = () => ler<Record<string, string>>("categorias.json");
+
+const grafos = new Map<Vista, DadosGrafo>();
+/** O grafo de uma vista, lido uma vez por build. */
+export function grafo(vista: Vista): DadosGrafo {
+  if (!grafos.has(vista)) grafos.set(vista, normalizar(ler(`grafo-${vista}.json`)));
+  return grafos.get(vista)!;
+}
+
+/** Em que vista do grafo cada parlamentar aparece (para o link "ver no grafo"). */
+export function vistaNoGrafo(id: string): Vista | null {
+  if (grafo("brasil").nos.some((n) => n.id === id && n.grau)) return "brasil";
+  if (grafo("parana").nos.some((n) => n.id === id)) return "parana";
+  return null;
+}
 
 /** A data da coleta mais recente entre as fontes (não a data em que os JSON foram gerados). */
 export function dataDaColeta(): string {

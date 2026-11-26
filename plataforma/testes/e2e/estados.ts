@@ -35,7 +35,28 @@ export const ESTADOS: Estado[] = [
     soAxe: true,
     preparar: async (page) => {
       await grafoPronto(page);
-      await page.getByRole("combobox").fill("car");
+      // a inicial tem duas buscas (a do topo e a de dentro do grafo): esta é a do topo
+      await page.getByRole("combobox", { name: "Buscar deputado ou vereador" }).fill("car");
+      await expect(page.getByRole("option").first()).toBeVisible();
+    },
+  },
+  {
+    // o estado vem da URL: vista, ponto escolhido e a ficha dele aberta
+    nome: "inicio-ponto-no-grafo",
+    rota: "/?vista=brasil&no=dep-220704",
+    soAxe: true,
+    preparar: async (page) => {
+      await grafoPronto(page);
+      await expect(page.getByRole("heading", { name: "Carol Dartora" })).toBeVisible();
+    },
+  },
+  {
+    nome: "inicio-busca-do-grafo",
+    rota: "/",
+    soAxe: true,
+    preparar: async (page) => {
+      await grafoPronto(page);
+      await page.getByRole("combobox", { name: "Achar alguém no grafo" }).fill("dartora");
       await expect(page.getByRole("option").first()).toBeVisible();
     },
   },
@@ -64,4 +85,7 @@ export async function abrir(page: Page, estado: Estado) {
   expect(resposta?.status(), `status de ${estado.rota}`).toBe(estado.nome === "pagina-nao-encontrada" ? 404 : 200);
   await page.evaluate(() => document.fonts.ready);
   if (estado.preparar) await estado.preparar(page);
+  // o axe e o print medem a tela parada: espera as animações de entrada (a ficha que
+  // sobe, o carimbo que bate), senão o axe pega a cor no meio do fade e acusa contraste
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== "running"), null, { timeout: 5_000 });
 }

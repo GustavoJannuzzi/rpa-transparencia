@@ -4,9 +4,9 @@ import Barras, { type ItemBarra } from "@/componentes/Barras";
 import { ForaDaSoma, SecaoEmRevisao } from "@/componentes/EmRevisao";
 import TabelaDespesas from "@/componentes/TabelaDespesas";
 import Valor from "@/componentes/Valor";
-import { categorias, indice, parlamentar } from "@/lib/dados";
+import { categorias, indice, parlamentar, vistaNoGrafo } from "@/lib/dados";
 import { nomeFonte } from "@/lib/fontes";
-import { anosTexto, cargoNome, contagem, data, mes } from "@/lib/formato";
+import { cargoNome, contagem, data, mes } from "@/lib/formato";
 import { metadadosDaPagina } from "@/lib/site";
 import type { Procedencia } from "@/lib/tipos";
 
@@ -20,7 +20,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const p = parlamentar(id);
   const quem = p.casa === "cmc" ? "vereador(a) de Curitiba" : `deputado(a) federal${p.uf ? ` pelo ${p.uf}` : ""}`;
-  const periodo = p.anos.length ? `, ${anosTexto([Math.min(...p.anos), Math.max(...p.anos)])}` : "";
+  const [de, ate] = [Math.min(...p.anos), Math.max(...p.anos)];
+  const periodo = !p.anos.length ? "" : de === ate ? `, ${de}` : `, de ${de} a ${ate}`;
   const oque = p.casa === "cmc" ? "Diárias conferidas" : "Despesas conferidas";
   return metadadosDaPagina({
     title: p.nome,
@@ -37,6 +38,7 @@ export default async function PaginaParlamentar({ params }: { params: Promise<{ 
   const { id } = await params;
   const p = parlamentar(id);
   const vereador = p.casa === "cmc";
+  const noGrafo = vistaNoGrafo(p.id);
   const rot = categorias();
   const coleta = Object.values(p.p.coleta).sort().at(-1) ?? "";
   const proc: Procedencia = { fontes: p.fontes, coleta, situacao: "soma", linhas: p.linhas };
@@ -80,6 +82,13 @@ export default async function PaginaParlamentar({ params }: { params: Promise<{ 
             )}
             {p.nome_civil && p.nome_civil !== p.nome ? ` · nome civil: ${p.nome_civil}` : ""}
           </p>
+          {noGrafo && (
+            <p className="mt-2 text-sm">
+              <Link href={`/?vista=${noGrafo}&no=${p.id}`} className="text-carimbo-claro underline">
+                Ver {p.nome} no grafo
+              </Link>
+            </p>
+          )}
         </div>
         <div className="md:text-right">
           {p.linhas > 0 ? (

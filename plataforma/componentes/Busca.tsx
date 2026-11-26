@@ -32,7 +32,7 @@ export function buscar(itens: ItemIndice[], termo: string, limite = 8): ItemIndi
 
 type Props = {
   /** Se devolver true, a escolha foi tratada (por exemplo, mostrar no grafo) e a busca não navega. */
-  aoEscolher?: (id: string) => boolean;
+  aoEscolher?: (item: ItemIndice) => boolean;
   rotulo?: string;
   placeholder?: string;
   className?: string;
@@ -69,11 +69,11 @@ export default function Busca({ aoEscolher, rotulo = "Buscar deputado ou vereado
     return () => document.removeEventListener("pointerdown", fora);
   }, []);
 
-  const ir = (id: string) => {
+  const ir = (item: ItemIndice) => {
     setAberta(false);
     setQ("");
-    if (aoEscolher && aoEscolher(id)) return;
-    router.push(`/parlamentares/${id}/`);
+    if (aoEscolher && aoEscolher(item)) return;
+    router.push(`/parlamentares/${item.id}/`);
   };
 
   return (
@@ -110,9 +110,13 @@ export default function Busca({ aoEscolher, rotulo = "Buscar deputado ou vereado
           }
           if (e.key === "Enter" && mostrar && achados[ativo]) {
             e.preventDefault();
-            ir(achados[ativo].id);
+            ir(achados[ativo]);
           }
-          if (e.key === "Escape") setAberta(false);
+          if (e.key === "Escape" && mostrar) {
+            // fecha só a lista (a ficha do ponto, se houver, fica aberta)
+            e.preventDefault();
+            setAberta(false);
+          }
           if (e.key === "Tab") setAberta(false);
         }}
         role="combobox"
@@ -149,7 +153,7 @@ export default function Busca({ aoEscolher, rotulo = "Buscar deputado ou vereado
               onPointerEnter={() => setAtivo(n)}
               // o foco fica no campo: o clique escolhe sem tirar o foco dele
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => ir(i.id)}
+              onClick={() => ir(i)}
               className={`flex cursor-pointer items-baseline justify-between gap-3 px-3.5 py-2.5 ${n === ativo ? "bg-gaveta-3" : ""}`}
             >
               <span className="min-w-0 text-[0.95rem]">{i.nome}</span>

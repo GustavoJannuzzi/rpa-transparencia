@@ -267,7 +267,10 @@ def publicar(con: sqlite3.Connection) -> list[str]:
     tamanho += _escrever(destino / "categorias.json", cats_rotulo)
 
     # ---------- grafos ----------
-    tamanho += _escrever(destino / "grafo-brasil.json", _grafo_brasil(parl, fornecedores_dep, nomes_forn, coleta))
+    grafo_brasil, fornecedores_grafo = _grafo_brasil(parl, fornecedores_dep, nomes_forn, coleta)
+    tamanho += _escrever(destino / "grafo-brasil.json", grafo_brasil)
+    # os nomes dos fornecedores vão à parte: o grafo abre sem eles, e a ficha do ponto os busca depois
+    tamanho += _escrever(destino / "grafo-brasil-fornecedores.json", fornecedores_grafo)
     tamanho += _escrever(destino / "grafo-parana.json", _grafo_parana(parl, filiacoes, indice))
 
     # ---------- fontes, cobertura, conferência e revisão ----------
@@ -378,7 +381,10 @@ def _cor_indice(siglas: list[str]) -> dict[str, int]:
     return {s: i for i, s in enumerate(sorted(siglas))}
 
 
-def _grafo_brasil(parl, fornecedores_dep, nomes_forn, coleta) -> dict:
+def _grafo_brasil(parl, fornecedores_dep, nomes_forn, coleta) -> tuple[dict, dict]:
+    """O grafo Brasil, compacto para abrir rápido no celular: cada ligação é
+    [índice do nó a, índice do nó b, peso, [índices dos fornecedores]], e a tabela de
+    fornecedores (CNPJ e nome) vai num arquivo à parte."""
     deps = [pid for pid in parl if pid.startswith("dep-") and fornecedores_dep.get(pid)]
     n = len(deps)
     df: Counter[str] = Counter()
@@ -417,10 +423,18 @@ def _grafo_brasil(parl, fornecedores_dep, nomes_forn, coleta) -> dict:
     for no in nos:
         no["x"], no["y"] = pos[no["id"]]
     siglas = sorted({no["partido"] for no in nos if no["partido"]})
+    indice_no = {no["id"]: i for i, no in enumerate(nos)}
+    indice_forn: dict[str, int] = {}
+    saida = []
+    for (a, b), w in sorted(arestas.items()):
+        fs = [indice_forn.setdefault(d, len(indice_forn)) for d in exemplo[(a, b)]]
+        saida.append([indice_no[a], indice_no[b], round(w, 3), fs])
+    fornecedores = {"colunas": ["cnpj", "nome"], "fornecedores": [[d, nomes_forn.get(d)] for d in indice_forn]}
     return {
         "nos": nos,
-        "arestas": [{"a": a, "b": b, "peso": round(w, 3), "fornecedores": [{"doc": d, "nome": nomes_forn.get(d)} for d in exemplo[(a, b)]]}
-                    for (a, b), w in sorted(arestas.items())],
+        "colunas_arestas": ["a", "b", "peso", "fornecedores"],
+        "arestas": saida,
+        "fornecedores_em": "grafo-brasil-fornecedores.json",
         "partidos": siglas,
         "regra": (f"Dois deputados ficam ligados quando pagaram as mesmas empresas. Empresas que quase todo mundo usa (mais de "
                   f"{teto} deputados) não contam, e fornecedor pessoa física não entra. Cada deputado mostra até 5 ligações, "
@@ -429,7 +443,7 @@ def _grafo_brasil(parl, fornecedores_dep, nomes_forn, coleta) -> dict:
                           f"número de deputados que o usaram e N = {n}; fornecedores usados por mais de {teto} deputados (8%) não ligam "
                           "ninguém."),
         "p": {"fonte": "camara_deputados", "coleta": (coleta.get("camara_deputados") or "")[:10]},
-    }
+    }, fornecedores
 
 
 def _layout_parana(nos: list[dict], arestas: list[dict]) -> dict[str, tuple[float, float]]:
