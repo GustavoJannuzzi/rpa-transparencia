@@ -15,7 +15,6 @@ import csv
 import io
 import json
 import re
-import shutil
 import sqlite3
 import zipfile
 from pathlib import Path
@@ -41,13 +40,15 @@ def legado(con) -> None:
     pasta = AMOSTRAS / "cmc_legado"
     pasta.mkdir(parents=True, exist_ok=True)
     for url, caminho in _orig(con, "cmc_legado", "%Diarias_%.pdf"):
-        ano = re.search(r"Diarias_(\d{4})", url).group(1)
+        achado = re.search(r"Diarias_(\d{4})", url)
+        assert achado, url
+        ano = achado.group(1)
         tarjas: dict[int, list] = {}
         with pdfplumber.open(caminho) as pdf:
             for ip, pagina in enumerate(pdf.pages):
                 mapa = None
                 for t in pagina.find_tables():
-                    for linha, texto in zip(t.rows, t.extract()):
+                    for linha, texto in zip(t.rows, t.extract(), strict=True):
                         normal = [_norm_cab(c) for c in texto]
                         if "BENEFICIARIO" in normal and "CARGO" in normal:
                             mapa = {CABECALHOS[c]: i for i, c in enumerate(normal) if c in CABECALHOS}
@@ -128,17 +129,17 @@ def elotech(con) -> None:
 
 
 def prefeitura(con) -> None:
-    from html.parser import HTMLParser
 
     pasta = AMOSTRAS / "cmc_prefeitura"
     pasta.mkdir(parents=True, exist_ok=True)
-    for url, cam in _orig(con, "cmc_prefeitura", "%#exercicio=2025&pagina=1"):
+    for _url, cam in _orig(con, "cmc_prefeitura", "%#exercicio=2025&pagina=1"):
         html = cam.read_text(encoding="utf-8")
         ini = html.index('<table class="grid"')
         fim = html.index("</table>", ini) + len("</table>")
         tabela = html[ini:fim]
         linhas = re.findall(r"<tr class=\"grid_(?:Row|AlternatingRow)\".*?</tr>", tabela, re.S)
-        nomes, mats = {}, {}
+        nomes: dict[str, str] = {}
+        mats: dict[str, str] = {}
         for tr in linhas:
             tds = [re.sub(r"<[^>]+>", "", t).strip() for t in re.findall(r"<td[^>]*>(.*?)</td>", tr, re.S)]
             if len(tds) > 4 and not eh_cargo_parlamentar(tds[4]):
@@ -157,13 +158,15 @@ def prefeitura(con) -> None:
 def betha(con) -> None:
     pasta = AMOSTRAS / "cmc_betha"
     pasta.mkdir(parents=True, exist_ok=True)
-    for url, cam in _orig(con, "cmc_betha", "%consulta/324825&pagina=1"):
+    for _url, cam in _orig(con, "cmc_betha", "%consulta/324825&pagina=1"):
         html = cam.read_text(encoding="utf-8")
         ini = html.index('<table data-v-')
         fim = html.index("</table>", ini) + len("</table>")
         tabela = html[ini:fim]
-        cont = re.search(r'<span[^>]*bth-powernumber__value[^>]*>\s*\d+\s*</span>', html).group(0)
-        nomes = {}
+        achado = re.search(r'<span[^>]*bth-powernumber__value[^>]*>\s*\d+\s*</span>', html)
+        assert achado, "contador do Betha"
+        cont = achado.group(0)
+        nomes: dict[str, str] = {}
         # cada célula traz antes do valor um rótulo escondido (versão de celular);
         # sem tirá-lo, o nome vem colado ao rótulo e nenhuma troca acontece
         corpo = re.sub(r'<span[^>]*class="titleTableColumn"[^>]*>.*?</span>', "", tabela[tabela.find("<tbody"):], flags=re.S)

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import csv
 import re
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 
 from ..nucleo.texto import normalizar_nome
@@ -26,12 +26,12 @@ def eh_cargo_parlamentar(cargo: str | None) -> bool:
     return bool(RE_CARGO_PARLAMENTAR.fullmatch(normalizar_nome(cargo)))
 
 
-@lru_cache(maxsize=None)
-def _tabela(nome: str) -> dict[str, dict[str, str]]:
+@cache
+def _tabela(nome: str) -> dict[tuple[str, str], dict[str, str]]:
     caminho = PASTA / nome
     with caminho.open(encoding="utf-8", newline="") as f:
         linhas = [l for l in csv.DictReader(f) if not (l.get("origem") or "").startswith("#")]
-    return {(l["fonte"], normalizar_nome(l["origem"])): l for l in linhas}  # type: ignore[misc]
+    return {(l["fonte"], normalizar_nome(l["origem"])): l for l in linhas}
 
 
 def cargo(fonte: str, original: str | None) -> str | None:

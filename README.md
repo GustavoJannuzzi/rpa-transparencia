@@ -1,5 +1,9 @@
 # rpa-transparencia
 
+[![CI](https://github.com/GustavoJannuzzi/rpa-transparencia/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/GustavoJannuzzi/rpa-transparencia/actions/workflows/ci.yml)
+[![Contrato com os portais](https://github.com/GustavoJannuzzi/rpa-transparencia/actions/workflows/contrato.yml/badge.svg?branch=main)](https://github.com/GustavoJannuzzi/rpa-transparencia/actions/workflows/contrato.yml)
+[![Licença: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
+
 A Câmara Municipal de Curitiba trocou de sistema três vezes. O histórico das diárias
 está em quatro lugares, de quatro fornecedores, e só um deles tem API: um portal
 antigo que só gera PDF, o Elotech, o portal da Prefeitura e o Betha.
@@ -13,6 +17,13 @@ anotada, e o que não fecha vai para uma fila de revisão em vez de ser chutado.
 Uma plataforma estática (Next.js) mostra o resultado num grafo: deputados ligados
 por fornecedor em comum e vereadores ligados aos seus partidos, com a ficha de
 procedência de cada valor a um clique.
+
+![O robô passando pelo portal legado da Câmara, pelo portal da Prefeitura e pelo Betha](docs/robo.gif)
+
+*O robô (Playwright) nos três sistemas que só se leem pelo navegador, gravado pela
+própria coleta (`coletar --gravar-video`, 26/11/2026), em trechos escolhidos. As
+tabelas que listam servidores aparecem borradas, e a página da Prefeitura está
+recortada acima da grade: nome de servidor não é publicado, nem em imagem.*
 
 ## O que cada fonte exigiu
 
@@ -132,6 +143,30 @@ valor em reais nas páginas tem procedência.
 - **Contrato:** um teste por fonte contra o portal de verdade, separado dos outros,
   avisa quando o layout mudou: `python -m pytest -m contrato`.
 
+## Integração contínua
+
+Cada push roda, no GitHub Actions, o ruff, o mypy e o pytest; o build da plataforma,
+o `tsc` e o teste de procedência; o axe-core em 13 telas do site exportado, no
+desktop e no celular; a comparação com os prints de referência; e o Lighthouse CI
+com orçamento. Toda segunda-feira, o **contrato** roda contra os portais reais: se
+um deles mudar, o workflow abre uma issue sozinho. O que cada job confere, as
+exceções conhecidas do axe e como atualizar os prints estão em
+[`docs/ci.md`](docs/ci.md).
+
+```bash
+.venv/Scripts/python -m pip install -r requirements-dev.txt
+.venv/Scripts/python -m ruff check .
+.venv/Scripts/python -m mypy
+```
+
+```bash
+cd plataforma
+npm run build
+npx playwright install chromium
+npx playwright test            # axe; os prints só rodam no Linux do CI
+npx lhci autorun               # relatório em testes/lighthouse/
+```
+
 ## Como está organizado
 
 ```
@@ -175,3 +210,9 @@ o núcleo não muda.
   contra o outro). Nenhuma fonte publica a folha mês a mês por gabinete para anos
   passados; a série cresce a cada coleta.
 - Os JSON publicados somam ~49 MB, quase tudo despesa federal linha a linha.
+
+## Licença
+
+O código está sob a [licença MIT](LICENSE). Os dados são públicos e vêm das fontes
+citadas acima (Câmara Municipal de Curitiba, Prefeitura de Curitiba, Câmara dos
+Deputados e TSE); a licença do código não se aplica a eles.

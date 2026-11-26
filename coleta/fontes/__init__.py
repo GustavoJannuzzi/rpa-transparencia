@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from .base import Fonte
 from .camara_deputados.fonte import CamaraDeputados
-from .tse.fonte import Tse
 from .cmc_betha.fonte import CmcBetha
 from .cmc_elotech.fonte import CmcElotechAPI
 from .cmc_legado.fonte import CmcLegado
 from .cmc_prefeitura.fonte import CmcPrefeitura
+from .tse.fonte import Tse
 
 FONTES: list[type[Fonte]] = [
     CamaraDeputados,
