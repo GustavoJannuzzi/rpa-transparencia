@@ -1,0 +1,162 @@
+# CI: roda a cada push (em qualquer branch) e em PR vindo de fork.
+# PR de branch deste repositório já é coberto pelo push da própria branch.
+#
+#   python       ruff, mypy e pytest (sem os testes de contrato, que vão à internet)
+#   plataforma   build do export estático, tsc e o teste de procedência
+#   navegador    axe-core e prints de referência (Playwright) no site exportado
+#   lighthouse   orçamento de desempenho, acessibilidade, boas práticas e SEO
+#
+# Nenhum segredo: o GITHUB_TOKEN só lê o repositório.
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_COLOR: "1"
+
+jobs:
+  python:
+    name: Python (ruff, mypy, pytest)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - name: Dependências
+        run: python -m pip install -r requirements-dev.txt
+      - name: Chromium do Playwright (os testes de resiliência servem o portal legado no navegador)
+        run: python -m playwright install --with-deps chromium
+      - name: ruff
+        run: python -m ruff check --output-format=github .
+      - name: mypy
+        run: python -m mypy
+      - name: pytest
+        run: python -m pytest -ra
+
+  plataforma:
+    name: Plataforma (build, tsc, procedência)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: plataforma
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: plataforma/package-lock.json
+      - run: npm ci
+      - name: Cache do build do Next
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: plataforma/.next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('plataforma/package-lock.json') }}-${{ hashFiles('plataforma/app/**', 'plataforma/componentes/**', 'plataforma/lib/**') }}
+          restore-keys: next-${{ runner.os }}-${{ hashFiles('plataforma/package-lock.json') }}-
+      - name: Build (export estático em out/)
+        run: npm run build
+      - name: tsc --noEmit
+        run: npx tsc --noEmit
+      - name: Procedência (todo R$ tem fonte e data de coleta)
+        run: npm test
+      - name: Guarda o site para os jobs de navegador
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: site
+          path: plataforma/out
+          retention-days: 3
+          if-no-files-found: error
+
+  navegador:
+    name: Navegador (axe e prints)
+    needs: plataforma
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: plataforma
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: plataforma/package-lock.json
+      - run: npm ci
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: site
+          path: plataforma/out
+      - name: Chromium do Playwright
+        run: npx playwright install --with-deps chromium
+      - name: axe e prints de referência
+        run: npx playwright test
+      - name: Relatório do Playwright (diferenças de print, rastros)
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright
+          path: |
+            plataforma/testes/relatorio-playwright
+            plataforma/testes/resultados
+          retention-days: 14
+          if-no-files-found: ignore
+
+  lighthouse:
+    name: Lighthouse (orçamento)
+    needs: plataforma
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: plataforma
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: plataforma/package-lock.json
+      - run: npm ci
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: site
+          path: plataforma/out
+      - name: lhci autorun (relatório em arquivo, nunca em link público)
+        run: npx lhci autorun
+      - name: Notas medidas
+        if: ${{ !cancelled() }}
+        run: node testes/resumo-lighthouse.mjs >> "$GITHUB_STEP_SUMMARY"
+      - name: Relatórios do Lighthouse
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lighthouse
+          path: plataforma/testes/lighthouse
+          retention-days: 14
+          if-no-files-found: ignore
