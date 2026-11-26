@@ -1,10 +1,15 @@
 import GavetaColeta from "@/componentes/GavetaColeta";
 import Grafo from "@/componentes/Grafo";
-import { fontes } from "@/lib/dados";
+import { fontes, grafo } from "@/lib/dados";
 import { TELA_ESTREITA } from "@/lib/telas";
 
 export default function Inicio() {
   const f = fontes();
+  // a regra de cada vista vai no HTML: o texto sob o quadro não chega depois e não muda o tamanho dele
+  const regras = {
+    brasil: { regra: grafo("brasil").regra, tecnica: grafo("brasil").regra_tecnica },
+    parana: { regra: grafo("parana").regra, tecnica: grafo("parana").regra_tecnica },
+  };
   return (
     <div className="mx-auto grid max-w-[1600px] lg:min-h-[calc(100dvh-4rem)] lg:grid-cols-[1fr_440px]">
       {/* os dados do grafo saem junto com a página, antes do JavaScript dela: a vista da URL,
@@ -25,7 +30,7 @@ export default function Inicio() {
           </p>
         </div>
         <div className="flex-1">
-          <Grafo />
+          <Grafo regras={regras} />
         </div>
       </section>
       <aside className="border-t border-aco lg:border-t-0">
