@@ -148,7 +148,10 @@ class CamaraDeputados(Fonte):
                         continue
                     total_linhas += 1
                     d = ler_linha_ceap(l, ano, item.chave, self.id, self.procedencia(url, h, f"{nome}, linha {i}"), ocorr)
-                    (res.despesas if isinstance(d, Despesa) else res.pendencias).append(d)
+                    if isinstance(d, Despesa):
+                        res.despesas.append(d)
+                    else:
+                        res.pendencias.append(d)
         proc = self.procedencia(url, h, nome)
         res.totais.append(TotalOficial(fonte=self.id, escopo=f"ceap-{ano}", metrica="linhas_no_arquivo", valor=str(total_linhas),
                                        texto_original=f"linhas da legislatura {LEGISLATURA} em {nome}", procedencia=proc))

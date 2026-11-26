@@ -1,0 +1,5 @@
+# Ferramentas de qualidade (CI e máquina de quem desenvolve); o robô não precisa delas.
+-r requirements.txt
+ruff==0.17.6
+mypy==2.4.1
+types-networkx==3.6.1.20261126

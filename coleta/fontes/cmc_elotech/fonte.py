@@ -14,13 +14,12 @@ from datetime import date
 from decimal import Decimal
 
 from ... import config
-from ...modelo import (Descoberta, Despesa, GabineteRetrato, ItemInventario, Pendencia, PessoaFonte, Resultado,
-                       SistemaOrigem, TotalOficial)
+from ...de_para import eh_cargo_parlamentar
+from ...modelo import Descoberta, Despesa, GabineteRetrato, ItemInventario, Pendencia, PessoaFonte, Resultado, SistemaOrigem, TotalOficial
 from ...nucleo.banco import agora
 from ...nucleo.erros import PortalMudou
-from ...de_para import eh_cargo_parlamentar
-from ..base import Fonte
 from ...nucleo.texto import ValorIlegivel, apelido_entre_parenteses, chave_hash, decimal_ponto, normalizar_nome
+from ..base import Fonte
 
 API = "https://cmcuritiba.eloweb.net/portaltransparencia-api"
 TELA = "https://cmcuritiba.eloweb.net/portaltransparencia/1"

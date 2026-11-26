@@ -11,7 +11,7 @@ import numpy as np
 
 def layout(nos: list[str], arestas: list[tuple[str, str, float]], iteracoes: int = 400, espalhar: float = 4.0,
            gravidade: float = 1.5) -> dict[str, tuple[float, float]]:
-    g = nx.Graph()
+    g: nx.Graph[str] = nx.Graph()
     g.add_nodes_from(sorted(nos))
     for a, b, w in sorted(arestas):
         g.add_edge(a, b, weight=float(w))

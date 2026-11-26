@@ -138,7 +138,6 @@ def _transporte_elotech(falhas: list[str]):
 
 
 async def _coletar_elotech(falhas: list[str]):
-    from coleta.modelo import ItemInventario
     con = conectar()
     f = CmcElotechAPI()
     await f.abrir(Contexto(con=con, transporte_http=_transporte_elotech(falhas)))

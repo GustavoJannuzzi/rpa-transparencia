@@ -7,7 +7,7 @@ import io
 import json
 import re
 import zipfile
-from collections import defaultdict
+from collections.abc import Iterable
 from datetime import date
 from decimal import Decimal
 
@@ -20,12 +20,20 @@ from coleta.fontes.cmc_elotech.fonte import CmcElotechAPI
 from coleta.fontes.cmc_legado.parser import ler_pdf, ler_periodo, verificar_consistencia
 from coleta.fontes.cmc_prefeitura.fonte import CmcPrefeitura, ler_grade
 from coleta.fontes.tse.fonte import ler_candidaturas
-from coleta.modelo import Despesa, ItemInventario, Pendencia, Procedencia, Resultado
+from coleta.modelo import Despesa, ItemInventario, Procedencia, Resultado
 from coleta.nucleo.erros import PortalMudou
-from coleta.nucleo.texto import (ValorIlegivel, cpfs_expostos, decimal_ponto, dinheiro_br, documento_fornecedor,
-                                 mascarar_cpf, normalizar_nome)
+from coleta.nucleo.texto import ValorIlegivel, cpfs_expostos, decimal_ponto, dinheiro_br, documento_fornecedor, mascarar_cpf, normalizar_nome
 
 from .conftest import AMOSTRAS
+
+
+def _soma(valores: Iterable[Decimal | None]) -> Decimal:
+    """Soma de valores que não podem faltar: um None quebra o teste, como quebraria a soma."""
+    total = Decimal(0)
+    for v in valores:
+        assert v is not None
+        total += v
+    return total
 
 PROC = Procedencia(fonte="t", url="u", hash_original="h", coletado_em="2026-11-25")
 
@@ -146,7 +154,7 @@ def test_pdf_do_legado(ano):
 def test_totais_do_pdf_2015_fecham_nas_tres_colunas():
     rel = ler_pdf((AMOSTRAS / "cmc_legado" / "Diarias_2015.pdf").read_bytes(), 2015)
     anual = next(t for t in rel.totais if t.escopo == "2015")
-    assert anual.diarias == sum(l.valor_total for l in rel.linhas) == Decimal("27750.00")
+    assert anual.diarias == _soma(l.valor_total for l in rel.linhas) == Decimal("27750.00")
     assert anual.hospedagem == sum(l.hospedagem or 0 for l in rel.linhas) == Decimal("31573.70")
     assert anual.transporte == sum(l.transporte or 0 for l in rel.linhas) == Decimal("47141.68")
 
@@ -155,8 +163,8 @@ def test_total_de_abril_2016_so_fecha_sem_a_linha_devolvida():
     rel = ler_pdf((AMOSTRAS / "cmc_legado" / "Diarias_2016.pdf").read_bytes(), 2016)
     abril = [l for l in rel.linhas if l.competencia_bloco == 4]
     total = next(t for t in rel.totais if t.escopo == "2016-04")
-    assert sum(l.valor_total for l in abril) != total.diarias
-    assert sum(l.valor_total for l in abril if "devolvida" not in l.marcas) == total.diarias == Decimal("140.00")
+    assert _soma(l.valor_total for l in abril) != total.diarias
+    assert _soma(l.valor_total for l in abril if "devolvida" not in l.marcas) == total.diarias == Decimal("140.00")
 
 
 PDF_SEM_TABELA = b"\n".join([
@@ -263,7 +271,9 @@ def test_prefeitura_portal_mudou():
 # ---------------------------------------------------------------- Betha (tela)
 def test_betha_primeira_pagina_das_diarias():
     html = (AMOSTRAS / "cmc_betha" / "diarias_2026_pagina1.html").read_text(encoding="utf-8")
-    contador = int(re.search(r"bth-powernumber__value[^>]*>\s*(\d+)", html).group(1))
+    achado = re.search(r"bth-powernumber__value[^>]*>\s*(\d+)", html)
+    assert achado
+    contador = int(achado.group(1))
     assert contador == 54
     cab = [chave_coluna(re.sub(r"<[^>]+>", "", h)) for h in re.findall(r"<th[^>]*>(.*?)</th>", html, re.S)]
     # o rótulo de cada célula é para a versão de celular e fica escondido por CSS;
@@ -273,7 +283,7 @@ def test_betha_primeira_pagina_das_diarias():
     for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", corpo, re.S):
         cel = [re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", c)).strip() for c in re.findall(r"<td[^>]*>(.*?)</td>", tr, re.S)]
         if len(cel) >= len(cab) - 1:
-            linhas.append({"_pagina": 1, **dict(zip(cab, cel))})
+            linhas.append({"_pagina": 1, **dict(zip(cab, cel, strict=False))})
     assert len(linhas) == contador  # o robô põe 100 por página: as 54 cabem numa
     f = CmcBetha()
     res = Resultado()
@@ -311,7 +321,7 @@ def test_ceap_negativos_e_liderancas():
 def test_ceap_cpf_de_pessoa_fisica_sai_mascarado():
     res, _ = _ceap()
     cpfs = [d for d in res if isinstance(d, Despesa) and d.fornecedor_tipo == "cpf"]
-    assert cpfs and all(d.fornecedor_doc.startswith("***") for d in cpfs)
+    assert cpfs and all((d.fornecedor_doc or "").startswith("***") for d in cpfs)
 
 
 def test_ceap_chave_estavel_e_sem_colisao():

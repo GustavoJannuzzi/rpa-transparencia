@@ -24,7 +24,7 @@ if TYPE_CHECKING:  # pragma: no cover
 @dataclass
 class Contexto:
     con: sqlite3.Connection
-    navegador: "Browser | None" = None
+    navegador: Browser | None = None
     gravar_video: bool = False
     # Para os testes: trocar o transporte HTTP (respostas gravadas, falhas injetadas).
     transporte_http: httpx.AsyncBaseTransport | None = None
@@ -65,7 +65,7 @@ class Fonte(ABC):
     @abstractmethod
     async def coletar_item(self, item: ItemInventario) -> Resultado: ...
 
-    async def antes_do_item(self, item: ItemInventario) -> None:
+    async def antes_do_item(self, item: ItemInventario) -> None:  # noqa: B027 (gancho opcional, vazio de propósito)
         """Gancho: fontes com navegador começam a gravar o rastro aqui."""
 
     async def evidencia(self, pasta: Path, sucesso: bool) -> list[str]:
@@ -105,8 +105,8 @@ class FonteNavegador(Fonte):
 
     def __init__(self) -> None:
         super().__init__()
-        self.contexto: "BrowserContext | None" = None
-        self.pagina: "Page | None" = None
+        self.contexto: BrowserContext | None = None
+        self.pagina: Page | None = None
         self._rastreando = False
 
     async def abrir(self, ctx: Contexto) -> None:
