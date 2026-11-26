@@ -23,9 +23,17 @@ import {
 import { TELA_ESTREITA, useMidia } from "@/lib/midia";
 import type { ItemIndice } from "@/lib/tipos";
 
-// A biblioteca do grafo começa a baixar junto com a página, em paralelo com os
-// dados (que o HTML já pede com <link rel="preload">), e não depois deles.
-const bibliotecas = typeof window === "undefined" ? null : Promise.all([import("graphology"), import("sigma")]);
+// A biblioteca do grafo começa a baixar logo que o texto da página está pintado com
+// as fontes certas (e não depois dos dados, que o HTML já pediu). Antes disso, montar o
+// grafo disputaria a tela com a primeira pintura e atrasaria o texto de abertura.
+let cacheBibliotecas: Promise<[typeof import("graphology"), typeof import("sigma")]> | null = null;
+function carregarBibliotecas() {
+  cacheBibliotecas ??= Promise.all([import("graphology"), import("sigma")]);
+  return cacheBibliotecas;
+}
+function depoisDaPrimeiraPintura(fazer: () => void) {
+  document.fonts.ready.then(() => requestAnimationFrame(() => requestAnimationFrame(fazer)));
+}
 
 const cacheDados = new Map<Vista, Promise<DadosGrafo>>();
 declare global {
@@ -40,7 +48,7 @@ function carregarDados(vista: Vista) {
     const bruto =
       inicial?.vista === vista
         ? inicial.dados
-        : fetch(`/dados/grafo-${vista}.json`).then((r) => {
+        : fetch(`/dados/grafo-${vista}.json`, { priority: "low" } as RequestInit).then((r) => {
             if (!r.ok) throw new Error(String(r.status));
             return r.json();
           });
@@ -119,6 +127,7 @@ export default function Grafo({ regras }: { regras: Record<Vista, { regra: strin
     setPartidoFoco(u.partido);
     pendente.current = u.no;
     setIniciado(true);
+    depoisDaPrimeiraPintura(() => void carregarBibliotecas());
   }, []);
 
   // 2. Dados da vista
@@ -166,11 +175,12 @@ export default function Grafo({ regras }: { regras: Record<Vista, { regra: strin
 
   // 4. Monta o sigma
   useEffect(() => {
-    if (!dados || emLista || !caixa.current || !bibliotecas) return;
+    if (!dados || emLista || !caixa.current) return;
     let sigma: SigmaT | null = null;
     let morto = false;
     (async () => {
-      const [{ default: Graph }, { default: Sigma }] = await bibliotecas;
+      await new Promise<void>((pronto) => depoisDaPrimeiraPintura(pronto));
+      const [{ default: Graph }, { default: Sigma }] = await carregarBibliotecas();
       if (morto || !caixa.current) return;
       const g = new Graph({ type: "undirected", multi: false });
       // a família de verdade que o next/font registrou (no canvas, var() não vale)
@@ -537,12 +547,12 @@ export default function Grafo({ regras }: { regras: Record<Vista, { regra: strin
             <>
               {iniciado ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={`/grafo/${vista}.svg`} alt="" aria-hidden="true" className={classeDesenho} />
+                <img src={`/grafo/${vista}.svg`} alt="" aria-hidden="true" decoding="async" fetchPriority="low" className={classeDesenho} />
               ) : (
                 <picture>
                   <source media={TELA_ESTREITA} srcSet="/grafo/parana.svg" />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/grafo/brasil.svg" alt="" aria-hidden="true" className={classeDesenho} />
+                  <img src="/grafo/brasil.svg" alt="" aria-hidden="true" decoding="async" fetchPriority="low" className={classeDesenho} />
                 </picture>
               )}
               <p role="status" className="absolute bottom-3 left-3 z-10 rounded-[3px] bg-gaveta/90 px-2.5 py-1 text-[0.82rem] text-tinta-3">
