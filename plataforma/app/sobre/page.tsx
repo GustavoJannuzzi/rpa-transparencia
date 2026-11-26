@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { revisao } from "@/lib/dados";
+import { metadadosDaPagina } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Sobre" };
+export const metadata: Metadata = metadadosDaPagina({
+  title: "Sobre",
+  description: "Plataforma independente e não oficial: de onde vêm os dados, as regras da conferência e o que ficou de fora.",
+  caminho: "/sobre/",
+});
 
 export default function Sobre() {
   const divergentes = revisao()

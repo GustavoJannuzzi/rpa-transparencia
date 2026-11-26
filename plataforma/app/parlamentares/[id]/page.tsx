@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Barras, { type ItemBarra } from "@/componentes/Barras";
+import { ForaDaSoma, SecaoEmRevisao } from "@/componentes/EmRevisao";
 import TabelaDespesas from "@/componentes/TabelaDespesas";
 import Valor from "@/componentes/Valor";
 import { categorias, indice, parlamentar } from "@/lib/dados";
 import { nomeFonte } from "@/lib/fontes";
-import { cargoNome, data, inteiro, mes } from "@/lib/formato";
+import { anosTexto, cargoNome, contagem, data, mes } from "@/lib/formato";
+import { metadadosDaPagina } from "@/lib/site";
 import type { Procedencia } from "@/lib/tipos";
 
 export const dynamicParams = false;
@@ -17,7 +19,14 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const p = parlamentar(id);
-  return { title: p.nome, description: `Despesas conferidas de ${p.nome}, com a procedência de cada número.` };
+  const quem = p.casa === "cmc" ? "vereador(a) de Curitiba" : `deputado(a) federal${p.uf ? ` pelo ${p.uf}` : ""}`;
+  const periodo = p.anos.length ? `, ${anosTexto([Math.min(...p.anos), Math.max(...p.anos)])}` : "";
+  const oque = p.casa === "cmc" ? "Diárias conferidas" : "Despesas conferidas";
+  return metadadosDaPagina({
+    title: p.nome,
+    description: `${oque} de ${p.nome}, ${quem}${p.partido ? ` (${p.partido})` : ""}${periodo}, com a fonte de cada número e o que ficou em revisão.`,
+    caminho: `/parlamentares/${p.id}/`,
+  });
 }
 
 function slug(s: string) {
@@ -27,6 +36,7 @@ function slug(s: string) {
 export default async function PaginaParlamentar({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const p = parlamentar(id);
+  const vereador = p.casa === "cmc";
   const rot = categorias();
   const coleta = Object.values(p.p.coleta).sort().at(-1) ?? "";
   const proc: Procedencia = { fontes: p.fontes, coleta, situacao: "soma", linhas: p.linhas };
@@ -72,27 +82,26 @@ export default async function PaginaParlamentar({ params }: { params: Promise<{ 
           </p>
         </div>
         <div className="md:text-right">
-          <p className="text-sm text-tinta-3">Total conferido{p.anos.length ? `, ${Math.min(...p.anos)}–${Math.max(...p.anos)}` : ""}</p>
-          {p.linhas > 0 ? <Valor valor={p.total} p={proc} tamanho="grande" /> : <p className="font-titulo text-2xl text-tinta-3">nenhuma despesa publicada</p>}
-          <p className="num mt-1 text-sm text-tinta-3">{inteiro(p.linhas)} despesas · {p.fontes.map(nomeFonte).join(" · ")}</p>
+          {p.linhas > 0 ? (
+            <>
+              <p className="text-sm text-tinta-3">
+                {vereador ? "Diárias conferidas" : "Total conferido"}
+                {p.anos.length ? `, ${Math.min(...p.anos)}–${Math.max(...p.anos)}` : ""}
+              </p>
+              <Valor valor={p.total} p={proc} tamanho="grande" />
+              <p className="num mt-1 text-sm text-tinta-3">
+                {contagem(p.linhas, vereador ? "diária" : "despesa", vereador ? "diárias" : "despesas")} · {p.fontes.map(nomeFonte).join(" · ")}
+              </p>
+            </>
+          ) : (
+            <p className="font-titulo text-2xl text-tinta-3">{vereador ? "Nenhuma diária conferida" : "Nenhuma despesa conferida"}</p>
+          )}
         </div>
+        <ForaDaSoma p={p} />
       </header>
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-10 py-8 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <section aria-labelledby="despesas" className="min-w-0">
-          <h2 id="despesas" className="font-titulo text-2xl font-medium">
-            Despesas, uma a uma
-          </h2>
-          <p className="mt-1 max-w-[70ch] text-sm text-tinta-3">
-            Clique num valor para ver a ficha: fonte, data da coleta e o documento oficial. Linhas que a conferência mandou
-            para revisão não aparecem aqui; as que a própria fonte não soma aparecem riscadas.
-          </p>
-          <div className="mt-5">
-            <TabelaDespesas id={p.id} anos={p.anos} rotulos={rot} />
-          </div>
-        </section>
-
-        <aside className="min-w-0 space-y-10">
+        <aside aria-label="Resumo" className="min-w-0 space-y-10 lg:col-start-2 lg:row-start-1">
           {anos.length > 0 && (
             <section aria-labelledby="por-ano">
               <h2 id="por-ano" className="font-titulo text-lg font-medium">
@@ -113,6 +122,7 @@ export default async function PaginaParlamentar({ params }: { params: Promise<{ 
               </div>
             </section>
           )}
+          <SecaoEmRevisao p={p} />
           {p.gabinete.length > 0 && (
             <section aria-labelledby="gabinete">
               <h2 id="gabinete" className="font-titulo text-lg font-medium">
@@ -175,6 +185,30 @@ export default async function PaginaParlamentar({ params }: { params: Promise<{ 
             </section>
           )}
         </aside>
+
+        <section aria-labelledby="despesas" className="min-w-0 lg:col-start-1 lg:row-start-1">
+          <h2 id="despesas" className="font-titulo text-2xl font-medium">
+            Despesas, uma a uma
+          </h2>
+          <p className="mt-1 max-w-[70ch] text-sm text-tinta-3">
+            Clique num valor para ver a ficha: fonte, data da coleta e o documento oficial. Linhas que a conferência mandou
+            para revisão não aparecem aqui
+            {p.em_revisao.length || p.periodos_em_revisao?.length ? (
+              <>
+                {" "}
+                (estão contadas em{" "}
+                <a href="#em-revisao" className="underline hover:text-tinta">
+                  Em revisão
+                </a>
+                )
+              </>
+            ) : null}
+            ; as que a própria fonte não soma aparecem riscadas.
+          </p>
+          <div className="mt-5">
+            <TabelaDespesas id={p.id} anos={p.anos} rotulos={rot} />
+          </div>
+        </section>
       </div>
     </article>
   );

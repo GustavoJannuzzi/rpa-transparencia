@@ -8,7 +8,7 @@ import { ABA_DEMAIS, paletaPartidos } from "@/lib/cores";
 
 type No = { id: string; rotulo: string; partido: string | null; uf?: string; grau?: number; tipo?: string; total?: string; x: number; y: number };
 type Aresta = { a: string; b: string; peso?: number; atual?: boolean; periodo?: string; base?: string; fornecedores?: { doc: string; nome: string | null }[] };
-type DadosGrafo = { nos: No[]; arestas: Aresta[]; partidos: string[]; regra: string };
+type DadosGrafo = { nos: No[]; arestas: Aresta[]; partidos: string[]; regra: string; regra_tecnica?: string };
 type Vista = "brasil" | "parana";
 
 const APAGADO = "#2b3532";
@@ -24,6 +24,9 @@ export default function Grafo() {
   const sigmaRef = useRef<SigmaT | null>(null);
   const grafoRef = useRef<GraphT | null>(null);
   const estado = useRef<{ hover: string | null; sel: string | null; partido: string | null }>({ hover: null, sel: null, partido: null });
+  const tituloFicha = useRef<HTMLHeadingElement>(null);
+  // depois de "mostrar no grafo" pelo teclado, o foco vai para a ficha do ponto (a lista some)
+  const focarFicha = useRef(false);
 
   // Carrega os dados da vista
   useEffect(() => {
@@ -241,9 +244,32 @@ export default function Grafo() {
   }, [selecionado, partidoFoco]);
 
   const escolher = useCallback((id: string) => {
+    focarFicha.current = true;
     setEmLista(false);
     setSelecionado(id);
   }, []);
+
+  useEffect(() => {
+    if (selecionado && focarFicha.current && tituloFicha.current) {
+      focarFicha.current = false;
+      tituloFicha.current.focus();
+    }
+  }, [selecionado, emLista]);
+
+  const ABAS: [Vista, string, string][] = [
+    ["brasil", "Brasil", " · fornecedores em comum"],
+    ["parana", "Paraná", " · partidos"],
+  ];
+  // abas de verdade: setas, Home e End trocam a vista e levam o foco junto
+  const teclaNasAbas = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const i = ABAS.findIndex(([v]) => v === vista);
+    const prox =
+      e.key === "ArrowRight" ? (i + 1) % ABAS.length : e.key === "ArrowLeft" ? (i - 1 + ABAS.length) % ABAS.length : e.key === "Home" ? 0 : e.key === "End" ? ABAS.length - 1 : -1;
+    if (prox < 0) return;
+    e.preventDefault();
+    setVista(ABAS[prox][0]);
+    document.getElementById(`aba-${ABAS[prox][0]}`)?.focus();
+  };
 
   const noSel = dados?.nos.find((n) => n.id === selecionado) ?? null;
   const ligacoes = useMemo(() => {
@@ -258,17 +284,16 @@ export default function Grafo() {
   return (
     <div className="relative flex h-full min-h-[560px] flex-col">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 pt-4 sm:px-8">
-        <div role="tablist" aria-label="Vista do grafo" className="flex gap-1.5">
-          {(
-            [
-              ["brasil", "Brasil", " · fornecedores em comum"],
-              ["parana", "Paraná", " · partidos"],
-            ] as [Vista, string, string][]
-          ).map(([v, r, resto]) => (
+        <div role="tablist" aria-label="Vista do grafo" className="flex gap-1.5" onKeyDown={teclaNasAbas}>
+          {ABAS.map(([v, r, resto]) => (
             <button
               key={v}
+              id={`aba-${v}`}
+              type="button"
               role="tab"
               aria-selected={vista === v}
+              aria-controls="painel-grafo"
+              tabIndex={vista === v ? 0 : -1}
               onClick={() => setVista(v)}
               className={`rounded-t-[5px] px-3 pb-1.5 pt-2 font-titulo text-[0.9rem] font-medium ${vista === v ? "bg-manilha text-manilha-tinta" : "bg-gaveta-3 text-tinta-2 hover:text-tinta"}`}
             >
@@ -287,7 +312,12 @@ export default function Grafo() {
         </button>
       </div>
 
-      <div className="relative mx-4 min-h-[440px] flex-1 overflow-hidden border-t-2 border-manilha bg-gaveta-2 sm:mx-8">
+      <div
+        id="painel-grafo"
+        role="tabpanel"
+        aria-labelledby={`aba-${vista}`}
+        className="relative mx-4 min-h-[440px] flex-1 overflow-hidden border-t-2 border-manilha bg-gaveta-2 sm:mx-8"
+      >
         {erro && <p className="p-6 text-tinta-2">{erro}</p>}
         {!dados && !erro && <p className="p-6 text-tinta-3">Abrindo o grafo…</p>}
         {dados && !emLista && <div ref={caixa} className="absolute inset-0" aria-label="Grafo de parlamentares; use a lista para navegar pelo teclado" role="img" />}
@@ -297,7 +327,9 @@ export default function Grafo() {
           <aside className="ficha-sai absolute bottom-4 left-4 z-10 w-[min(26rem,calc(100%-2rem))] rounded-[3px] bg-manilha p-4 text-manilha-tinta shadow-[0_18px_36px_-12px_rgba(0,0,0,0.7)]">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="font-titulo text-lg font-semibold leading-tight">{noSel.rotulo}</h3>
+                <h2 ref={tituloFicha} tabIndex={-1} className="font-titulo text-lg font-semibold leading-tight focus:outline-none">
+                  {noSel.rotulo}
+                </h2>
                 <p className="text-sm text-manilha-tinta-2">
                   {noSel.tipo === "partido"
                     ? "Partido"
@@ -371,7 +403,17 @@ export default function Grafo() {
             </li>
           )}
         </ul>
-        {dados && <p className="mt-2 max-w-[80ch] text-[0.82rem] leading-relaxed text-tinta-3">{dados.regra}</p>}
+        {dados && (
+          <div className="mt-2 max-w-[80ch] text-[0.82rem] leading-relaxed text-tinta-3">
+            <p>{dados.regra}</p>
+            {dados.regra_tecnica && (
+              <details className="mt-1">
+                <summary className="cursor-pointer underline decoration-tinta-3/50 underline-offset-2 hover:text-tinta-2">a conta, em detalhe</summary>
+                <p className="mt-1">{dados.regra_tecnica}</p>
+              </details>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
