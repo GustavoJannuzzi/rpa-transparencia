@@ -11,6 +11,8 @@ import json
 import sqlite3
 from collections import defaultdict
 from decimal import Decimal
+from itertools import pairwise
+from typing import Any
 
 from .. import de_para
 from .banco import agora, js, transacao
@@ -143,7 +145,7 @@ def _vereadores(con, rv: Revisor) -> None:
             toks.append("n:" + normalizar_nome(r["nome_parlamentar"]))
             so_apelido.add(normalizar_nome(r["nome_parlamentar"]))
             apelidos[normalizar_nome(r["nome"])] = r["nome_parlamentar"]
-        for a, b in zip(toks, toks[1:]):
+        for a, b in pairwise(toks):
             u.unir(a, b)
         for t in toks:
             u.achar(t)
@@ -170,8 +172,8 @@ def _vereadores(con, rv: Revisor) -> None:
         componentes[u.achar(t)].add(t)
     pid_de: dict[str, str] = {}
     info: dict[str, dict] = {}
-    for raiz, toks in componentes.items():
-        nomes = sorted({t[2:] for t in toks if t.startswith("n:")}, key=lambda n: (-len(n.split()), -len(n), n))
+    for grupo in componentes.values():
+        nomes = sorted({t[2:] for t in grupo if t.startswith("n:")}, key=lambda n: (-len(n.split()), -len(n), n))
         if not nomes:
             continue
         canon = nomes[0]
@@ -179,20 +181,20 @@ def _vereadores(con, rv: Revisor) -> None:
         longos = [n for n in nomes if len(n.split()) >= 3 and n not in so_apelido]
         suspeito = any(len(_tokens_nome(a) & _tokens_nome(b)) < 2 for i, a in enumerate(longos) for b in longos[i + 1:])
         pid = f"ver-cwb-{slug(canon)}"
-        for t in toks:
+        for t in grupo:
             pid_de[t] = pid
         info[pid] = {"canon": canon, "nomes": set(nomes), "anos": set(), "suspeito": suspeito,
-                     "matriculas": sorted(t[2:] for t in toks if t.startswith("m:"))}
+                     "matriculas": sorted(t[2:] for t in grupo if t.startswith("m:"))}
         if suspeito:
             rv.revisao("cmc", "identidade", pid, "nomes diferentes ligados à mesma pessoa pelas matrículas",
                        {"nomes": nomes, "matriculas": info[pid]["matriculas"]})
 
     for fonte, ref in sorted(refs):
         t = token_ref(ref)
-        pid = pid_de.get(t)
-        if pid is None:
+        if t not in pid_de:
             rv.revisao(fonte, "identidade", ref, "parlamentar sem nome em nenhuma das fontes", {"ref": ref})
             continue
+        pid = pid_de[t]
         if info[pid]["suspeito"]:
             continue
         metodo = "matrícula" if t.startswith("m:") else "nome"
@@ -200,9 +202,9 @@ def _vereadores(con, rv: Revisor) -> None:
 
     # gabinetes ("gab:NOME CIVIL"): a pessoa dona do gabinete
     for (ref,) in con.execute("SELECT DISTINCT ref_parlamentar FROM gabinetes WHERE ref_parlamentar IS NOT NULL"):
-        pid = pid_de.get("n:" + normalizar_nome(ref[4:]))
-        if pid and not info[pid]["suspeito"]:
-            con.execute("INSERT OR REPLACE INTO parlamentar_ids(fonte, ref, parlamentar_id, metodo) VALUES(?,?,?,?)", ("gabinete", ref, pid, "lotação do gabinete"))
+        dono = pid_de.get("n:" + normalizar_nome(ref[4:]))
+        if dono and not info[dono]["suspeito"]:
+            con.execute("INSERT OR REPLACE INTO parlamentar_ids(fonte, ref, parlamentar_id, metodo) VALUES(?,?,?,?)", ("gabinete", ref, dono, "lotação do gabinete"))
         else:
             rv.revisao("cmc", "identidade", ref, "gabinete sem vereador identificado", {"lotacao": ref})
 
@@ -223,13 +225,13 @@ def _vereadores(con, rv: Revisor) -> None:
         apelido = next((apelidos[n] for n in i["nomes"] if n in apelidos), None)
         eleicoes = sorted({max([e for e in ELEICOES_CMC if e < a] or [0]) for a in i["anos"]} - {0})
         partido_atual = None
-        urna = None
+        urna_exib: str | None = None
         for e in eleicoes:
             achados = {(c["partido"], c["nome_urna"], c["situacao"], c["nome_norm"]) for n in i["nomes"] for c in cands.get((e, n), [])}
             partidos = {a[0] for a in achados}
             if len(partidos) == 1:
                 p, urna_e, sit, _ = sorted(achados)[0]
-                urna = urna_e or urna
+                urna_exib = urna_e or urna_exib
                 con.execute("INSERT INTO filiacoes(parlamentar_id, partido, desde, ate, fonte, base) VALUES(?,?,?,?,?,?)",
                             (pid, p, f"{e + 1}-01", f"{e + 4}-12", "tse", f"partido na eleição de {e} ({sit.lower()})"))
                 partido_atual = p
@@ -239,11 +241,11 @@ def _vereadores(con, rv: Revisor) -> None:
             else:
                 rv.revisao("tse", "partido", f"{pid}:{e}", "nome não encontrado entre os candidatos a vereador da eleição",
                            {"vereador": civil, "eleicao": e, "nomes_tentados": sorted(i["nomes"])})
-        nome_exib = _titulo(apelido) if apelido else (_titulo(urna) if urna else civil)
+        nome_exib = _titulo(apelido) if apelido else (_titulo(urna_exib) if urna_exib else civil)
         con.execute("INSERT INTO parlamentares(id, nome, nome_civil, casa, uf, municipio, partido_atual, extra) VALUES(?,?,?,?,?,?,?,?)",
                     (pid, nome_exib, civil, "cmc", "PR", "Curitiba", partido_atual,
                      js({"anos": sorted(i["anos"]), "eleicoes": eleicoes, "matriculas": i["matriculas"],
-                         "nome_exibido_de": "gabinete" if apelido else ("tse" if urna else "nome civil")})))
+                         "nome_exibido_de": "gabinete" if apelido else ("tse" if urna_exib else "nome civil")})))
 
 
 # ---------------------------------------------------------------------------
@@ -258,7 +260,7 @@ def _divergencias_api(con, rv: Revisor) -> set[tuple[str, int]]:
     for (escopo,) in amostras:
         _, dep, ano = escopo.split("-")
         ano = int(ano)
-        api = defaultdict(lambda: [0, Decimal("0")])
+        api: defaultdict[str, list[Any]] = defaultdict(lambda: [0, Decimal("0")])  # [linhas, soma]
         for (cam,) in con.execute("SELECT caminho FROM originais WHERE fonte='camara_deputados' AND url LIKE ?",
                                   (f"%/deputados/{dep}/despesas?ano={ano}&%",)):
             from .. import config
@@ -272,7 +274,7 @@ def _divergencias_api(con, rv: Revisor) -> set[tuple[str, int]]:
                 total_api += 1
                 if d["valorLiquido"] and abs(Decimal(str(d["valorLiquido"])) + Decimal(str(d["valorDocumento"]))) < Decimal("0.005") and d["valorDocumento"]:
                     sinal_trocado += 1
-        arq = defaultdict(lambda: [0, Decimal("0")])
+        arq: defaultdict[str, list[Any]] = defaultdict(lambda: [0, Decimal("0")])
         for r in con.execute("SELECT categoria_original c, json_extract(extra,'$.valor_documento') v FROM despesas WHERE fonte='camara_deputados' AND ref_parlamentar=? AND ano=?", (dep, ano)):
             arq[r["c"]][0] += 1
             arq[r["c"]][1] += Decimal(r["v"] or "0")
@@ -299,7 +301,7 @@ def situacoes(con: sqlite3.Connection, rv: Revisor) -> None:
     divergentes = _divergencias_api(con, rv)
     legado = _regras_legado(con, rv)
     # portal da Prefeitura: anos em que os dois caminhos de consulta não bateram
-    prefeitura_divergente = set()
+    prefeitura_divergente: set[int] = set()
     for r in con.execute("""SELECT escopo, texto_original FROM totais_oficiais
                             WHERE fonte='cmc_prefeitura' AND metrica='ano_inteiro_x_mes_a_mes' AND valor='diverge'"""):
         ano = int(r["escopo"].split("-")[1])
@@ -311,7 +313,7 @@ def situacoes(con: sqlite3.Connection, rv: Revisor) -> None:
         rv.conferencia("cmc_prefeitura", "ano_inteiro_x_mes_a_mes", r["escopo"], "o mesmo conjunto de linhas", r["texto_original"],
                        "confere" if r["valor"] == "confere" else "diverge",
                        "dois caminhos independentes de consulta no portal, que não publica total")
-    prefeitura_divergente = frozenset(prefeitura_divergente)
+    prefeitura_fixo = frozenset(prefeitura_divergente)
     lote = []
     cur = con.execute("""SELECT chave, fonte, tipo, ref_parlamentar, beneficiario_tipo, cargo_original, categoria_original,
                                 valor, ano, competencia, fornecedor_nome, extra FROM despesas""")
@@ -320,7 +322,7 @@ def situacoes(con: sqlite3.Connection, rv: Revisor) -> None:
         if not linhas:
             break
         for d in linhas:
-            lote.append(_situacao(d, ids, divergentes, legado, rv, prefeitura_divergente))
+            lote.append(_situacao(d, ids, divergentes, legado, rv, prefeitura_fixo))
         con.executemany("INSERT OR REPLACE INTO despesa_situacao(chave, situacao, motivo, parlamentar_id, categoria) VALUES(?,?,?,?,?)", lote)
         lote.clear()
 

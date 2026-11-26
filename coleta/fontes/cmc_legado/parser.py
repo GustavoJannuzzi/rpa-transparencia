@@ -19,7 +19,7 @@ import pdfplumber
 
 from ...de_para import eh_cargo_parlamentar
 from ...nucleo.erros import PortalMudou
-from ...nucleo.texto import ValorIlegivel, dinheiro_br, normalizar_nome, sem_acento
+from ...nucleo.texto import ValorIlegivel, dinheiro_br, sem_acento
 
 MESES = {
     "JANEIRO": 1, "FEVEREIRO": 2, "MARCO": 3, "ABRIL": 4, "MAIO": 5, "JUNHO": 6,
@@ -175,10 +175,10 @@ def verificar_consistencia(qtde: str, unit: str, total: Decimal) -> str:
         return f"nao_verificavel: quantidade '{q}' / unitário '{_limpo(unit)}'"
     if len(qtds) != len(valores):
         return f"nao_verificavel: {len(qtds)} quantidades para {len(valores)} valores"
-    calc = sum((Decimal(n) * v for n, v in zip(qtds, valores)), Decimal("0"))
+    calc = sum((Decimal(n) * v for n, v in zip(qtds, valores, strict=True)), Decimal("0"))
     if calc == total:
         return "ok"
-    return f"diverge: {' + '.join(f'{n} × {v}' for n, v in zip(qtds, valores))} = {calc}, a fonte diz {total}"
+    return f"diverge: {' + '.join(f'{n} × {v}' for n, v in zip(qtds, valores, strict=True))} = {calc}, a fonte diz {total}"
 
 
 def _dinheiro_opcional(t: str | None) -> Decimal | None:
@@ -256,7 +256,7 @@ def ler_pdf(conteudo: bytes, ano: int) -> RelatorioDiarias:
                     pendentes_do_bloco.append(lin)
     if mapa is None:
         raise PortalMudou(f"PDF {ano} sem o cabeçalho da tabela de diárias")
-    return RelatorioDiarias(ano=ano, colunas=sorted(mapa, key=mapa.get), linhas=linhas, totais=totais, paginas=npag)
+    return RelatorioDiarias(ano=ano, colunas=sorted(mapa, key=lambda c: mapa[c]), linhas=linhas, totais=totais, paginas=npag)
 
 
 def _ler_linha(ano: int, ip: int, il: int, cel: list[str], mapa: dict[str, int], mp: re.Match | None) -> LinhaDiaria:

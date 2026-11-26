@@ -1,0 +1,117 @@
+# Contrato com os portais: uma vez por semana, um teste por fonte contra o portal
+# de verdade (python -m pytest -m contrato). É o alarme de "o portal mudou": se um
+# seletor, coluna, campo da API ou endereço de arquivo deixar de existir, o teste
+# reprova e o workflow abre uma issue (ou comenta na que já está aberta). Quando
+# volta a passar, ele comenta e fecha a issue.
+#
+# Portal lento ou fora do ar por alguns minutos não é portal que mudou: o que
+# reprovar na primeira tentativa roda de novo 5 minutos depois, e só reprovando
+# outra vez vira issue.
+#
+# O robô continua educado: uma rodada por semana, uma requisição por vez, com o
+# User-Agent de cada fonte (coleta/config.py). Nenhum captcha é contornado.
+#
+# Também roda num PR que mexa neste arquivo ou nos testes de contrato, para ver o
+# resultado antes do merge; num PR ele não abre issue.
+name: Contrato com os portais
+
+on:
+  schedule:
+    # segunda-feira, 09:17 UTC (06:17 em Brasília), longe do horário de pico dos portais
+    - cron: "17 9 * * 1"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/contrato.yml
+      - coleta/testes/test_contrato.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: contrato
+  cancel-in-progress: false
+
+env:
+  ROTULO: portal-mudou
+
+jobs:
+  contrato:
+    name: Contrato com os portais reais
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - name: Dependências
+        run: python -m pip install -r requirements.txt
+      - name: Chromium do Playwright
+        run: python -m playwright install --with-deps chromium
+
+      - name: pytest -m contrato
+        id: contrato
+        run: |
+          set -o pipefail
+          if python -m pytest -m contrato -rA --junitxml=contrato.xml 2>&1 | tee contrato.log; then
+            exit 0
+          fi
+          echo "::warning::Alguma fonte reprovou. Nova tentativa só delas em 5 minutos: lentidão passa, layout mudado reprova de novo."
+          sleep 300
+          python -m pytest -m contrato --last-failed -rA --junitxml=contrato-2.xml 2>&1 | tee -a contrato.log
+
+      - name: Resumo
+        if: ${{ !cancelled() }}
+        run: python .github/scripts/resumo_contrato.py contrato.xml contrato-2.xml >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Abre ou atualiza a issue
+        if: failure() && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RODADA: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          {
+            echo "O teste de contrato reprovou em $(date -u '+%d/%m/%Y %H:%M UTC'): um portal mudou, saiu do ar ou recusou o robô."
+            echo
+            python .github/scripts/resumo_contrato.py contrato.xml contrato-2.xml
+            echo
+            echo "Rodada: $RODADA"
+            echo
+            echo "O que fazer: abrir o log da rodada, conferir no navegador se o portal mudou de verdade e ajustar o seletor ou o leitor da fonte. Não é para contornar bloqueio nem captcha."
+          } > corpo.md
+          aberta=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --label "$ROTULO" --json number --jq '.[0].number // empty')
+          if [ -n "$aberta" ]; then
+            gh issue comment "$aberta" --repo "$GITHUB_REPOSITORY" --body-file corpo.md
+          else
+            gh label create "$ROTULO" --repo "$GITHUB_REPOSITORY" --color B60205 --description "O teste de contrato com um portal reprovou" --force
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "Contrato: um portal mudou" --label "$ROTULO" --body-file corpo.md
+          fi
+
+      - name: Fecha a issue quando o contrato volta a passar
+        if: success() && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RODADA: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          aberta=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --label "$ROTULO" --json number --jq '.[0].number // empty')
+          if [ -n "$aberta" ]; then
+            gh issue close "$aberta" --repo "$GITHUB_REPOSITORY" --comment "O contrato voltou a passar em todas as fontes: $RODADA"
+          fi
+
+      - name: Log da rodada
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: contrato
+          path: |
+            contrato.log
+            contrato*.xml
+          retention-days: 30

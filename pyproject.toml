@@ -12,3 +12,46 @@ addopts = "-m 'not contrato' -q"
 markers = [
     "contrato: roda contra o portal de verdade e avisa quando o layout mudou (python -m pytest -m contrato)",
 ]
+
+[tool.ruff]
+target-version = "py311"
+# Só decide onde o isort quebra um import longo (E501 está desligado, abaixo).
+line-length = 150
+src = ["."]
+extend-exclude = ["plataforma", "dados"]
+
+[tool.ruff.lint]
+# pyflakes e pycodestyle (E, F, W), imports ordenados (I), bugbear (B) e sintaxe
+# do Python 3.11 (UP).
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = [
+    # O projeto não usa formatador e escreve linha longa de propósito (consulta,
+    # mensagem de erro, URL). Quebrar 800 linhas não pegaria erro nenhum.
+    "E501",
+    # `l` é "linha" em todo o código, e a fonte monoespaçada separa l de 1.
+    "E741",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["coleta"]
+split-on-trailing-comma = false
+combine-as-imports = true
+
+[tool.mypy]
+python_version = "3.11"
+files = ["coleta"]
+plugins = ["pydantic.mypy"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+# Sem tipos publicados.
+module = ["pdfplumber", "pdfplumber.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# PyMuPDF: só o script que tarja as amostras usa, e não é dependência do robô.
+module = ["fitz"]
+ignore_missing_imports = true
