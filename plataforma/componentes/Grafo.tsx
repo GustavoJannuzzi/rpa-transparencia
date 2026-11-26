@@ -38,8 +38,8 @@ function depoisDaPrimeiraPintura(fazer: () => void) {
 const cacheDados = new Map<Vista, Promise<DadosGrafo>>();
 declare global {
   interface Window {
-    /** o pedido que o script inline da página inicial já fez, antes do JavaScript */
-    __grafoInicial?: { vista: Vista; dados: Promise<unknown> };
+    /** o pedido do script inline da página inicial (feito logo depois da primeira pintura, ou aqui, o que vier antes) */
+    __grafoInicial?: { vista: Vista; pedir: () => Promise<unknown>; pedirDesenho: () => Promise<string> };
   }
 }
 function carregarDados(vista: Vista) {
@@ -47,12 +47,11 @@ function carregarDados(vista: Vista) {
     const inicial = window.__grafoInicial;
     const bruto =
       inicial?.vista === vista
-        ? inicial.dados
-        : fetch(`/dados/grafo-${vista}.json`, { priority: "low" } as RequestInit).then((r) => {
+        ? inicial.pedir()
+        : fetch(`/dados/grafo-${vista}.json`).then((r) => {
             if (!r.ok) throw new Error(String(r.status));
             return r.json();
           });
-    if (inicial?.vista === vista) window.__grafoInicial = undefined;
     const p = bruto.then((d) => normalizar(d as Parameters<typeof normalizar>[0]));
     p.catch(() => cacheDados.delete(vista));
     cacheDados.set(vista, p);
@@ -104,6 +103,7 @@ export default function Grafo({ regras }: { regras: Record<Vista, { regra: strin
   const [emLista, setEmLista] = useState(false);
   const [aviso, setAviso] = useState<{ id: string; nome: string } | null>(null);
   const [fornecedores, setFornecedores] = useState<[string, string | null][] | null>(null);
+  const [desenho, setDesenho] = useState<{ vista: Vista; svg: string } | null>(null);
   const caixa = useRef<HTMLDivElement>(null);
   const quadro = useRef<HTMLDivElement>(null);
   const ficha = useRef<HTMLElement>(null);
@@ -498,6 +498,19 @@ export default function Grafo({ regras }: { regras: Record<Vista, { regra: strin
   }, [dados, selecionado]);
 
   const carregando = !erro && (!dados || (!emLista && !desenhado));
+
+  // 8. O desenho do grafo enquanto o canvas carrega: SVG embutido (não <img>, que viraria o
+  // maior elemento da tela e atrasaria o LCP), pedido depois da primeira pintura
+  useEffect(() => {
+    if (!iniciado || !carregando || emLista || desenho?.vista === vista) return;
+    let vivo = true;
+    const inicial = window.__grafoInicial;
+    const pedido = inicial?.vista === vista ? inicial.pedirDesenho() : fetch(`/grafo/${vista}.svg`).then((r) => (r.ok ? r.text() : ""));
+    pedido.then((svg) => vivo && setDesenho({ vista, svg })).catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, [iniciado, carregando, emLista, vista, desenho]);
   const classeDesenho = "pointer-events-none absolute inset-0 h-full w-full p-[30px]";
 
   return (
@@ -545,16 +558,14 @@ export default function Grafo({ regras }: { regras: Record<Vista, { regra: strin
           {/* o desenho do grafo, gerado no build, enquanto o canvas carrega */}
           {carregando && !emLista && (
             <>
-              {iniciado ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={`/grafo/${vista}.svg`} alt="" aria-hidden="true" decoding="async" fetchPriority="low" className={classeDesenho} />
-              ) : (
-                <picture>
-                  <source media={TELA_ESTREITA} srcSet="/grafo/parana.svg" />
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/grafo/brasil.svg" alt="" aria-hidden="true" decoding="async" fetchPriority="low" className={classeDesenho} />
-                </picture>
-              )}
+              {/* ilha fora do React na hidratação: o script da página põe o SVG aqui depois da primeira pintura */}
+              <div
+                id="grafo-desenho"
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 p-[30px] [&>svg]:h-full [&>svg]:w-full"
+                dangerouslySetInnerHTML={{ __html: desenho?.vista === vista ? desenho.svg : "" }}
+                suppressHydrationWarning
+              />
               <p role="status" className="absolute bottom-3 left-3 z-10 rounded-[3px] bg-gaveta/90 px-2.5 py-1 text-[0.82rem] text-tinta-3">
                 Abrindo o grafo…
               </p>
