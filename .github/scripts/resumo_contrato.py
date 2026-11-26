@@ -1,7 +1,9 @@
 """Tabela em markdown do resultado do teste de contrato, lida do JUnit XML do pytest.
 
-Uso: python .github/scripts/resumo_contrato.py contrato.xml
-Vai para o resumo do job no GitHub e para o corpo da issue quando algo reprova.
+Uso: python .github/scripts/resumo_contrato.py contrato.xml [contrato-2.xml]
+O segundo arquivo, quando existe, é a nova tentativa só do que reprovou: o
+resultado dele vale sobre o da primeira. Vai para o resumo do job no GitHub e para
+o corpo da issue quando algo reprova.
 """
 
 from __future__ import annotations
@@ -20,33 +22,43 @@ FONTE = {
 }
 
 
-def main(caminho: str) -> None:
-    arquivo = Path(caminho)
-    if not arquivo.exists():
-        print("O pytest não chegou a gravar o resultado (ver o log da rodada).")
-        return
-    linhas = []
+def ler(arquivo: Path) -> dict[str, tuple[str, float, str]]:
+    casos: dict[str, tuple[str, float, str]] = {}
     for caso in ET.parse(arquivo).getroot().iter("testcase"):
-        nome = caso.get("name", "")
         falha = caso.find("failure")
         if falha is None:
             falha = caso.find("error")
         pulado = caso.find("skipped")
         if falha is not None:
-            situacao = "reprovou"
-            detalhe = (falha.get("message") or "").splitlines()[0][:200] if falha.get("message") else ""
+            situacao, detalhe = "reprovou", (falha.get("message") or "").splitlines()[0][:200] if falha.get("message") else ""
         elif pulado is not None:
-            situacao = "pulado"
-            detalhe = (pulado.get("message") or "")[:200]
+            situacao, detalhe = "pulado", (pulado.get("message") or "")[:200]
         else:
-            situacao = "passou"
-            detalhe = ""
-        tempo = float(caso.get("time") or 0)
-        linhas.append(f"| {FONTE.get(nome, nome)} | {situacao} | {tempo:.1f} s | {detalhe.replace('|', '/')} |")
+            situacao, detalhe = "passou", ""
+        casos[caso.get("name", "")] = (situacao, float(caso.get("time") or 0), detalhe)
+    return casos
+
+
+def main(caminhos: list[str]) -> None:
+    arquivos = [Path(c) for c in caminhos if Path(c).exists()]
+    if not arquivos:
+        print("O pytest não chegou a gravar o resultado (ver o log da rodada).")
+        return
+    primeira = ler(arquivos[0])
+    segunda = ler(arquivos[1]) if len(arquivos) > 1 else {}
     print("| Fonte | Resultado | Tempo | Detalhe |")
     print("|---|---|---:|---|")
-    print("\n".join(linhas) if linhas else "| (nenhum teste rodou) | | | |")
+    for nome, (situacao, tempo, detalhe) in primeira.items():
+        if nome in segunda:
+            antes = detalhe
+            situacao, tempo, detalhe = segunda[nome]
+            situacao += " na 2ª tentativa"
+            if not detalhe:
+                detalhe = f"na 1ª: {antes}"
+        print(f"| {FONTE.get(nome, nome)} | {situacao} | {tempo:.1f} s | {detalhe.replace('|', '/')} |")
+    if not primeira:
+        print("| (nenhum teste rodou) | | | |")
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "contrato.xml")
+    main(sys.argv[1:] or ["contrato.xml"])

@@ -4,6 +4,10 @@
 # reprova e o workflow abre uma issue (ou comenta na que já está aberta). Quando
 # volta a passar, ele comenta e fecha a issue.
 #
+# Portal lento ou fora do ar por alguns minutos não é portal que mudou: o que
+# reprovar na primeira tentativa roda de novo 5 minutos depois, e só reprovando
+# outra vez vira issue.
+#
 # O robô continua educado: uma rodada por semana, uma requisição por vez, com o
 # User-Agent de cada fonte (coleta/config.py). Nenhum captcha é contornado.
 #
@@ -57,11 +61,16 @@ jobs:
         id: contrato
         run: |
           set -o pipefail
-          python -m pytest -m contrato -rA -p no:cacheprovider --junitxml=contrato.xml 2>&1 | tee contrato.log
+          if python -m pytest -m contrato -rA --junitxml=contrato.xml 2>&1 | tee contrato.log; then
+            exit 0
+          fi
+          echo "::warning::Alguma fonte reprovou. Nova tentativa só delas em 5 minutos: lentidão passa, layout mudado reprova de novo."
+          sleep 300
+          python -m pytest -m contrato --last-failed -rA --junitxml=contrato-2.xml 2>&1 | tee -a contrato.log
 
       - name: Resumo
         if: ${{ !cancelled() }}
-        run: python .github/scripts/resumo_contrato.py contrato.xml >> "$GITHUB_STEP_SUMMARY"
+        run: python .github/scripts/resumo_contrato.py contrato.xml contrato-2.xml >> "$GITHUB_STEP_SUMMARY"
 
       - name: Abre ou atualiza a issue
         if: failure() && github.event_name != 'pull_request'
@@ -72,7 +81,7 @@ jobs:
           {
             echo "O teste de contrato reprovou em $(date -u '+%d/%m/%Y %H:%M UTC'): um portal mudou, saiu do ar ou recusou o robô."
             echo
-            python .github/scripts/resumo_contrato.py contrato.xml
+            python .github/scripts/resumo_contrato.py contrato.xml contrato-2.xml
             echo
             echo "Rodada: $RODADA"
             echo
@@ -104,5 +113,5 @@ jobs:
           name: contrato
           path: |
             contrato.log
-            contrato.xml
+            contrato*.xml
           retention-days: 30

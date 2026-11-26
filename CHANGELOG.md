@@ -22,13 +22,27 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 - Dependabot para pip, npm e GitHub Actions.
 - Licença MIT para o código.
 - Animação do robô passando pelos três sistemas de navegador, no README.
+- Plataforma: favicon, imagem de compartilhamento (Open Graph), `robots.txt` e
+  `sitemap.xml` ([#2](https://github.com/GustavoJannuzzi/rpa-transparencia/pull/2)).
 
 ### Corrigido
 
+- O que a conferência deixou em revisão aparece na página do parlamentar, logo
+  abaixo do total, com o motivo; 2024 e 2025 entram na tabela de diárias da Câmara
+  de Curitiba, marcados; a fila de revisão diz quantas linhas de despesa cada
+  motivo segura ([#2](https://github.com/GustavoJannuzzi/rpa-transparencia/pull/2)).
+- A ficha de procedência cabe no celular, e a tabela de despesas vira lista lá
+  ([#2](https://github.com/GustavoJannuzzi/rpa-transparencia/pull/2)).
+- Acessibilidade: contraste do carimbo sépia, busca como combobox com
+  `aria-activedescendant`, abas com setas e o foco depois de "mostrar no grafo"
+  ([#2](https://github.com/GustavoJannuzzi/rpa-transparencia/pull/2)).
+- O link do relatório da conferência, que dava 404 no ar, agora é `/conferencia/`
+  ([#2](https://github.com/GustavoJannuzzi/rpa-transparencia/pull/2)).
 - Os avisos do ruff e do mypy no pacote `coleta` (imports sem uso, tipos de
   variáveis reaproveitadas, `zip` sem `strict` onde o tamanho já é conferido, um
-  lambda que capturava a variável do laço). Nenhuma mudança de comportamento: os
-  mesmos testes passam.
+  lambda que capturava a variável do laço). Nenhuma mudança de comportamento: com
+  a mesma base e a mesma semente de hash, o código antigo e o novo geram os mesmos
+  JSON, CSV, relatório e tabelas de conferência, tirando os carimbos de hora.
 
 ## [0.1.0] - 2026-11-26
 
