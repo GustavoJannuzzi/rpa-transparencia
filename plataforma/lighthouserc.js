@@ -25,11 +25,11 @@ const PAGINAS = {
 };
 const BASE = "http://127.0.0.1:3107";
 
-// pisos comuns a todas as páginas (medido: acessibilidade 100, menos a inicial;
-// boas práticas 96; SEO 100; CLS de 0 a 0,038)
+// pisos comuns a todas as páginas (medido depois do conserto de acessibilidade,
+// #2: acessibilidade, boas práticas e SEO 100 em todas; CLS de 0 a 0,038)
 const comum = {
   "categories:accessibility": ["error", { minScore: 0.98 }],
-  "categories:best-practices": ["error", { minScore: 0.92 }],
+  "categories:best-practices": ["error", { minScore: 0.95 }],
   "categories:seo": ["error", { minScore: 0.95 }],
   "cumulative-layout-shift": ["error", { maxNumericValue: 0.1 }],
 };
@@ -48,11 +48,10 @@ module.exports = {
         {
           // o grafo: a página mais pesada (JSON de 777 KB, sigma e WebGL)
           matchingUrlPattern: "^http://127\\.0\\.0\\.1:3107/$",
-          // medido: desempenho 77 a 87, TBT 516 a 1.112 ms, LCP 754 ms, 182 KB de JS
+          // medido: desempenho de 70 a 90, TBT de 399 ms a 4,4 s (uma rodada fora da
+          // curva), LCP de 755 a 873 ms, 183 KB de JS
           assertions: {
             ...comum,
-            // o carimbo sépia derruba o contraste aqui até o conserto de acessibilidade (96)
-            "categories:accessibility": ["error", { minScore: 0.94 }],
             "categories:performance": ["error", { minScore: 0.75 }],
             "total-blocking-time": ["error", { maxNumericValue: 1200 }],
             "largest-contentful-paint": ["error", { maxNumericValue: 1500 }],
