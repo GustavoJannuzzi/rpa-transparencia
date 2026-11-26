@@ -17,8 +17,9 @@ colors:
   carimbo: "#8a6fd1"
   carimbo-claro: "#b3a0ea"
   carimbo-escuro: "#5a43a6"
-  sepia: "#7a6635"
+  sepia: "#5f4f27"
   sepia-claro: "#cdb274"
+  contorno: "#6f7a75"
 typography:
   display:
     fontFamily: "Archivo, system-ui, sans-serif"
@@ -145,14 +146,15 @@ Grafite esverdeado em camadas, tinta creme em três pesos, cartolina manilha e u
 - **Tinta de ficha** (manilha-tinta) e **tinta de ficha secundária** (manilha-tinta-2): texto principal e rótulos de campo dentro da manilha.
 
 ### Tertiary
-- **Sépia de revisão** (sepia): carimbos VER CONFERÊNCIA / EM REVISÃO / FORA DA SOMA sobre manilha. Só para carimbo.
-- **Sépia clara** (sepia-claro): nota "Não somada" sobre a gaveta, na tabela de despesas.
+- **Sépia de revisão** (sepia, #5f4f27): carimbos VER CONFERÊNCIA / EM REVISÃO / FORA DA SOMA sobre manilha. Só para carimbo. Escurecida em 26/11 para 4,8:1 sobre a manilha (a anterior, #7a6635, dava 3,3:1).
+- **Sépia clara** (sepia-claro): nota "Não somada" sobre a gaveta, na tabela de despesas, e o carimbo EM REVISÃO quando ele fica sobre a gaveta (linha "Fora desta soma" do parlamentar, ano em revisão na tabela de diárias).
 
 ### Neutral
 - **Gaveta** (gaveta): fundo da página e `theme-color`.
 - **Gaveta 2** (gaveta-2): campos, lista da busca, fundo do quadro do grafo.
 - **Gaveta 3** (gaveta-3): aba inativa, opção ativa da busca, trilho das barras, chip de partido em foco.
-- **Aço** (aco) e **aço 2** (aco-2): filetes de cabeçalho, rodapé, colunas e linhas de tabela (aco); bordas de campo e botão, barra de rolagem (aco-2).
+- **Aço** (aco) e **aço 2** (aco-2): filetes de cabeçalho, rodapé, colunas e linhas de tabela (aco); borda da lista suspensa, barra de rolagem (aco-2).
+- **Contorno** (contorno, #6f7a75): borda de campo, select e botão secundário. É o cinza das abas "demais", e dá 3,3:1 sobre a gaveta-2, o mínimo para o contorno de um controle.
 - **Tinta** (tinta), **tinta 2** (tinta-2), **tinta 3** (tinta-3): texto principal, texto de apoio, metadados e legendas (tinta-3 a 5,8:1 sobre a gaveta).
 
 Abas de partido (lib/cores.ts): dez tons apagados (ouro, verde-água, malva, azul-acinzentado, terracota, oliva, azul-névoa, areia, sálvia, rosa-pó) mais um cinza (#6f7a75) para "demais". O violeta fica fora dessa lista.
@@ -206,7 +208,10 @@ Cantos quase retos. Fichas e carimbos com 3px; campos, selects e botões com 6px
 ## Components
 
 ### Ficha de procedência (assinatura)
-Todo valor em reais passa pelo componente de valor: sublinhado pontilhado em tinta-3, hover em violeta claro, `cursor: help`. O clique abre uma ficha manilha de até 22rem para o lado onde cabe: título "De onde vem este número", carimbo no canto (CONFERIDO, SOMA CONFERIDA ou FORA DA SOMA), filete, fontes, grade rótulo/valor (Coleta, Linhas, No original, Nota), link "Abrir o documento oficial" e "fechar". Fecha com Esc ou clique fora. Valor fora da soma aparece riscado e em tinta-3.
+Todo valor em reais passa pelo componente de valor: sublinhado pontilhado em tinta-3, hover em violeta claro, `cursor: help`. O clique abre uma ficha manilha de até 22rem: título "De onde vem este número", carimbo no canto (CONFERIDO, SOMA CONFERIDA ou FORA DA SOMA), filete, fontes, grade rótulo/valor (Coleta, Linhas, No original, Nota), link "Abrir o documento oficial" e "fechar". A ficha é desenhada fora do fluxo (portal no body), para nunca ficar presa num contêiner com rolagem. No computador, sai embaixo do número (em cima, se não couber), alinhada pela borda que cabe e nunca a menos de 16px da borda da tela. Abaixo de 640px, sobe da base da tela como uma folha de largura inteira, com a mesma manilha e o mesmo carimbo. Recebe o foco ao abrir; fecha com Esc, clique fora ou o Tab que sai dela, e o foco volta ao número. Valor fora da soma aparece riscado e em tinta-3.
+
+### Linha "Fora desta soma"
+Logo abaixo do total do parlamentar: carimbo EM REVISÃO em sépia clara sobre a gaveta e a frase do que ficou de fora (categoria e anos, quantas despesas), com "Por quê" levando à seção "Em revisão, fora da soma", que explica cada recorte em português de leigo e leva à fila de revisão da fonte. Para vereador, separa os anos de mandato em revisão dos anos sem diária nas fontes.
 
 ### Ficha da coleta
 Uma ficha manilha por fonte: nome em Title, modo e anos em Label, e a equação "N linhas na origem = publicadas + em revisão" com o N em Archivo 1.35rem. Carimbos empilhados no canto superior direito.
@@ -218,7 +223,7 @@ Borda de 2px, cantos de 3px, Archivo 600 em caixa alta, girado. Violeta fundo de
 Abas de fichário em Archivo 0.9rem: ativa em manilha, inativa em gaveta-3. O quadro do grafo é gaveta-2 com filete manilha de 2px no topo. Rótulos de partido no canvas são placas gaveta a 88% com texto manilha-2, posicionadas para não se sobreporem; o hover desenha placa escura com texto creme e anel violeta claro de 2px. A legenda é uma lista de chips com aba colorida, sigla e contagem; o chip em foco ganha gaveta-3 e anel violeta claro de 1px. "Ver em lista" oferece a tabela acessível equivalente.
 
 ### Inputs / Fields
-- **Style:** fundo gaveta-2, borda aço-2 de 1px, cantos de 6px, 40px de altura na busca e 36px nos selects; placeholder tinta-3; cursor de texto violeta claro.
+- **Style:** fundo gaveta-2, borda contorno de 1px, cantos de 6px, 40px de altura na busca e nos selects; placeholder tinta-3; cursor de texto violeta claro.
 - **Focus:** a borda passa a violeta; o resto do sistema usa o contorno global violeta claro.
 - **Busca:** combobox com lista suspensa gaveta-2; opção ativa em gaveta-3, nome à esquerda e "partido · UF" em tinta-3 à direita.
 

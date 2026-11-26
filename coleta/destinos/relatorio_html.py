@@ -79,8 +79,10 @@ def gerar(con: sqlite3.Connection) -> Path:
     pasta.mkdir(parents=True, exist_ok=True)
     caminho = pasta / "conferencia.html"
     caminho.write_text(html, encoding="utf-8")
-    # cópia para a plataforma servir
-    destino = config.destino_plataforma().parent / "conferencia.html"
-    if destino.parent.exists():
+    # cópia para a plataforma servir em /conferencia/ (a hospedagem tira o .html do endereço)
+    publico = config.destino_plataforma().parent
+    if publico.exists():
+        destino = publico / "conferencia" / "index.html"
+        destino.parent.mkdir(exist_ok=True)
         destino.write_text(html, encoding="utf-8")
     return caminho

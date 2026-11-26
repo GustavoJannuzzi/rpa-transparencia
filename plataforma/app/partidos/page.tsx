@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { partidos } from "@/lib/dados";
+import { metadadosDaPagina } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Partidos" };
+export const metadata: Metadata = metadadosDaPagina({
+  title: "Partidos",
+  description: "Os partidos dos deputados federais e dos vereadores de Curitiba, com as despesas conferidas de quem passou por cada um.",
+  caminho: "/partidos/",
+});
 
 export default function Partidos() {
   const lista = partidos().sort((a, b) => a.sigla.localeCompare(b.sigla, "pt-BR"));
