@@ -132,6 +132,8 @@ export default function Grafo() {
       .then((d) => {
         if (cancelado) return;
         setDados(d);
+        // um partido da URL que não está nesta vista apagaria todos os pontos: é ignorado
+        setPartidoFoco((p) => (p && d.nos.some((n) => n.partido === p && n.tipo !== "partido") ? p : null));
         const id = pendente.current;
         if (id) {
           pendente.current = null;
