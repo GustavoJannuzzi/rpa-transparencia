@@ -1,0 +1,83 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { revisao } from "@/lib/dados";
+
+export const metadata: Metadata = { title: "Sobre" };
+
+export default function Sobre() {
+  const divergentes = revisao()
+    .grupos.filter((g) => g.tipo === "api_x_arquivo")
+    .flatMap((g) => g.exemplos.map((e) => e.chave))
+    .concat()
+    .sort()
+    .map((c) => {
+      const [cat, ano] = c.split("/");
+      return `${cat.replace(/\.$/, "").toLowerCase()} (${ano})`;
+    });
+  return (
+    <article className="mx-auto max-w-[760px] px-4 py-8 sm:px-8 sm:py-12">
+      <h1 className="font-titulo text-[2.4rem] font-medium leading-tight tracking-[-0.02em]">Sobre</h1>
+      <div className="mt-6 space-y-5 text-[1.03rem] leading-relaxed text-tinta-2 [&_h2]:mt-10 [&_h2]:font-titulo [&_h2]:text-xl [&_h2]:font-medium [&_h2]:text-tinta [&_strong]:font-medium [&_strong]:text-tinta">
+        <p>
+          Esta é uma plataforma <strong>independente e não oficial</strong>. Não tem vínculo com a Câmara dos Deputados, com a
+          Câmara Municipal de Curitiba, com a Prefeitura de Curitiba nem com o TSE. Usa só dados que esses órgãos publicam.
+        </p>
+
+        <h2>De onde vêm os dados</h2>
+        <ul className="list-disc space-y-2 pl-5">
+          <li>Câmara dos Deputados: API de Dados Abertos (lista de deputados) e arquivo anual da cota parlamentar (despesas).</li>
+          <li>
+            Câmara Municipal de Curitiba: o portal legado (relatórios em PDF, 2013–2016), o Elotech (API pública, 2017–2023), o
+            portal de transparência da Prefeitura (2024–2025) e o Betha (2026).
+          </li>
+          <li>TSE: dados abertos de candidaturas, para o partido de cada vereador na eleição do mandato.</li>
+        </ul>
+        <p>
+          O passo a passo, a conferência de cada fonte e a fila de revisão estão em{" "}
+          <Link href="/como-os-dados-chegam-aqui/" className="text-carimbo-claro underline">
+            Como os dados chegam aqui
+          </Link>
+          .
+        </p>
+
+        <h2>Regras</h2>
+        <ul className="list-disc space-y-2 pl-5">
+          <li>Só aparece o que passou na conferência. O que não fecha vai para a fila de revisão, fora dos totais.</li>
+          <li>Nenhum número é completado nem arredondado. Todo valor tem a ficha: fonte, data da coleta e documento oficial.</li>
+          <li>
+            Neutralidade: não há ranking de quem gasta mais, nem adjetivo. Fornecedor em comum não insinua nada; só mostra que
+            duas pessoas contrataram a mesma empresa.
+          </li>
+          <li>
+            Pessoas: parlamentar aparece pelo nome. Assessor e servidor aparecem só em totais (custo do gabinete, diárias de
+            servidores), nunca pelo nome. Fornecedor pessoa física aparece com o CPF mascarado e não entra no grafo.
+          </li>
+          <li>
+            Coleta educada: uma requisição por vez em cada portal, com pausa, respeitando o robots.txt. Portal com captcha ou
+            login fica de fora; captcha nunca é contornado.
+          </li>
+        </ul>
+
+        <h2>O que ficou de fora, e por quê</h2>
+        <ul className="list-disc space-y-2 pl-5">
+          <li>Assembleia Legislativa do Paraná: a consulta da verba pede “Não sou um robô”.</li>
+          <li>Câmaras que usam o IPM Atende.net (Colombo, Araucária, Cascavel): desafio da Cloudflare ao consultar.</li>
+          <li>Londrina: o robots.txt do site proíbe robôs.</li>
+          <li>Pessoal de gabinete dos deputados federais: as páginas estão bloqueadas pelo robots.txt da Câmara.</li>
+        </ul>
+
+        <h2>Limites que vale saber</h2>
+        <ul className="list-disc space-y-2 pl-5">
+          <li>O partido de vereador é o da eleição que deu o mandato; troca de partido no meio do mandato não está na fonte.</li>
+          <li>O Betha publica o valor previsto da diária; o portal da Prefeitura, o valor empenhado. Cada um aparece com o seu rótulo.</li>
+          {divergentes.length > 0 && (
+            <li>
+              Na conferência por amostra, o arquivo anual e a API da Câmara não bateram nestas categorias, que ficam em revisão
+              e fora dos totais: {divergentes.join("; ")}.
+            </li>
+          )}
+        </ul>
+      </div>
+    </article>
+  );
+}

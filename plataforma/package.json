@@ -1,0 +1,26 @@
+{
+  "name": "rpa-transparencia-plataforma",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "next dev -p 3007",
+    "build": "next build",
+    "start": "npx serve out -l 3007",
+    "test": "node testes/procedencia.mjs"
+  },
+  "dependencies": {
+    "graphology": "0.26.0",
+    "next": "16.4.6",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "sigma": "3.0.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.5",
+    "@types/node": "22.20.7",
+    "@types/react": "19.3.3",
+    "@types/react-dom": "19.3.0",
+    "tailwindcss": "4.3.5",
+    "typescript": "5.9.3"
+  }
+}
