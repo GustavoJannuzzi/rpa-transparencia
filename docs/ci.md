@@ -44,7 +44,9 @@ de acessibilidade da plataforma
 
 `toHaveScreenshot` em 11 telas, no desktop e no celular, com animação desligada. O
 desenho do grafo fica mascarado (é WebGL, e o runner não tem GPU); a casca em volta
-é comparada. As imagens ficam em `plataforma/testes/e2e/prints/`.
+é comparada. As imagens ficam em `plataforma/testes/e2e/prints/`; as primeiras
+entraram pelo workflow abaixo, em
+[#5](https://github.com/GustavoJannuzzi/rpa-transparencia/pull/5).
 
 **As referências só valem no runner Linux do CI.** A fonte é desenhada de outro
 jeito no Windows e no macOS, e todo print reprovaria. Por isso, fora do Linux esses
@@ -144,11 +146,13 @@ do Elotech e da Câmara dos Deputados, e os arquivos do TSE e da Câmara.
 | 26/11/2026, 19:49 UTC | PR #1, segundo push | 6 de 6 passaram |
 | 26/11/2026, 20:01 UTC | PR #1, terceiro push | 6 de 6 passaram |
 | 26/11/2026, 20:04 UTC | PR #1, depois do rebase | 5 de 6: o portal da Prefeitura não terminou de abrir em 30 s (`Page.goto` com tempo esgotado). Foi isso que levou à segunda tentativa 5 minutos depois. |
+| 26/11/2026, 20:10 UTC | PR #1, já com a segunda tentativa | 6 de 6 passaram de primeira |
+| 26/11/2026, 20:16 UTC | **à mão** (*Run workflow*), na `main` | 6 de 6 passaram de primeira, em 20 s |
 
 As seis fontes responderam aos IPs do GitHub, inclusive o Betha, que recusa
 "HeadlessChrome". Por isso nenhuma fica fora do agendado. A falha do portal da
 Prefeitura foi de tempo, não de layout: a mesma fonte passou em 8 s nas rodadas
-anteriores. Se um portal passar a
+anteriores e em 3 s na rodada à mão. Se um portal passar a
 bloquear o runner, a saída é tirar aquela fonte do agendado, com um aviso aqui, em
 vez de deixar um alarme falso toda semana. Contornar o bloqueio não é saída.
 
