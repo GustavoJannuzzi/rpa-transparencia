@@ -1,0 +1,31 @@
+# Ambiente Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Estado, cache, originais e evidências do robô: ficam na máquina que coleta.
+# Os originais (PDFs, páginas, respostas) trazem nome de servidor público; o
+# repositório só guarda as amostras anonimizadas dos testes.
+/dados/
+
+# Plataforma
+plataforma/node_modules/
+plataforma/.next/
+plataforma/out/
+plataforma/next-env.d.ts
+plataforma/*.tsbuildinfo
+
+# Segredos
+.env
+.env.*
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Artefatos de trabalho do processo de design (o contrato da direção fica em
+# .impeccable/surfaces/; o sistema documentado, em DESIGN.md)
+.impeccable/questions/
+.impeccable/mocks/
+.impeccable/review/

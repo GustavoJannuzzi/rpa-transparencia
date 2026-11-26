@@ -1,0 +1,27 @@
+fonte,origem,categoria,rotulo
+camara_deputados,COMBUSTÍVEIS E LUBRIFICANTES.,combustivel,Combustível
+camara_deputados,PASSAGEM AÉREA - SIGEPA,passagem_aerea,Passagem aérea
+camara_deputados,PASSAGEM AÉREA - RPA,passagem_aerea,Passagem aérea
+camara_deputados,PASSAGEM AÉREA - REEMBOLSO,passagem_aerea,Passagem aérea
+camara_deputados,PASSAGEM AÉREA - MISSÃO OFICIAL,passagem_aerea,Passagem aérea
+camara_deputados,"SERVIÇO DE TÁXI, PEDÁGIO E ESTACIONAMENTO",taxi_pedagio,"Táxi, pedágio e estacionamento"
+camara_deputados,MANUTENÇÃO DE ESCRITÓRIO DE APOIO À ATIVIDADE PARLAMENTAR,escritorio,Escritório de apoio
+camara_deputados,DIVULGAÇÃO DA ATIVIDADE PARLAMENTAR.,divulgacao,Divulgação da atividade
+camara_deputados,TELEFONIA,telefonia,Telefonia
+camara_deputados,FORNECIMENTO DE ALIMENTAÇÃO DO PARLAMENTAR,alimentacao,Alimentação
+camara_deputados,"HOSPEDAGEM ,EXCETO DO PARLAMENTAR NO DISTRITO FEDERAL.",hospedagem,Hospedagem
+camara_deputados,LOCAÇÃO OU FRETAMENTO DE VEÍCULOS AUTOMOTORES,locacao_veiculos,Locação de veículos
+camara_deputados,COMPLEMENTAÇÃO DO AUXÍLIO-MORADIA,auxilio_moradia,Complemento do auxílio-moradia
+camara_deputados,"PASSAGENS TERRESTRES, MARÍTIMAS OU FLUVIAIS",passagem_terrestre,"Passagens terrestres, marítimas ou fluviais"
+camara_deputados,SERVIÇO DE SEGURANÇA PRESTADO POR EMPRESA ESPECIALIZADA.,seguranca,Segurança
+camara_deputados,ASSINATURA DE PUBLICAÇÕES,publicacoes,Assinatura de publicações
+camara_deputados,SERVIÇOS POSTAIS,postais,Serviços postais
+camara_deputados,LOCAÇÃO OU FRETAMENTO DE AERONAVES,fretamento_aeronaves,Fretamento de aeronaves
+camara_deputados,LOCAÇÃO OU FRETAMENTO DE EMBARCAÇÕES,fretamento_embarcacoes,Fretamento de embarcações
+camara_deputados,AQUISIÇÃO DE TOKENS E CERTIFICADOS DIGITAIS,certificado_digital,Certificado digital
+camara_deputados,"PARTICIPAÇÃO EM CURSO, PALESTRA OU EVENTO SIMILAR",cursos,"Cursos, palestras e eventos"
+camara_deputados,"CONSULTORIAS, PESQUISAS E TRABALHOS TÉCNICOS.",consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+cmc_legado,Diária,diaria,Diárias
+cmc_elotech,Diária,diaria,Diárias
+cmc_prefeitura,Diárias,diaria,Diárias
+cmc_betha,Diária,diaria,Diárias
