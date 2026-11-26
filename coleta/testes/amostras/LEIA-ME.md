@@ -10,3 +10,15 @@ São as respostas reais dos portais, com estas trocas antes de entrar no reposit
 - HTML: só a tabela e o contador da página (o resto é o menu do portal).
 
 Parlamentar mantém o nome, que é o dado público que a plataforma mostra.
+
+## Fontes novas (2026-11-26)
+
+`elotech/`, `cldf/`, `almg/` e `alesp/` vêm de `python -m coleta.testes.gerar_amostras_casas`, a partir dos
+originais da coleta de 26/11/2026, com estas trocas:
+
+- Elotech (Câmara de Maringá): o nome de quem não é vereador vira `SERVIDOR TARJADO n`, e a matrícula sai; o motivo
+  da viagem (texto livre) é omitido; o cadastro de pessoal fica só com os vereadores e um servidor tarjado;
+- CLDF: o CPF do deputado e o do fornecedor pessoa física viram números de dígitos repetidos (`111.111.111-11`),
+  que não fecham o dígito verificador; o nome do fornecedor pessoa física é tarjado; a planilha XLSX é escrita de
+  novo, só com as linhas escolhidas (datas nos dois formatos e duas linhas com as colunas deslocadas);
+- ALMG e ALESP: o mesmo para o emitente ou fornecedor pessoa física.

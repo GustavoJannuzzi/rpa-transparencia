@@ -337,4 +337,4 @@ def test_tse_so_vereador_de_curitiba():
         cands, eleitos = ler_candidaturas(f, 2024, lambda loc: PROC)
     assert cands and all(c.municipio == "CURITIBA" for c in cands)
     assert all(c.partido for c in cands)
-    assert eleitos <= len(cands)
+    assert set(eleitos) <= {"Curitiba"} and eleitos.get("Curitiba", 0) <= len(cands)

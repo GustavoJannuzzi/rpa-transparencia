@@ -69,7 +69,9 @@ def gerar(con: sqlite3.Connection) -> Path:
             "conferencias": [dict(r) for r in con.execute(
                 "SELECT * FROM conferencias WHERE fonte=? AND verificacao NOT IN ('origem_igual_coletado_mais_revisao') ORDER BY resultado='confere', verificacao, escopo", (fid,))],
             "revisao_grupos": [dict(r) for r in con.execute(
-                "SELECT motivo, tipo, COUNT(*) n FROM revisao WHERE fonte=? OR (fonte='cmc' AND ?='cmc_elotech') GROUP BY 1, 2 ORDER BY n DESC", (fid, fid))],
+                # a revisão de identidade de uma câmara fica no nome da casa; aparece junto da fonte Elotech dela
+                "SELECT motivo, tipo, COUNT(*) n FROM revisao WHERE fonte=? OR (fonte=? AND (? LIKE 'elotech%' OR ?='cmc_elotech')) GROUP BY 1, 2 ORDER BY n DESC",
+                (fid, F.sistema.casa, fid, fid))],
         })
     html = Environment(autoescape=True).from_string(MODELO).render(fontes=fontes, gerado=agora(), versao=config.VERSAO_ROBO)
     if n := cpfs_expostos(html):  # o relatório também vai para a plataforma
