@@ -5,9 +5,11 @@
 // onde a plataforma sofre. Três rodadas por página; vale a melhor de cada métrica
 // (aggregationMethod "optimistic", o padrão), porque o runner compartilhado oscila.
 //
-// O orçamento começou no que o runner do GitHub mediu em 26/11/2026, menos uma
-// margem; os números medidos estão em docs/ci.md. Quando uma melhoria subir a
-// nota, suba o piso aqui junto.
+// O orçamento começou no que o runner do GitHub (ubuntu-24.04) mediu em
+// 26/11/2026, menos uma margem; a tabela medida está em docs/ci.md. Quando uma
+// melhoria subir a nota, suba o piso aqui junto. Quando uma mudança pesar de
+// propósito (o sigma no pacote inicial, por exemplo), suba o teto no mesmo PR e
+// diga por quê.
 //
 // O relatório fica em arquivo (upload.target "filesystem") e vai como artefato do
 // workflow. Nunca use "temporary-public-storage": ele publica o relatório num link
@@ -23,10 +25,11 @@ const PAGINAS = {
 };
 const BASE = "http://127.0.0.1:3107";
 
-// pisos comuns a todas as páginas
+// pisos comuns a todas as páginas (medido: acessibilidade 100, menos a inicial;
+// boas práticas 96; SEO 100; CLS de 0 a 0,038)
 const comum = {
   "categories:accessibility": ["error", { minScore: 0.98 }],
-  "categories:best-practices": ["error", { minScore: 0.9 }],
+  "categories:best-practices": ["error", { minScore: 0.92 }],
   "categories:seo": ["error", { minScore: 0.95 }],
   "cumulative-layout-shift": ["error", { maxNumericValue: 0.1 }],
 };
@@ -45,24 +48,26 @@ module.exports = {
         {
           // o grafo: a página mais pesada (JSON de 777 KB, sigma e WebGL)
           matchingUrlPattern: "^http://127\\.0\\.0\\.1:3107/$",
+          // medido: desempenho 77 a 87, TBT 516 a 1.112 ms, LCP 754 ms, 182 KB de JS
           assertions: {
             ...comum,
-            // o carimbo sépia derruba o contraste aqui até o conserto de acessibilidade
+            // o carimbo sépia derruba o contraste aqui até o conserto de acessibilidade (96)
             "categories:accessibility": ["error", { minScore: 0.94 }],
-            "categories:performance": ["error", { minScore: 0.4 }],
-            "total-blocking-time": ["error", { maxNumericValue: 3500 }],
-            "largest-contentful-paint": ["error", { maxNumericValue: 6000 }],
-            "resource-summary:script:size": ["error", { maxNumericValue: 300000 }],
+            "categories:performance": ["error", { minScore: 0.75 }],
+            "total-blocking-time": ["error", { maxNumericValue: 1200 }],
+            "largest-contentful-paint": ["error", { maxNumericValue: 1500 }],
+            "resource-summary:script:size": ["error", { maxNumericValue: 215000 }],
           },
         },
         {
           matchingUrlPattern: "^http://127\\.0\\.0\\.1:3107/.+",
+          // medido: desempenho 100, TBT 36 a 61 ms, LCP 752 a 904 ms, 145 a 149 KB de JS
           assertions: {
             ...comum,
-            "categories:performance": ["error", { minScore: 0.6 }],
-            "total-blocking-time": ["error", { maxNumericValue: 1500 }],
-            "largest-contentful-paint": ["error", { maxNumericValue: 4000 }],
-            "resource-summary:script:size": ["error", { maxNumericValue: 300000 }],
+            "categories:performance": ["error", { minScore: 0.9 }],
+            "total-blocking-time": ["error", { maxNumericValue: 300 }],
+            "largest-contentful-paint": ["error", { maxNumericValue: 1500 }],
+            "resource-summary:script:size": ["error", { maxNumericValue: 175000 }],
           },
         },
       ],
@@ -70,7 +75,6 @@ module.exports = {
     upload: {
       target: "filesystem",
       outputDir: "testes/lighthouse",
-      reportFilenamePattern: "%%PATHNAME%%-%%DATETIME%%.report.%%EXTENSION%%",
     },
   },
 };

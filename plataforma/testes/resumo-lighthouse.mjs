@@ -15,7 +15,8 @@ if (!existsSync(manifesto)) {
 const rodadas = JSON.parse(readFileSync(manifesto, "utf-8"));
 const porUrl = new Map();
 for (const r of rodadas) {
-  const lhr = JSON.parse(readFileSync(path.isAbsolute(r.jsonPath) ? r.jsonPath : path.join(PASTA, path.basename(r.jsonPath)), "utf-8"));
+  // o manifest guarda o caminho da máquina que rodou; o arquivo está nesta pasta
+  const lhr = JSON.parse(readFileSync(path.join(PASTA, path.basename(r.jsonPath)), "utf-8"));
   const a = lhr.audits;
   const linha = {
     p: lhr.categories.performance.score,
