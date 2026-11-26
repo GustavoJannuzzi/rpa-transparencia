@@ -49,3 +49,33 @@ async def baixar_arquivo(fonte: Fonte, url: str, destino: Path, *, validade_h: f
     h = sha256_arquivo(destino)
     registrar_original_arquivo(fonte.con, fonte.id, destino, url, destino.suffix.lstrip("."), h)
     return destino, h, False
+
+
+async def baixar_comprimido(fonte: Fonte, url: str, destino: Path) -> tuple[Path, str]:
+    """Baixa `url` gravando já comprimido (gzip) em `destino`: um arquivo de 160 MB
+    ocupa ~10% disso no disco. O hash é o do conteúdo original, como veio."""
+    import gzip
+
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    assert fonte.http is not None
+    await fonte.educacao.verificar_robots(url, fonte.http)
+    parcial = destino.with_suffix(destino.suffix + ".parcial")
+    h = hashlib.sha256()
+    async with fonte.educacao.vez(url):
+        try:
+            async with fonte.http.stream("GET", url) as r:
+                if r.status_code >= 500:
+                    raise FalhaTransitoria(f"HTTP {r.status_code} em {url}")
+                r.raise_for_status()
+                with gzip.open(parcial, "wb", compresslevel=6) as f:
+                    async for bloco in r.aiter_bytes(1 << 20):
+                        h.update(bloco)
+                        f.write(bloco)
+        except Exception as e:
+            if isinstance(e, FalhaTransitoria):
+                raise
+            raise FalhaTransitoria(f"{type(e).__name__} ao baixar {url}") from e
+    parcial.replace(destino)
+    digest = h.hexdigest()
+    registrar_original_arquivo(fonte.con, fonte.id, destino, url, "json.gz", digest)
+    return destino, digest

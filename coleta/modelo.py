@@ -11,16 +11,25 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-Esfera = Literal["federal", "municipal"]
+Esfera = Literal["federal", "estadual", "municipal"]
+TipoCasa = Literal["camara_federal", "senado", "assembleia", "camara_municipal"]
 Modo = Literal["api", "arquivo", "robo", "robo_pdf"]
+# Uma linha por nota ou registro da fonte, ou uma linha que a própria fonte já
+# somou (a ALESP publica por fornecedor × tipo × mês). Agregado nunca vira nota.
+Granularidade = Literal["nota", "agregado"]
 
 
 class Casa(BaseModel):
+    """Uma casa legislativa. A identidade de cada parlamentar é por casa."""
+
     id: str
+    tipo: TipoCasa
     esfera: Esfera
     nome: str
-    municipio: str | None = None
     uf: str
+    municipio: str | None = None
+    ibge: int | None = None  # código IBGE do município (câmara municipal)
+    cargo: str = "parlamentar"  # como se chama quem tem mandato nela, no singular
 
 
 class SistemaOrigem(BaseModel):
@@ -49,7 +58,9 @@ class Despesa(BaseModel):
     chave: str
     fonte: str
     item: str
-    tipo: Literal["cota_federal", "diaria_municipal"]
+    tipo: Literal["cota_federal", "diaria_municipal", "verba_estadual"]
+    casa: str | None = None  # None: a casa da fonte
+    granularidade: Granularidade = "nota"
     ref_parlamentar: str | None = None  # id do parlamentar NA FONTE
     beneficiario_tipo: Literal["parlamentar", "servidor", "lideranca"]
     nome_beneficiario: str | None = None  # só de parlamentar; servidor nunca tem nome gravado
@@ -110,6 +121,21 @@ class GabineteRetrato(BaseModel):
     procedencia: Procedencia
 
 
+class Remuneracao(BaseModel):
+    """O que um parlamentar recebe (subsídio), como o cadastro de pessoal da casa
+    mostra numa data. Só parlamentar: servidor nunca tem linha aqui."""
+
+    fonte: str
+    casa: str
+    ref_parlamentar: str
+    competencia: str
+    data_referencia: str
+    valor: Decimal
+    rotulo: str
+    cargo_original: str | None = None
+    procedencia: Procedencia
+
+
 class TotalOficial(BaseModel):
     """O que a própria fonte afirma: contagem, soma em R$, data de atualização."""
 
@@ -146,6 +172,7 @@ class Resultado(BaseModel):
     pessoas: list[PessoaFonte] = Field(default_factory=list)
     candidaturas: list[Candidatura] = Field(default_factory=list)
     gabinetes: list[GabineteRetrato] = Field(default_factory=list)
+    remuneracoes: list[Remuneracao] = Field(default_factory=list)
     totais: list[TotalOficial] = Field(default_factory=list)
 
 
@@ -154,7 +181,9 @@ class Descoberta(BaseModel):
     totais: list[TotalOficial] = Field(default_factory=list)
 
 
-CASAS = {
-    "camara-deputados": Casa(id="camara-deputados", esfera="federal", nome="Câmara dos Deputados", uf="BR"),
-    "cmc": Casa(id="cmc", esfera="municipal", nome="Câmara Municipal de Curitiba", municipio="Curitiba", uf="PR"),
+CASAS_FIXAS = {
+    "camara-deputados": Casa(id="camara-deputados", tipo="camara_federal", esfera="federal", nome="Câmara dos Deputados", uf="BR",
+                             cargo="deputado federal"),
+    "cmc": Casa(id="cmc", tipo="camara_municipal", esfera="municipal", nome="Câmara Municipal de Curitiba", municipio="Curitiba",
+                uf="PR", ibge=4106902, cargo="vereador"),
 }

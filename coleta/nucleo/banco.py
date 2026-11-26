@@ -57,7 +57,8 @@ CREATE TABLE IF NOT EXISTS despesas(
   categoria TEXT, categoria_original TEXT,
   fornecedor_doc TEXT, fornecedor_tipo TEXT, fornecedor_nome TEXT,
   valor TEXT NOT NULL, documento_url TEXT, descricao TEXT,
-  url TEXT, hash_original TEXT, localizador TEXT, coletado_em TEXT, extra TEXT
+  url TEXT, hash_original TEXT, localizador TEXT, coletado_em TEXT, extra TEXT,
+  casa TEXT, granularidade TEXT NOT NULL DEFAULT 'nota'
 );
 CREATE INDEX IF NOT EXISTS ix_desp_fonte ON despesas(fonte, ano);
 CREATE INDEX IF NOT EXISTS ix_desp_ref ON despesas(ref_parlamentar);
@@ -93,6 +94,14 @@ CREATE TABLE IF NOT EXISTS gabinetes(
   PRIMARY KEY(fonte, lotacao_original, competencia)
 );
 
+-- Subsídio de parlamentar como o cadastro de pessoal da casa mostra numa data.
+CREATE TABLE IF NOT EXISTS remuneracoes(
+  fonte TEXT NOT NULL, casa TEXT NOT NULL, ref_parlamentar TEXT NOT NULL, competencia TEXT NOT NULL,
+  data_referencia TEXT, valor TEXT NOT NULL, rotulo TEXT, cargo_original TEXT,
+  url TEXT, hash_original TEXT, localizador TEXT, coletado_em TEXT,
+  PRIMARY KEY(fonte, ref_parlamentar, competencia)
+);
+
 -- Daqui para baixo, tudo é refeito pelo `conferir` a cada rodada.
 CREATE TABLE IF NOT EXISTS parlamentares(
   id TEXT PRIMARY KEY, nome TEXT NOT NULL, nome_civil TEXT, casa TEXT NOT NULL,
@@ -124,6 +133,21 @@ CREATE TABLE IF NOT EXISTS conferencias(
 """
 
 
+# Colunas que entraram depois da primeira versão do banco: o banco é cache
+# reconstruível, mas um banco antigo ganha as colunas em vez de ser apagado.
+MIGRACOES = (
+    ("despesas", "casa", "TEXT"),
+    ("despesas", "granularidade", "TEXT NOT NULL DEFAULT 'nota'"),
+)
+
+
+def _migrar(con: sqlite3.Connection) -> None:
+    for tabela, coluna, tipo in MIGRACOES:
+        colunas = {r[1] for r in con.execute(f"PRAGMA table_info({tabela})")}
+        if coluna not in colunas:
+            con.execute(f"ALTER TABLE {tabela} ADD COLUMN {coluna} {tipo}")
+
+
 def agora() -> str:
     return datetime.now(UTC).astimezone().isoformat(timespec="seconds")
 
@@ -135,6 +159,10 @@ def conectar(caminho: Path | None = None) -> sqlite3.Connection:
     # (uma por item do inventário, para a retomada ser atômica).
     con = sqlite3.connect(caminho, timeout=30, isolation_level=None)
     con.row_factory = sqlite3.Row
+    # o ESQUEMA cria o que falta; num banco antigo, as colunas novas vêm antes dele,
+    # porque ele também cria índices sobre elas
+    if con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='despesas'").fetchone():
+        _migrar(con)
     con.executescript(ESQUEMA)
     return con
 

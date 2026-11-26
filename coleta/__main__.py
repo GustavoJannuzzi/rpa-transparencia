@@ -8,24 +8,25 @@ import sys
 
 import typer
 
-from .fontes import FONTES, criar
+from .fontes import FONTES, criar, grupo
 from .nucleo import execucao
 from .nucleo.banco import conectar
 from .nucleo.execucao import eco
 
 app = typer.Typer(add_completion=False, help="Robôs de transparência: coleta, conferência e publicação.")
 
-OpcFonte = typer.Option(None, "--fonte", "-f", help="Só estas fontes (pode repetir).")
+OpcFonte = typer.Option(None, "--fonte", "-f", help="Só estas fontes, ou todas de um fornecedor (elotech, assembleia). Pode repetir.")
 
 
 def _selecionar(fontes: list[str] | None) -> list[str]:
     ids = [f.id for f in FONTES]
     if not fontes:
         return ids
-    desconhecidas = set(fontes) - set(ids)
+    grupos = {grupo(f) for f in FONTES}
+    desconhecidas = set(fontes) - set(ids) - grupos
     if desconhecidas:
-        raise typer.BadParameter(f"fontes desconhecidas: {sorted(desconhecidas)}. Existem: {ids}")
-    return [i for i in ids if i in fontes]
+        raise typer.BadParameter(f"fontes desconhecidas: {sorted(desconhecidas)}. Existem: {ids} e os grupos {sorted(grupos - set(ids))}")
+    return [f.id for f in FONTES if f.id in fontes or grupo(f) in fontes]
 
 
 async def _rodar(etapa: str, ids: list[str], refazer: bool, gravar_video: bool) -> dict[str, execucao.Placar | int]:

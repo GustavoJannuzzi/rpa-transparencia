@@ -110,6 +110,44 @@ _RE_ONZE_DIGITOS = re.compile(r"(?<!\d)\d{11}(?!\d)")
 _FIM_DE_PALAVRA = frozenset(" \t\r\n\"',;[]{}()<>|")
 
 
+def cnpj_valido(d: str) -> bool:
+    """Dígitos verificadores do CNPJ (14 dígitos)."""
+    if len(d) != 14 or len(set(d)) == 1:
+        return False
+    n = [int(c) for c in d]
+    for tam, pesos in ((12, [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]), (13, [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2])):
+        r = sum(a * b for a, b in zip(n[:tam], pesos, strict=True)) % 11
+        if (0 if r < 2 else 11 - r) != n[tam]:
+            return False
+    return True
+
+
+def documento_de_numero(texto: str | None) -> tuple[str | None, str | None]:
+    """CNPJ ou CPF que a planilha guardou como número ('13347016000117.0',
+    '82024000137.0'): perdeu os zeros à esquerda, e um CNPJ que começa com 000 fica
+    com 11 dígitos, como um CPF. Os zeros são recompostos só quando os dígitos
+    verificadores fecham, e só de um jeito: se o número fecha como CNPJ e como CPF,
+    fica como CPF (mascarado), o lado seguro. Devolve o texto e a nota do que foi feito."""
+    bruto = (texto or "").strip()
+    t = re.sub(r"\.0+$", "", bruto)
+    d = so_digitos(t)
+    if not d or not re.fullmatch(r"\d+", t):
+        return texto, None
+    era_numero = t != bruto or len(d) not in (11, 14)
+    if not era_numero:
+        return texto, None
+    como_cnpj = 8 <= len(d) <= 14 and cnpj_valido(d.zfill(14))
+    como_cpf = 8 <= len(d) <= 11 and _cpf_valido(d.zfill(11))
+    if como_cnpj and not como_cpf:
+        if len(d) == 14:
+            return d, "número da planilha lido sem o '.0'"
+        return d.zfill(14), "CNPJ gravado como número na fonte: zeros à esquerda recompostos, dígitos verificadores conferidos"
+    if como_cpf:
+        return d.zfill(11), ("CPF gravado como número na fonte: zeros à esquerda recompostos, dígitos verificadores conferidos"
+                             if len(d) < 11 else "número da planilha lido sem o '.0'")
+    return t, "número da planilha lido sem o '.0' (não fecha como CNPJ nem como CPF)"
+
+
 def _cpf_valido(d: str) -> bool:
     n = [int(c) for c in d]
     if len(set(n)) == 1:

@@ -1,0 +1,192 @@
+# Quem o robô coleta. Um adaptador por fornecedor; cada adaptador recebe daqui a
+# lista de entidades (casas) que atende, com endereço, código da entidade e consulta.
+#
+# Casa nova num fornecedor que já tem adaptador = um bloco novo aqui, nenhuma linha
+# de código. O `descobrir` confere cada bloco contra a própria fonte (o CNPJ da
+# entidade na API de entidades do Elotech, por exemplo) e para se não bater.
+#
+# Período comum das casas novas: o mesmo da 57ª legislatura federal.
+[periodo]
+de = 2023
+ate = 2026
+
+# ---------------------------------------------------------------------------
+# Elotech (Oxy / eloweb): API pública do portal, cabeçalhos `entidade` e
+# `exercicio`. `host` é a instalação; `entidade`, o número da Câmara nela (a
+# Prefeitura costuma ser 1). Escolha: cidades grandes e uma por região, da lista
+# inicial do levantamento de 26/11/2026.
+# ---------------------------------------------------------------------------
+
+# Curitiba usa o Elotech de 2017 a 2023, e o mesmo adaptador a atende com as
+# particularidades daquela série (diária só com matrícula até 2020).
+[[elotech]]
+fonte = "cmc_elotech"
+casa = "cmc"
+municipio = "Curitiba"
+ibge = 4106902
+regiao = "Metropolitana de Curitiba"
+host = "https://cmcuritiba.eloweb.net"
+entidade = 1
+cnpj = "77636520000110"
+de = 2017
+ate = 2023
+tela = "https://cmcuritiba.eloweb.net/portaltransparencia/1"
+
+[[elotech]]
+fonte = "elotech_maringa"
+casa = "cm-maringa"
+municipio = "Maringá"
+ibge = 4115200
+regiao = "Norte Central"
+host = "https://maringa.oxy.elotech.com.br"
+entidade = 6
+cnpj = "77926509000194"
+
+[[elotech]]
+fonte = "elotech_ponta_grossa"
+casa = "cm-ponta-grossa"
+municipio = "Ponta Grossa"
+ibge = 4119905
+regiao = "Centro Oriental"
+host = "https://cmpg.oxy.elotech.com.br"
+entidade = 1
+cnpj = "77780138000185"
+
+[[elotech]]
+fonte = "elotech_foz_do_iguacu"
+casa = "cm-foz-do-iguacu"
+municipio = "Foz do Iguaçu"
+ibge = 4108304
+regiao = "Oeste"
+host = "https://foz.oxy.elotech.com.br"
+entidade = 2
+cnpj = "75914051000128"
+
+[[elotech]]
+fonte = "elotech_sarandi"
+casa = "cm-sarandi"
+municipio = "Sarandi"
+ibge = 4126256
+regiao = "Norte Central"
+host = "https://sarandi.oxy.elotech.com.br"
+entidade = 3
+cnpj = "78844834000170"
+
+# Instalação própria do município (não está no domínio da Elotech), mesmo produto.
+[[elotech]]
+fonte = "elotech_umuarama"
+casa = "cm-umuarama"
+municipio = "Umuarama"
+ibge = 4128104
+regiao = "Noroeste"
+host = "https://servicos.umuarama.pr.gov.br"
+entidade = 2
+cnpj = "77646438000176"
+
+[[elotech]]
+fonte = "elotech_cianorte"
+casa = "cm-cianorte"
+municipio = "Cianorte"
+ibge = 4105508
+regiao = "Noroeste"
+host = "https://cianorte.oxy.elotech.com.br"
+entidade = 2
+cnpj = "75783688000122"
+
+[[elotech]]
+fonte = "elotech_irati"
+casa = "cm-irati"
+municipio = "Irati"
+ibge = 4110706
+regiao = "Sudeste"
+host = "https://irati.oxy.elotech.com.br"
+entidade = 2
+cnpj = "77778819000109"
+
+[[elotech]]
+fonte = "elotech_campina_grande_do_sul"
+casa = "cm-campina-grande-do-sul"
+municipio = "Campina Grande do Sul"
+ibge = 4104006
+regiao = "Metropolitana de Curitiba"
+host = "https://campinagrandedosul.oxy.elotech.com.br"
+entidade = 5
+cnpj = "02185870000108"
+
+[[elotech]]
+fonte = "elotech_pitanga"
+casa = "cm-pitanga"
+municipio = "Pitanga"
+ibge = 4119608
+regiao = "Centro-Sul"
+host = "https://pitanga.oxy.elotech.com.br"
+entidade = 2
+cnpj = "77778652000186"
+
+[[elotech]]
+fonte = "elotech_ubirata"
+casa = "cm-ubirata"
+municipio = "Ubiratã"
+ibge = 4128005
+regiao = "Centro Ocidental"
+host = "https://ubirata.oxy.elotech.com.br"
+entidade = 2
+cnpj = "01784600000150"
+
+[[elotech]]
+fonte = "elotech_cambara"
+casa = "cm-cambara"
+municipio = "Cambará"
+ibge = 4103602
+regiao = "Norte Pioneiro"
+host = "https://cambara.oxy.elotech.com.br"
+entidade = 2
+cnpj = "00781306000122"
+
+[[elotech]]
+fonte = "elotech_renascenca"
+casa = "cm-renascenca"
+municipio = "Renascença"
+ibge = 4121604
+regiao = "Sudoeste"
+host = "https://renascenca.oxy.elotech.com.br"
+entidade = 2
+cnpj = "01603715000100"
+
+# ---------------------------------------------------------------------------
+# Assembleias: cada uma é o seu próprio sistema, então cada uma tem o seu
+# adaptador. O bloco diz onde está o dado e como a casa se chama.
+# ---------------------------------------------------------------------------
+
+[[assembleia]]
+fonte = "cldf"
+casa = "al-df"
+uf = "DF"
+nome = "Câmara Legislativa do Distrito Federal"
+cargo = "deputado distrital"
+sistema = "Dados abertos da CLDF (CKAN)"
+modo = "arquivo"
+conjunto = "https://dados.cl.df.gov.br/dataset/verbas-indenizatorias"
+
+[[assembleia]]
+fonte = "almg"
+casa = "al-mg"
+uf = "MG"
+nome = "Assembleia Legislativa de Minas Gerais"
+cargo = "deputado estadual"
+sistema = "API de dados abertos da ALMG"
+modo = "api"
+api = "https://dadosabertos.almg.gov.br/api/v2"
+legislatura = 20
+
+[[assembleia]]
+fonte = "alesp"
+casa = "al-sp"
+uf = "SP"
+nome = "Assembleia Legislativa do Estado de São Paulo"
+cargo = "deputado estadual"
+sistema = "Dados abertos da ALESP (arquivo JSON)"
+modo = "arquivo"
+conjunto = "https://dadosabertos.al.sp.gov.br/dataset/despesas-de-gabinete"
+arquivo = "https://www3.al.sp.gov.br/repositorio/dados-abertos/output/json/despesas.json"
+deputados = "https://www3.al.sp.gov.br/repositorio/dados-abertos/output/json/deputados.json"
