@@ -25,8 +25,23 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 - Plataforma: favicon, imagem de compartilhamento (Open Graph), `robots.txt` e
   `sitemap.xml` ([#2](https://github.com/GustavoJannuzzi/rpa-transparencia/pull/2)).
 
+- Grafo: campo "Achar alguém no grafo" dentro do quadro, botões de aproximar,
+  afastar e ver o grafo inteiro, dica de uso sob as abas e a legenda dentro do
+  quadro no computador ([#7](https://github.com/GustavoJannuzzi/rpa-transparencia/pull/7)).
+- Grafo: o estado fica na URL (`/?vista=parana&no=…&lista=1&partido=…`). O Voltar
+  devolve o grafo como estava, e a página do parlamentar tem o link "Ver … no
+  grafo" ([#7](https://github.com/GustavoJannuzzi/rpa-transparencia/pull/7)).
+
 ### Alterado
 
+- Grafo no celular: abre na vista Paraná quando a URL não diz outra; a ficha do
+  ponto sobe da base da tela e a câmera põe o ponto acima dela; um toque a até
+  22 px de um ponto vale como toque nele; a ficha mostra todas as ligações e os
+  fornecedores por extenso ([#7](https://github.com/GustavoJannuzzi/rpa-transparencia/pull/7)).
+- Grafo mais leve: `grafo-brasil.json` de 779 KB para 150 KB (os nomes dos
+  fornecedores vão para `grafo-brasil-fornecedores.json`, carregado quando a
+  primeira ficha abre); os dados são pedidos logo depois da primeira pintura, e um
+  desenho do grafo gerado no build ocupa o quadro enquanto o canvas carrega ([#7](https://github.com/GustavoJannuzzi/rpa-transparencia/pull/7)).
 - O GitHub Actions pode abrir PR neste repositório, para o workflow de prints
   abrir o dele sozinho. As permissões padrão do `GITHUB_TOKEN` continuam só de
   leitura.
