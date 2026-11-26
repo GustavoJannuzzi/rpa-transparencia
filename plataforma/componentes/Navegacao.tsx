@@ -7,6 +7,7 @@ const ITENS = [
   { href: "/", rotulo: "Grafo" },
   { href: "/partidos/", rotulo: "Partidos" },
   { href: "/parlamentares/", rotulo: "Parlamentares" },
+  { href: "/cobertura/", rotulo: "Cobertura" },
   { href: "/como-os-dados-chegam-aqui/", rotulo: "Como os dados chegam aqui" },
   { href: "/sobre/", rotulo: "Sobre" },
 ];

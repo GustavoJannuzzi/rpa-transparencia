@@ -226,6 +226,16 @@ A ficha do ponto é manilha, como a de procedência: no computador, dentro do qu
 
 Vista, ponto escolhido, lista e partido em foco ficam na URL (`/?vista=parana&no=…&lista=1&partido=…`): o Voltar devolve o grafo como estava, e a página do parlamentar tem o link "Ver … no grafo". Sem nada na URL, o celular abre no Paraná (leve e legível) e o computador no Brasil.
 
+### Cobertura e casas
+A página Cobertura é a vitrine dos vários sistemas e tem cinco blocos, nesta ordem:
+- **Frase medida:** sem cartões de KPI, uma frase em Archivo com os números da coleta ("N casas coletadas, em M sistemas diferentes") e uma linha de apoio com parlamentares, linhas e a data da coleta.
+- **Fichas de sistema:** uma ficha manilha por adaptador (sistema, fornecedor, modo, casas que ele atende, com os anos), no recuo alternado de 6px das fichas da coleta. A ficha do sistema que atende muitas casas ocupa a largura toda e lista as casas em colunas.
+- **Mapas:** o Paraná por município e o Brasil por UF, como SVG gerado no build (`app/mapas`) a partir da malha do IBGE e carregado como imagem, para as centenas de contornos não pesarem no HTML da página. O preenchimento diz a situação: manilha para "coletada" (o mesmo preenchimento das barras), hachura sépia clara para "em revisão", hachura em contorno para "o portal barra o robô" (robots.txt, Cloudflare, captcha), gaveta-3 para "ainda sem adaptador" e gaveta-2, quase o fundo, para o resto. O filete é aço; o da casa coletada, gaveta, para ela saltar. O mapa não é interativo: o texto alternativo da imagem diz quantas casas há em cada situação, e a tabela é a forma de navegar.
+- **Levantamento:** tabela com as contagens do levantamento das fontes, sempre rotuladas com a data, separadas do que a coleta mediu.
+- **Todas as casas:** tabela agrupada (Congresso, Assembleias, Câmaras do PR), com uma busca e um select de situação que filtram no navegador. Três colunas: casa, sistema do portal e situação, que traz a amostra da mesma cor do mapa, o rótulo e o motivo em português de leigo.
+
+A página de cada casa segue o desenho do parlamentar: cabeçalho com o total na ficha, a linha "Fora desta soma", as fichas de sistema com a equação "N linhas na origem = publicadas + em revisão" e o carimbo, a tabela ano a ano (vereadores com nome × servidores só na soma, e "a fonte não publica" no lugar de zero), a revisão por motivo, os membros em ordem alfabética e, na coluna, categoria, subsídio, outras conferências e os fornecedores pagos por mais de um.
+
 ### Inputs / Fields
 - **Style:** fundo gaveta-2, borda contorno de 1px, cantos de 6px, 40px de altura na busca e nos selects; placeholder tinta-3; cursor de texto violeta claro.
 - **Focus:** a borda passa a violeta; o resto do sistema usa o contorno global violeta claro.

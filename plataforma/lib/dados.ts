@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { normalizar, type DadosGrafo, type Vista } from "./grafo";
-import type { Fontes, ItemIndice, ItemPartido, Parlamentar, Partido, Revisao } from "./tipos";
+import type { Casa, Cobertura, Fontes, ItemIndice, ItemPartido, Mapa, Parlamentar, Partido, ResumoCasa, Revisao } from "./tipos";
 
 const PASTA = path.join(process.cwd(), "public", "dados");
 
@@ -16,6 +16,17 @@ export const parlamentar = (id: string) => ler<Parlamentar>(path.join("parlament
 export const fontes = () => ler<Fontes>("fontes.json");
 export const revisao = () => ler<Revisao>("revisao.json");
 export const categorias = () => ler<Record<string, string>>("categorias.json");
+export const casas = () => ler<ResumoCasa[]>("casas.json");
+export const casa = (id: string) => ler<Casa>(path.join("casas", `${id}.json`));
+export const cobertura = () => ler<Cobertura>("cobertura.json");
+export const mapa = (nome: "pr" | "br") => ler<Mapa>(`mapa-${nome}.json`);
+
+/** A casa de um parlamentar, pelo id (lida uma vez por build). */
+let _casas: Map<string, ResumoCasa> | null = null;
+export function casaDe(id: string): ResumoCasa | undefined {
+  _casas ??= new Map(casas().map((c) => [c.id, c]));
+  return _casas.get(id);
+}
 
 const grafos = new Map<Vista, DadosGrafo>();
 /** O grafo de uma vista, lido uma vez por build. */

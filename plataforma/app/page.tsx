@@ -26,8 +26,8 @@ export default function Inicio() {
             Quem gastou com quem, e de onde vem cada número
           </h1>
           <p className="mt-3 max-w-[62ch] text-[0.98rem] leading-relaxed text-tinta-2">
-            Deputados federais ligados pelos fornecedores que contrataram em comum, e vereadores de Curitiba ligados aos seus
-            partidos. Fornecedor em comum não insinua nada: só mostra que duas pessoas contrataram a mesma empresa.
+            Deputados federais e estaduais (DF, MG e SP) ligados pelos fornecedores que contrataram em comum, e vereadores de 13
+            câmaras do Paraná ligados aos seus partidos. Fornecedor em comum não insinua nada: só mostra que duas pessoas contrataram a mesma empresa.
           </p>
         </div>
         <div className="flex-1">

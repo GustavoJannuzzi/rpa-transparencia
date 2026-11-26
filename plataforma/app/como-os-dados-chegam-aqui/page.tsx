@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { CarimboRevisao } from "@/componentes/EmRevisao";
 import Valor from "@/componentes/Valor";
 import { fontes, revisao } from "@/lib/dados";
@@ -98,6 +99,14 @@ export default function ComoOsDadosChegam() {
         A Câmara Municipal de Curitiba trocou de sistema três vezes. O histórico das diárias está espalhado em quatro lugares,
         de quatro fornecedores, e só um deles tem API. Onde há API, a coleta usa a API; onde não há, um robô abre o portal como
         uma pessoa faria. Tudo vai para um modelo único, passa pela conferência e só então aparece aqui.
+      </p>
+      <p className="mt-3 max-w-[68ch] text-[0.95rem] leading-relaxed text-tinta-3">
+        As outras casas (as assembleias do DF, de MG e de SP e mais 12 câmaras do Paraná) usam o mesmo modelo e a mesma
+        conferência. Que casas estão aqui, por qual sistema, e por que as outras ainda não estão:{" "}
+        <Link href="/cobertura/" className="text-carimbo-claro underline">
+          Cobertura
+        </Link>
+        .
       </p>
       <dl className="mt-8 grid max-w-[68rem] gap-x-8 gap-y-4 text-[0.95rem] leading-relaxed sm:grid-cols-3">
         <div className="border-t border-aco pt-3">

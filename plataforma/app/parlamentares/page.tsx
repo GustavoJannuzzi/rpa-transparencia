@@ -1,48 +1,82 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { indice } from "@/lib/dados";
+import { casas, indice } from "@/lib/dados";
 import { inteiro } from "@/lib/formato";
 import { metadadosDaPagina } from "@/lib/site";
+import type { ItemIndice } from "@/lib/tipos";
 
 export const metadata: Metadata = metadadosDaPagina({
   title: "Parlamentares",
-  description: "Deputados federais da 57ª legislatura e vereadores de Curitiba, em ordem alfabética, com as despesas conferidas de cada um.",
+  description:
+    "Deputados federais da 57ª legislatura, deputados estaduais do DF, de MG e de SP e vereadores das câmaras do Paraná que a coleta cobre, em ordem alfabética, casa por casa.",
   caminho: "/parlamentares/",
 });
 
+const ORDEM_TIPO = { camara_federal: 0, senado: 1, assembleia: 2, camara_municipal: 3 } as const;
+
 export default function Parlamentares() {
   const todos = indice();
-  const grupos = [
-    { id: "vereadores", titulo: "Vereadores de Curitiba", itens: todos.filter((i) => i.casa === "cmc") },
-    { id: "deputados", titulo: "Deputados federais (57ª legislatura)", itens: todos.filter((i) => i.casa === "camara-deputados") },
-  ];
+  const porCasa = new Map<string, ItemIndice[]>();
+  for (const i of todos) porCasa.set(i.casa, [...(porCasa.get(i.casa) ?? []), i]);
+  // federal, depois as assembleias, depois as câmaras; dentro de cada tipo, pelo nome da casa
+  const grupos = casas()
+    .filter((c) => porCasa.has(c.id))
+    .sort((a, b) => ORDEM_TIPO[a.tipo] - ORDEM_TIPO[b.tipo] || (a.municipio ?? a.nome).localeCompare(b.municipio ?? b.nome, "pt-BR"));
+  const titulo = (c: (typeof grupos)[number]) =>
+    c.tipo === "camara_federal"
+      ? "Deputados federais (57ª legislatura)"
+      : c.tipo === "assembleia"
+        ? `${c.id === "al-df" ? "Deputados distritais" : "Deputados estaduais"}: ${c.nome}`
+        : `Vereadores de ${c.municipio}`;
   return (
     <div className="mx-auto max-w-[1180px] px-4 py-8 sm:px-8 sm:py-10">
       <h1 className="font-titulo text-[2.4rem] font-medium leading-tight tracking-[-0.02em]">Parlamentares</h1>
       <p className="mt-2 max-w-[65ch] text-tinta-2">
-        Em ordem alfabética. Esta lista é o mesmo índice do grafo, para quem prefere navegar sem ele.
+        Em ordem alfabética, casa por casa. Esta lista é o mesmo índice do grafo e da busca, para quem prefere navegar sem eles. Que casas
+        entram, e por que outras ficam de fora, está em{" "}
+        <Link href="/cobertura/" className="underline hover:text-tinta">
+          Cobertura
+        </Link>
+        .
       </p>
-      {grupos.map((g) => (
-        <section key={g.id} className="mt-10" aria-labelledby={g.id}>
-          <h2 id={g.id} className="font-titulo text-xl font-medium">
-            {g.titulo} <span className="num text-tinta-3">({inteiro(g.itens.length)})</span>
-          </h2>
-          <ul className="mt-4 columns-1 gap-8 sm:columns-2 lg:columns-3">
-            {g.itens.map((i) => (
-              <li key={i.id} className="break-inside-avoid border-t border-aco py-1.5">
-                <Link href={`/parlamentares/${i.id}/`} className="hover:text-carimbo-claro hover:underline">
-                  {i.nome}
+      <nav aria-label="Casas nesta página" className="mt-6 flex flex-wrap gap-x-4 gap-y-1.5 text-sm">
+        {grupos.map((c) => (
+          <a key={c.id} href={`#casa-${c.id}`} className="text-tinta-2 underline hover:text-tinta">
+            {c.tipo === "camara_municipal" ? c.municipio : c.tipo === "camara_federal" ? "Câmara dos Deputados" : c.uf}
+          </a>
+        ))}
+      </nav>
+      {grupos.map((c) => {
+        const itens = porCasa.get(c.id) ?? [];
+        return (
+          <section key={c.id} className="mt-10 scroll-mt-6" id={`casa-${c.id}`} aria-labelledby={`titulo-${c.id}`}>
+            <h2 id={`titulo-${c.id}`} className="font-titulo text-xl font-medium">
+              {titulo(c)} <span className="num text-tinta-3">({inteiro(itens.length)})</span>
+            </h2>
+            {c.tipo !== "camara_federal" && (
+              <p className="mt-1 text-sm">
+                <Link href={`/casas/${c.id}/`} className="text-tinta-3 underline hover:text-tinta">
+                  A casa: sistema, totais e o que ficou em revisão
                 </Link>
-                <span className="text-sm text-tinta-3">
-                  {" "}
-                  · {i.partido ?? "partido em revisão"}
-                  {i.casa === "camara-deputados" ? ` · ${i.uf}` : ""}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
+              </p>
+            )}
+            <ul className="mt-4 columns-1 gap-8 sm:columns-2 lg:columns-3">
+              {itens.map((i) => (
+                <li key={i.id} className="break-inside-avoid border-t border-aco py-1.5">
+                  <Link href={`/parlamentares/${i.id}/`} className="hover:text-carimbo-claro hover:underline">
+                    {i.nome}
+                  </Link>
+                  <span className="text-sm text-tinta-3">
+                    {" "}
+                    · {i.partido ?? (c.tipo === "assembleia" ? "partido não informado" : "partido em revisão")}
+                    {i.casa === "camara-deputados" ? ` · ${i.uf}` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        );
+      })}
     </div>
   );
 }

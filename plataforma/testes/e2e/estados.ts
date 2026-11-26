@@ -76,6 +76,11 @@ export const ESTADOS: Estado[] = [
   { nome: "vereador", rota: "/parlamentares/ver-cwb-pedro-paulo-costa/" },
   { nome: "vereador-com-gabinete", rota: "/parlamentares/ver-cwb-alexandre-leprevost/", soAxe: true },
   { nome: "como-os-dados-chegam-aqui", rota: "/como-os-dados-chegam-aqui/" },
+  // as casas novas: a vitrine dos vários sistemas, uma câmara do Elotech e uma assembleia de arquivo agregado
+  { nome: "cobertura", rota: "/cobertura/" },
+  { nome: "casa-camara", rota: "/casas/cm-maringa/" },
+  { nome: "casa-assembleia", rota: "/casas/al-sp/", soAxe: true },
+  { nome: "deputado-estadual", rota: "/parlamentares/est-mg-12193/", soAxe: true },
   { nome: "sobre", rota: "/sobre/" },
   { nome: "pagina-nao-encontrada", rota: "/nao-existe/" },
 ];

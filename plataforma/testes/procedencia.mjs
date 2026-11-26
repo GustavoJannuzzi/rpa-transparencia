@@ -70,9 +70,20 @@ for (const arq of readdirSync(path.join(DADOS, "parlamentares"))) {
   }
 }
 
+// 3. casas: o resumo de cada casa diz de quais fontes e de quando veio
+let casas = 0;
+if (existsSync(path.join(DADOS, "casas"))) {
+  for (const arq of readdirSync(path.join(DADOS, "casas"))) {
+    casas++;
+    const j = JSON.parse(readFileSync(path.join(DADOS, "casas", arq), "utf-8"));
+    if (!j.p?.fontes?.length || !/^\d{4}-\d{2}-\d{2}$/.test(j.p.coleta ?? "")) falhas.push(`casas/${arq}: sem fonte ou sem data de coleta`);
+    if (j.linhas > 0 && !j.sistemas?.length) falhas.push(`casas/${arq}: linhas publicadas sem o sistema de onde vieram`);
+  }
+}
+
 if (falhas.length) {
   console.error(`${falhas.length} falha(s):`);
   for (const f of falhas.slice(0, 30)) console.error("  " + f);
   process.exit(1);
 }
-console.log(`ok: ${paginas} páginas, ${valores} valores em reais no HTML, ${linhas} linhas de despesa nos JSON, todos com procedência`);
+console.log(`ok: ${paginas} páginas, ${valores} valores em reais no HTML, ${linhas} linhas de despesa nos JSON e ${casas} casas, todos com procedência`);

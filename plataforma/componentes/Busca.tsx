@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { ondeCurto } from "@/lib/formato";
 import type { ItemIndice } from "@/lib/tipos";
 
 function norm(s: string) {
@@ -136,7 +137,12 @@ export default function Busca({ aoEscolher, rotulo = "Buscar deputado ou vereado
         {itens === null && <p className="px-3.5 py-2.5 text-sm text-tinta-3">Abrindo o índice…</p>}
         {itens !== null && achados.length === 0 && (
           <p className="px-3.5 py-2.5 text-sm leading-relaxed text-tinta-3">
-            Nenhum nome encontrado. A busca cobre os deputados federais da 57ª legislatura e os vereadores de Curitiba. Partidos ficam em{" "}
+            Nenhum nome encontrado. A busca cobre os deputados federais da 57ª legislatura, os deputados estaduais do DF, de MG e de SP
+            e os vereadores das câmaras do PR que a coleta cobre (lista em{" "}
+            <Link href="/cobertura/" className="text-tinta-2 underline hover:text-tinta" onClick={() => setAberta(false)}>
+              Cobertura
+            </Link>
+            ). Partidos ficam em{" "}
             <Link href="/partidos/" className="text-tinta-2 underline hover:text-tinta" onClick={() => setAberta(false)}>
               Partidos
             </Link>
@@ -158,7 +164,7 @@ export default function Busca({ aoEscolher, rotulo = "Buscar deputado ou vereado
             >
               <span className="min-w-0 text-[0.95rem]">{i.nome}</span>
               <span className="shrink-0 text-xs text-tinta-3">
-                {i.partido ?? "sem partido"} · {i.casa === "cmc" ? "Curitiba" : i.uf}
+                {i.partido ?? "sem partido"} · {ondeCurto(i)}
               </span>
             </li>
           ))}

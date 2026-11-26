@@ -17,7 +17,7 @@ Next.js + TypeScript + Tailwind, exportação estática (`plataforma/`), dados n
 
 ## Product Purpose
 
-Uma plataforma independente que junta despesas públicas de parlamentares vindas de sistemas que não conversam entre si — a Câmara de Curitiba em quatro sistemas (legado em PDF, Elotech, portal da Prefeitura, Betha) e a cota dos deputados federais pela API e pelos arquivos anuais — num modelo só, e mostra tudo num grafo que agrupa por partido e liga por fornecedor em comum. Sucesso: o visitante acha o parlamentar, entende o que está vendo e confia no número porque vê de onde ele veio.
+Uma plataforma independente que junta despesas públicas de parlamentares vindas de sistemas que não conversam entre si — a Câmara de Curitiba em quatro sistemas (legado em PDF, Elotech, portal da Prefeitura, Betha), mais câmaras do PR no Elotech, as assembleias do DF, de MG e de SP, e a cota dos deputados federais pela API e pelos arquivos anuais — num modelo só, e mostra tudo num grafo que agrupa por partido e liga por fornecedor em comum. Sucesso: o visitante acha o parlamentar, entende o que está vendo e confia no número porque vê de onde ele veio.
 
 ## Positioning
 
@@ -30,7 +30,8 @@ Todo número tem procedência (fonte, data da coleta, documento oficial) e só v
 
 ## Capabilities and Constraints
 
-- Telas: grafo (Brasil por fornecedor em comum; Paraná por partido), partido, parlamentar, "Como os dados chegam aqui" (linha do tempo da cobertura de Curitiba, fontes, conferência e revisão) e Sobre.
+- Telas: grafo (Brasil por fornecedor em comum; Paraná por partido), partido, parlamentar (de qualquer casa), casa (assembleia ou câmara municipal), Cobertura (quais casas, em qual sistema, e por que as outras ficaram de fora), "Como os dados chegam aqui" (linha do tempo da cobertura de Curitiba, fontes, conferência e revisão) e Sobre.
+- Casas: Câmara dos Deputados, as assembleias do DF, de MG e de SP, e 13 câmaras municipais do PR (Curitiba em quatro sistemas; as outras no Elotech). Um adaptador por fornecedor, configurado por entidade.
 - Assessor e servidor aparecem só no agregado (custo do gabinete, diárias de servidores no total da Câmara), nunca pelo nome. Fornecedor pessoa física aparece com CPF mascarado e não entra no grafo.
 - Partido de vereador é o da eleição do mandato (TSE); de deputado, o informado em cada linha da cota.
 - Valores do Betha são "valor previsto da diária"; do gabinete, "remuneração contratual" (Betha) e "remuneração" (Elotech): sempre com o rótulo da fonte.

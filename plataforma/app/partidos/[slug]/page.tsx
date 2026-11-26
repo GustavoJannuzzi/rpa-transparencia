@@ -3,9 +3,12 @@ import Link from "next/link";
 import Barras, { type ItemBarra } from "@/componentes/Barras";
 import Valor from "@/componentes/Valor";
 import { categorias, dataDaColeta, partido, partidos } from "@/lib/dados";
-import { mes, proporcao } from "@/lib/formato";
+import { mes, ondeCurto, proporcao, tipoDaCasa } from "@/lib/formato";
 import { metadadosDaPagina } from "@/lib/site";
 import type { Procedencia } from "@/lib/tipos";
+
+/** Fontes de vereador: o partido vem do TSE (eleição do mandato). */
+const partidoDoTse = (f: string) => f.startsWith("cmc_") || f.startsWith("elotech_");
 
 export const dynamicParams = false;
 
@@ -28,13 +31,13 @@ export default async function PaginaPartido({ params }: { params: Promise<{ slug
   const p = partido(slug);
   const rot = categorias();
   // as fontes que de fato entraram na soma (o partido de vereador vem do TSE)
-  const fontesUsadas = [...p.fontes, ...(p.fontes.some((f) => f.startsWith("cmc_")) ? ["tse"] : [])];
+  const fontesUsadas = [...p.fontes, ...(p.fontes.some(partidoDoTse) ? ["tse"] : [])];
   const coleta = Object.values(p.coleta).sort().at(-1) ?? dataDaColeta();
   const proc: Procedencia = { fontes: fontesUsadas, coleta, situacao: "soma", nota: p.regra };
   const recorte = (r: { fontes: string[]; linhas: number } | undefined): Procedencia => {
     const fs = r?.fontes ?? p.fontes;
     return {
-      fontes: [...fs, ...(fs.some((f) => f.startsWith("cmc_")) ? ["tse"] : [])],
+      fontes: [...fs, ...(fs.some(partidoDoTse) ? ["tse"] : [])],
       coleta: fs.map((f) => p.coleta[f] ?? "").sort().at(-1) ?? coleta,
       situacao: "soma",
       linhas: r?.linhas,
@@ -58,8 +61,9 @@ export default async function PaginaPartido({ params }: { params: Promise<{ slug
   }
   const maxMes = meses.reduce((m, [, v]) => (Number(v) > Number(m) ? v : m), "0");
   const cats: ItemBarra[] = Object.entries(p.por_categoria).map(([k, v]) => ({ chave: k, valor: v, p: recorte(p.procedencia_categoria?.[k]) }));
-  const federais = p.membros.filter((m) => m.casa === "camara-deputados");
-  const municipais = p.membros.filter((m) => m.casa === "cmc");
+  const federais = p.membros.filter((m) => tipoDaCasa(m.casa) === "federal");
+  const estaduais = p.membros.filter((m) => tipoDaCasa(m.casa) === "estadual");
+  const municipais = p.membros.filter((m) => tipoDaCasa(m.casa) === "municipal");
 
   return (
     <article className="mx-auto max-w-[1180px] px-4 py-8 sm:px-8 sm:py-10">
@@ -72,7 +76,7 @@ export default async function PaginaPartido({ params }: { params: Promise<{ slug
         <div>
           <h1 className="font-titulo text-[3rem] font-medium leading-none tracking-[-0.02em] sm:text-[4rem]">{p.sigla}</h1>
           <p className="mt-3 text-tinta-2">
-            {federais.length} deputado(s) federal(is) · {municipais.length} vereador(es) de Curitiba
+            {federais.length} deputado(s) federal(is) · {estaduais.length} deputado(s) estadual(is) · {municipais.length} vereador(es)
           </p>
         </div>
         {Number(p.total) !== 0 && (
@@ -152,12 +156,12 @@ export default async function PaginaPartido({ params }: { params: Promise<{ slug
           Parlamentares do partido
         </h2>
         <ul className="mt-4 columns-1 gap-8 sm:columns-2 lg:columns-3">
-          {[...municipais, ...federais].map((m) => (
+          {[...municipais, ...estaduais, ...federais].map((m) => (
             <li key={m.id} className="break-inside-avoid border-t border-aco py-1.5">
               <Link href={`/parlamentares/${m.id}/`} className="hover:text-carimbo-claro hover:underline">
                 {m.nome}
               </Link>
-              <span className="text-sm text-tinta-3"> · {m.casa === "cmc" ? "Curitiba" : m.uf}</span>
+              <span className="text-sm text-tinta-3"> · {ondeCurto(m)}</span>
             </li>
           ))}
         </ul>

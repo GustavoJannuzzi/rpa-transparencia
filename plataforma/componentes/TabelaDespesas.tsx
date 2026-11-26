@@ -55,7 +55,7 @@ export default function TabelaDespesas({ id, anos, rotulos }: { id: string; anos
       .filter((l) => !categoria || arq.categorias[l[1]] === categoria)
       .map(([dt, ic, iforn, valor, doc, ik, info]) => {
         const coleta = arq.coletas[ik];
-        const url = documento(arq, doc) ?? info?.src ?? null;
+        const url = documento(arq, doc) ?? info?.src ?? coleta.src ?? null;
         const fora = Boolean(info?.s);
         return {
           data: dt,

@@ -22,6 +22,9 @@ const PAGINAS = {
   deputada: "/parlamentares/dep-220704/",
   dados: "/como-os-dados-chegam-aqui/",
   sobre: "/sobre/",
+  // as casas: a vitrine dos vários sistemas (mapas em SVG e a tabela de 428 casas) e uma assembleia
+  cobertura: "/cobertura/",
+  casa: "/casas/al-sp/",
 };
 const BASE = "http://127.0.0.1:3107";
 
