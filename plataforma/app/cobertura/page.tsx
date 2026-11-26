@@ -64,9 +64,7 @@ export default function PaginaCobertura() {
   const lev = cob.levantamento;
 
   const classesPr = new Map<string, Classe>(cob.camaras_pr.map((c) => [String(c.ibge), classe(c.situacao, c.motivo)]));
-  const nomesPr = new Map(cob.camaras_pr.map((c) => [String(c.ibge), c.municipio]));
   const classesBr = new Map<string, Classe>(cob.assembleias.map((a) => [a.uf, classe(a.situacao, a.motivo)]));
-  const nomesBr = new Map(cob.assembleias.map((a) => [a.uf, `${a.sigla} (${a.uf})`]));
 
   const linhas: LinhaCobertura[] = [
     ...cob.federal.map((f) => ({
@@ -187,10 +185,9 @@ export default function PaginaCobertura() {
             <MapaCobertura
               className="mt-4"
               mapa={mapa("pr")}
+              arquivo="/mapas/pr.svg"
               classes={classesPr}
-              nomes={nomesPr}
-              titulo="Mapa do Paraná por município"
-              descricao={`${camaras.length} câmaras coletadas; as demais estão na tabela abaixo, com o motivo.`}
+              descricao={`Mapa do Paraná por município: ${camaras.length} câmaras coletadas; as demais estão na tabela abaixo, com o motivo.`}
             />
           </div>
           <div>
@@ -199,10 +196,9 @@ export default function PaginaCobertura() {
             <MapaCobertura
               className="mt-4 max-w-[420px]"
               mapa={mapa("br")}
+              arquivo="/mapas/br.svg"
               classes={classesBr}
-              nomes={nomesBr}
-              titulo="Mapa do Brasil por estado"
-              descricao={`${assembleias.length} assembleias coletadas; as demais estão na tabela abaixo, com o motivo.`}
+              descricao={`Mapa do Brasil por estado: ${assembleias.length} assembleias coletadas; as demais estão na tabela abaixo, com o motivo.`}
             />
           </div>
         </div>

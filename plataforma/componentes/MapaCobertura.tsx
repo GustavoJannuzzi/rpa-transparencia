@@ -2,7 +2,7 @@ import { type Classe, ORDEM_CLASSE, PREENCHIMENTO, ROTULO_CLASSE } from "@/lib/c
 import { inteiro } from "@/lib/formato";
 import type { Mapa } from "@/lib/tipos";
 
-/** As hachuras do mapa e da legenda: sépia para revisão, contorno para o portal que barra o robô. */
+/** As hachuras da legenda e da tabela: sépia para revisão, contorno para o portal que barra o robô. */
 export function PadroesMapa() {
   return (
     <svg width="0" height="0" aria-hidden="true" focusable="false" className="absolute">
@@ -28,20 +28,19 @@ export function Amostra({ classe }: { classe: Classe }) {
   );
 }
 
-/** Mapa estático (a malha do IBGE vira caminho de SVG no publicar). Não é interativo:
- * a tabela abaixo é a forma de navegar, e o mapa diz por extenso o que mostra. */
+/** Mapa estático: o desenho é um SVG gerado no build (app/mapas), carregado como
+ * imagem quando chega perto da tela, para não pesar no HTML. A legenda conta as
+ * casas de cada situação; a tabela abaixo é a forma de navegar. */
 export default function MapaCobertura({
   mapa,
+  arquivo,
   classes,
-  nomes,
-  titulo,
   descricao,
   className = "",
 }: {
   mapa: Mapa;
+  arquivo: string;
   classes: Map<string, Classe>;
-  nomes: Map<string, string>;
-  titulo: string;
   descricao: string;
   className?: string;
 }) {
@@ -50,27 +49,14 @@ export default function MapaCobertura({
     const c = classes.get(String(a.id)) ?? "outra";
     contagem.set(c, (contagem.get(c) ?? 0) + 1);
   }
-  const idTitulo = `mapa-${titulo.replace(/[^a-z]/gi, "").toLowerCase()}`;
+  const [, , largura, altura] = mapa.viewBox.split(" ").map(Number);
+  const resumo = ORDEM_CLASSE.filter((c) => contagem.get(c))
+    .map((c) => `${ROTULO_CLASSE[c].toLowerCase()}: ${inteiro(contagem.get(c) ?? 0)}`)
+    .join("; ");
   return (
     <figure className={className}>
-      <svg viewBox={mapa.viewBox} role="img" aria-labelledby={idTitulo} className="h-auto w-full" preserveAspectRatio="xMidYMid meet">
-        <title id={idTitulo}>{`${titulo}. ${descricao}`}</title>
-        {mapa.areas.map((a) => {
-          const c = classes.get(String(a.id)) ?? "outra";
-          return (
-            <path
-              key={a.id}
-              d={a.d}
-              fill={PREENCHIMENTO[c]}
-              stroke={c === "coletada" ? "var(--color-gaveta)" : "var(--color-aco)"}
-              strokeWidth={c === "coletada" ? 1.2 : 0.6}
-              strokeLinejoin="round"
-            >
-              <title>{`${nomes.get(String(a.id)) ?? a.id}: ${ROTULO_CLASSE[c].toLowerCase()}`}</title>
-            </path>
-          );
-        })}
-      </svg>
+      {/* eslint-disable-next-line @next/next/no-img-element -- export estático, SVG gerado no build */}
+      <img src={arquivo} alt={`${descricao} Situação das casas: ${resumo}.`} width={largura} height={altura} loading="lazy" decoding="async" className="h-auto w-full" />
       <figcaption className="mt-3">
         <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-[0.82rem] text-tinta-2">
           {ORDEM_CLASSE.filter((c) => contagem.get(c)).map((c) => (
