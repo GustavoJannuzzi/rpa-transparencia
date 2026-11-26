@@ -16,5 +16,4 @@ export function useMidia(consulta: string, noServidor = false): boolean {
   );
 }
 
-/** Abaixo de 640 px (o `sm` do Tailwind): fichas viram folha na base da tela. */
-export const TELA_ESTREITA = "(max-width: 639.98px)";
+export { TELA_ESTREITA } from "./telas";

@@ -1,11 +1,19 @@
 import GavetaColeta from "@/componentes/GavetaColeta";
 import Grafo from "@/componentes/Grafo";
 import { fontes } from "@/lib/dados";
+import { TELA_ESTREITA } from "@/lib/telas";
 
 export default function Inicio() {
   const f = fontes();
   return (
     <div className="mx-auto grid max-w-[1600px] lg:min-h-[calc(100dvh-4rem)] lg:grid-cols-[1fr_440px]">
+      {/* os dados do grafo saem junto com a página, antes do JavaScript dela: a vista da URL,
+          ou o Paraná no celular e o Brasil no computador */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `(function(){try{var q=new URLSearchParams(location.search).get("vista");var v=q==="brasil"||q==="parana"?q:matchMedia(${JSON.stringify(TELA_ESTREITA)}).matches?"parana":"brasil";var p=fetch("/dados/grafo-"+v+".json").then(function(r){if(!r.ok)throw new Error(r.status);return r.json()});p.catch(function(){});window.__grafoInicial={vista:v,dados:p}}catch(e){}})()`,
+        }}
+      />
       <section aria-labelledby="titulo" className="flex flex-col border-aco lg:border-r">
         <div className="px-4 pt-6 sm:px-8">
           <h1 id="titulo" className="max-w-[24ch] font-titulo text-[2.1rem] font-medium leading-[1.04] tracking-[-0.02em] sm:text-[2.6rem]">

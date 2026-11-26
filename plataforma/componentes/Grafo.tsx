@@ -4,87 +4,183 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type GraphT from "graphology";
 import type SigmaT from "sigma";
-import { ABA_DEMAIS, paletaPartidos } from "@/lib/cores";
+import Busca from "@/componentes/Busca";
+import { ABA_DEMAIS } from "@/lib/cores";
+import {
+  APAGADO,
+  corDaAresta,
+  corDoNo,
+  coresDaVista,
+  entraNoGrafo,
+  escalaDoNo,
+  normalizar,
+  tamanhoDaAresta,
+  tamanhoDoNo,
+  type DadosGrafo,
+  type No,
+  type Vista,
+} from "@/lib/grafo";
+import { TELA_ESTREITA, useMidia } from "@/lib/midia";
+import type { ItemIndice } from "@/lib/tipos";
 
-type No = { id: string; rotulo: string; partido: string | null; uf?: string; grau?: number; tipo?: string; total?: string; x: number; y: number };
-type Aresta = { a: string; b: string; peso?: number; atual?: boolean; periodo?: string; base?: string; fornecedores?: { doc: string; nome: string | null }[] };
-type DadosGrafo = { nos: No[]; arestas: Aresta[]; partidos: string[]; regra: string; regra_tecnica?: string };
-type Vista = "brasil" | "parana";
+// A biblioteca do grafo começa a baixar junto com a página, em paralelo com os
+// dados (que o HTML já pede com <link rel="preload">), e não depois deles.
+const bibliotecas = typeof window === "undefined" ? null : Promise.all([import("graphology"), import("sigma")]);
 
-const APAGADO = "#2b3532";
+const cacheDados = new Map<Vista, Promise<DadosGrafo>>();
+declare global {
+  interface Window {
+    /** o pedido que o script inline da página inicial já fez, antes do JavaScript */
+    __grafoInicial?: { vista: Vista; dados: Promise<unknown> };
+  }
+}
+function carregarDados(vista: Vista) {
+  if (!cacheDados.has(vista)) {
+    const inicial = window.__grafoInicial;
+    const bruto =
+      inicial?.vista === vista
+        ? inicial.dados
+        : fetch(`/dados/grafo-${vista}.json`).then((r) => {
+            if (!r.ok) throw new Error(String(r.status));
+            return r.json();
+          });
+    if (inicial?.vista === vista) window.__grafoInicial = undefined;
+    const p = bruto.then((d) => normalizar(d as Parameters<typeof normalizar>[0]));
+    p.catch(() => cacheDados.delete(vista));
+    cacheDados.set(vista, p);
+  }
+  return cacheDados.get(vista)!;
+}
+
+// os nomes dos fornecedores ficam num arquivo à parte: só vêm quando alguém abre um ponto
+let cacheFornecedores: Promise<[string, string | null][]> | null = null;
+function carregarFornecedores() {
+  cacheFornecedores ??= fetch("/dados/grafo-brasil-fornecedores.json")
+    .then((r) => (r.ok ? r.json() : Promise.reject()))
+    .then((d: { fornecedores: [string, string | null][] }) => d.fornecedores)
+    .catch(() => {
+      cacheFornecedores = null;
+      return [];
+    });
+  return cacheFornecedores;
+}
+
+const ABAS: [Vista, string, string][] = [
+  ["brasil", "Brasil", " · fornecedores em comum"],
+  ["parana", "Paraná", " · partidos"],
+];
+
+/** O estado do grafo mora na URL: voltar de uma página devolve o grafo como estava,
+ * e dá para mandar o link de "fulano no grafo". */
+type EstadoUrl = { vista: Vista | null; no: string | null; lista: boolean; partido: string | null };
+function lerUrl(): EstadoUrl {
+  const q = new URLSearchParams(window.location.search);
+  const v = q.get("vista");
+  return {
+    vista: v === "brasil" || v === "parana" ? v : null,
+    no: q.get("no"),
+    lista: q.get("lista") === "1",
+    partido: q.get("partido"),
+  };
+}
 
 export default function Grafo() {
+  const estreita = useMidia(TELA_ESTREITA);
+  const [iniciado, setIniciado] = useState(false);
   const [vista, setVista] = useState<Vista>("brasil");
   const [dados, setDados] = useState<DadosGrafo | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [desenhado, setDesenhado] = useState(false);
   const [selecionado, setSelecionado] = useState<string | null>(null);
   const [partidoFoco, setPartidoFoco] = useState<string | null>(null);
   const [emLista, setEmLista] = useState(false);
+  const [aviso, setAviso] = useState<{ id: string; nome: string } | null>(null);
+  const [fornecedores, setFornecedores] = useState<[string, string | null][] | null>(null);
   const caixa = useRef<HTMLDivElement>(null);
+  const quadro = useRef<HTMLDivElement>(null);
+  const ficha = useRef<HTMLElement>(null);
+  const tituloFicha = useRef<HTMLHeadingElement>(null);
   const sigmaRef = useRef<SigmaT | null>(null);
   const grafoRef = useRef<GraphT | null>(null);
   const estado = useRef<{ hover: string | null; sel: string | null; partido: string | null }>({ hover: null, sel: null, partido: null });
-  const tituloFicha = useRef<HTMLHeadingElement>(null);
-  // depois de "mostrar no grafo" pelo teclado, o foco vai para a ficha do ponto (a lista some)
+  // quem pedir um ponto antes de os dados chegarem (a URL, a busca do grafo) espera aqui
+  const pendente = useRef<string | null>(null);
+  // depois de "mostrar no grafo" ou da busca, o foco vai para a ficha do ponto
   const focarFicha = useRef(false);
+  const ultimoToque = useRef(false);
+  const padrao: Vista = estreita ? "parana" : "brasil";
 
-  // Carrega os dados da vista
+  // 1. A URL decide o estado inicial; sem nada nela, o celular abre no Paraná, que é leve e legível
   useEffect(() => {
+    const u = lerUrl();
+    const celular = window.matchMedia(TELA_ESTREITA).matches;
+    setVista(u.vista ?? (celular ? "parana" : "brasil"));
+    setEmLista(u.lista);
+    setPartidoFoco(u.partido);
+    pendente.current = u.no;
+    setIniciado(true);
+  }, []);
+
+  // 2. Dados da vista
+  useEffect(() => {
+    if (!iniciado) return;
     let cancelado = false;
     setDados(null);
     setErro(null);
-    setSelecionado(null);
-    setPartidoFoco(null);
-    fetch(`/dados/grafo-${vista}.json`)
-      .then((r) => {
-        if (!r.ok) throw new Error(String(r.status));
-        return r.json();
+    setDesenhado(false);
+    carregarDados(vista)
+      .then((d) => {
+        if (cancelado) return;
+        setDados(d);
+        const id = pendente.current;
+        if (id) {
+          pendente.current = null;
+          const no = d.nos.find((n) => n.id === id);
+          if (no && entraNoGrafo(vista, no)) setSelecionado(id);
+          else if (no) setAviso({ id, nome: no.rotulo });
+        }
       })
-      .then((d: DadosGrafo) => !cancelado && setDados(d))
-      .catch(() => !cancelado && setErro("Não foi possível abrir os dados do grafo."));
+      .catch(() => !cancelado && setErro("Não foi possível abrir os dados do grafo. Recarregue a página para tentar de novo."));
     return () => {
       cancelado = true;
     };
-  }, [vista]);
+  }, [vista, iniciado]);
 
-  const cores = useMemo(() => {
-    const cont = new Map<string, number>();
-    dados?.nos.forEach((n) => n.partido && n.tipo !== "partido" && cont.set(n.partido, (cont.get(n.partido) ?? 0) + 1));
-    return paletaPartidos(cont);
-  }, [dados]);
-
-  const legenda = useMemo(() => {
-    const cont = new Map<string, number>();
-    dados?.nos.forEach((n) => n.partido && n.tipo !== "partido" && cont.set(n.partido, (cont.get(n.partido) ?? 0) + 1));
-    return [...cont.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-  }, [dados]);
-
-  // Monta o sigma
+  // 3. Estado -> URL (replaceState: não enche o histórico, e o Voltar devolve o grafo como estava)
   useEffect(() => {
-    if (!dados || emLista || !caixa.current) return;
+    if (!iniciado) return;
+    const q = new URLSearchParams();
+    if (vista !== padrao || selecionado || emLista || partidoFoco) q.set("vista", vista);
+    if (selecionado) q.set("no", selecionado);
+    if (emLista) q.set("lista", "1");
+    if (partidoFoco) q.set("partido", partidoFoco);
+    const url = q.size ? `/?${q.toString()}` : "/";
+    if (window.location.pathname + window.location.search !== url) window.history.replaceState(window.history.state, "", url);
+  }, [iniciado, vista, selecionado, emLista, partidoFoco, padrao]);
+
+  const { cores, legenda } = useMemo(() => (dados ? coresDaVista(dados) : { cores: new Map<string, string>(), legenda: [] as [string, number][] }), [dados]);
+
+  // 4. Monta o sigma
+  useEffect(() => {
+    if (!dados || emLista || !caixa.current || !bibliotecas) return;
     let sigma: SigmaT | null = null;
     let morto = false;
     (async () => {
-      const [{ default: Graph }, { default: Sigma }] = await Promise.all([import("graphology"), import("sigma")]);
+      const [{ default: Graph }, { default: Sigma }] = await bibliotecas;
       if (morto || !caixa.current) return;
       const g = new Graph({ type: "undirected", multi: false });
       // a família de verdade que o next/font registrou (no canvas, var() não vale)
       const familia = getComputedStyle(document.documentElement).getPropertyValue("--fonte-archivo").trim() || "Archivo, sans-serif";
-      const membrosPorPartido = new Map<string, number>();
-      dados.nos.forEach((n) => n.tipo !== "partido" && n.partido && membrosPorPartido.set(n.partido, (membrosPorPartido.get(n.partido) ?? 0) + 1));
-      // em tela estreita o ponto precisa ser menor, senão a rede vira uma bola só
-      const escalaNo = caixa.current.clientWidth < 640 ? 0.55 : 1;
+      const escala = escalaDoNo(caixa.current.clientWidth);
       for (const n of dados.nos) {
+        if (!entraNoGrafo(vista, n)) continue;
         const ehPartido = n.tipo === "partido";
-        // na vista Brasil, quem não divide fornecedor com ninguém fica só na lista
-        if (vista === "brasil" && !n.grau) continue;
-        const tamanho = ehPartido ? 7 : vista === "brasil" ? 2.4 + Math.min(n.grau ?? 0, 60) / 16 : n.tipo === "deputado" ? 5.5 : 4;
         g.addNode(n.id, {
           x: n.x,
           y: -n.y,
-          size: tamanho * escalaNo,
+          size: tamanhoDoNo(vista, n, escala),
           label: n.rotulo,
-          color: ehPartido ? "#d8c79f" : (n.partido && cores.get(n.partido)) || ABA_DEMAIS,
+          color: corDoNo(n, cores),
           zIndex: ehPartido ? 1 : 0,
           partido: n.partido,
           tipo: n.tipo ?? "deputado",
@@ -93,11 +189,7 @@ export default function Grafo() {
       }
       for (const a of dados.arestas) {
         if (!g.hasNode(a.a) || !g.hasNode(a.b) || g.hasEdge(a.a, a.b)) continue;
-        g.addEdge(a.a, a.b, {
-          size: vista === "brasil" ? 0.25 + Math.min(a.peso ?? 1, 30) / 40 : a.atual ? 0.9 : 0.5,
-          // cores opacas e escuras: o sigma não mistura transparência, e linha clara cruzada vira mancha
-          color: vista === "brasil" ? "#34403c" : a.atual ? "#6e6650" : "#3d3b33",
-        });
+        g.addEdge(a.a, a.b, { size: tamanhoDaAresta(vista, a), color: corDaAresta(vista, a) });
       }
       grafoRef.current = g;
       // placas de rótulo de partido já desenhadas neste quadro: a próxima desvia delas
@@ -208,6 +300,7 @@ export default function Grafo() {
       sigma.on("beforeRender", () => {
         placas.length = 0;
       });
+      sigma.once("afterRender", () => setDesenhado(true));
       sigma.on("enterNode", ({ node }) => {
         estado.current.hover = node;
         sigma?.refresh({ skipIndexation: true });
@@ -219,7 +312,24 @@ export default function Grafo() {
         caixa.current!.style.cursor = "";
       });
       sigma.on("clickNode", ({ node }) => setSelecionado(node));
-      sigma.on("clickStage", () => setSelecionado(null));
+      // o ponto é pequeno demais para o dedo: um toque perto de um ponto vale como toque nele
+      sigma.on("clickStage", ({ event }) => {
+        const s = sigma!;
+        const raio = ultimoToque.current ? 22 : 8;
+        let melhor: string | null = null;
+        let dist = raio;
+        g.forEachNode((id) => {
+          const d = s.getNodeDisplayData(id);
+          if (!d || d.hidden) return;
+          const p = s.framedGraphToViewport(d);
+          const dd = Math.hypot(p.x - event.x, p.y - event.y) - s.scaleSize(d.size);
+          if (dd < dist) {
+            dist = dd;
+            melhor = id;
+          }
+        });
+        setSelecionado(melhor);
+      });
       sigmaRef.current = sigma;
       sigma.refresh();
     })();
@@ -230,36 +340,128 @@ export default function Grafo() {
     };
   }, [dados, emLista, cores, vista]);
 
-  // Estado -> sigma
+  // 5. Estado -> sigma: destaque e câmera no ponto escolhido (no celular, acima da folha da ficha)
   useEffect(() => {
     estado.current.sel = selecionado;
     estado.current.partido = partidoFoco;
     const s = sigmaRef.current;
     if (!s) return;
     s.refresh({ skipIndexation: true });
-    if (selecionado && grafoRef.current?.hasNode(selecionado)) {
-      const pos = s.getNodeDisplayData(selecionado);
-      if (pos) s.getCamera().animate({ x: pos.x, y: pos.y, ratio: Math.min(s.getCamera().ratio, 0.55) }, { duration: 450 });
+    if (!selecionado || !grafoRef.current?.hasNode(selecionado)) return;
+    const quadroAtual = quadro.current;
+    const quadro0 = requestAnimationFrame(() => {
+      const d = s.getNodeDisplayData(selecionado);
+      if (!d) return;
+      const cam = s.getCamera();
+      const alvo = { ...cam.getState(), x: d.x, y: d.y, ratio: Math.min(cam.ratio, 0.55) };
+      // onde a folha vai parar (a animação de subida ainda está no começo: a medida tem de ser a final)
+      const topoFolha = estreita && ficha.current ? window.innerHeight - ficha.current.offsetHeight : null;
+      if (topoFolha !== null && quadroAtual) {
+        // a folha cobre a base da tela: rola até o quadro aparecer e põe o ponto no meio do que sobra dele
+        let q = quadroAtual.getBoundingClientRect();
+        if (Math.min(q.bottom, topoFolha) - Math.max(q.top, 0) < q.height * 0.45) {
+          window.scrollTo({ top: window.scrollY + q.top - 8 });
+          q = quadroAtual.getBoundingClientRect();
+        }
+        const visivel = (Math.max(q.top, 0) + Math.min(q.bottom, topoFolha)) / 2 - q.top;
+        const { height } = s.getDimensions();
+        const meio = height / 2;
+        const desejo = Math.max(24, Math.min(visivel, height - 24));
+        const p = s.viewportToFramedGraph({ x: s.getDimensions().width / 2, y: meio + (meio - desejo) }, { cameraState: alvo });
+        alvo.x = p.x;
+        alvo.y = p.y;
+      } else if (ficha.current) {
+        // no computador a ficha fica à esquerda, dentro do quadro: o ponto vai para o meio do que sobra à direita
+        const { width, height } = s.getDimensions();
+        const direitaDaFicha = ficha.current.offsetLeft + ficha.current.offsetWidth;
+        if (width - direitaDaFicha > 160) {
+          const desejo = (direitaDaFicha + width) / 2;
+          const p = s.viewportToFramedGraph({ x: width / 2 + (width / 2 - desejo), y: height / 2 }, { cameraState: alvo });
+          alvo.x = p.x;
+          alvo.y = p.y;
+        }
+      }
+      cam.animate(alvo, { duration: 450 });
+    });
+    return () => cancelAnimationFrame(quadro0);
+  }, [selecionado, partidoFoco, estreita, desenhado]);
+
+  // 6. Foco na ficha quando o ponto veio da lista ou da busca do grafo; Esc fecha a ficha
+  useEffect(() => {
+    if (selecionado && focarFicha.current && tituloFicha.current) {
+      focarFicha.current = false;
+      tituloFicha.current.focus({ preventScroll: true });
     }
-  }, [selecionado, partidoFoco]);
+  }, [selecionado, emLista, dados]);
+  useEffect(() => {
+    if (!selecionado) return;
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && !e.defaultPrevented && setSelecionado(null);
+    document.addEventListener("keydown", esc);
+    return () => document.removeEventListener("keydown", esc);
+  }, [selecionado]);
+
+  // 7. Os nomes dos fornecedores chegam quando a primeira ficha da vista Brasil abre
+  useEffect(() => {
+    if (vista !== "brasil" || !selecionado || fornecedores) return;
+    let vivo = true;
+    carregarFornecedores().then((f) => vivo && setFornecedores(f));
+    return () => {
+      vivo = false;
+    };
+  }, [vista, selecionado, fornecedores]);
+
+  const trocarVista = useCallback((v: Vista) => {
+    setVista((atual) => {
+      if (atual !== v) {
+        setSelecionado(null);
+        setPartidoFoco(null);
+        setAviso(null);
+      }
+      return v;
+    });
+  }, []);
 
   const escolher = useCallback((id: string) => {
     focarFicha.current = true;
+    setAviso(null);
     setEmLista(false);
     setSelecionado(id);
   }, []);
 
-  useEffect(() => {
-    if (selecionado && focarFicha.current && tituloFicha.current) {
-      focarFicha.current = false;
-      tituloFicha.current.focus();
-    }
-  }, [selecionado, emLista]);
+  // a busca do grafo acha a pessoa na vista em que ela está, ou avisa que ela não está no grafo
+  const achar = useCallback(
+    (item: ItemIndice) => {
+      const no = dados?.nos.find((n) => n.id === item.id);
+      if (no && entraNoGrafo(vista, no)) {
+        escolher(item.id);
+        return true;
+      }
+      const naOutra: Vista | null =
+        vista === "brasil" ? (item.casa === "cmc" || item.uf === "PR" ? "parana" : null) : item.casa === "camara-deputados" ? "brasil" : null;
+      if (naOutra) {
+        focarFicha.current = true;
+        pendente.current = item.id;
+        setEmLista(false);
+        trocarVista(naOutra);
+        return true;
+      }
+      setAviso({ id: item.id, nome: item.nome });
+      return true;
+    },
+    [dados, vista, escolher, trocarVista],
+  );
 
-  const ABAS: [Vista, string, string][] = [
-    ["brasil", "Brasil", " · fornecedores em comum"],
-    ["parana", "Paraná", " · partidos"],
-  ];
+  const camera = (acao: "mais" | "menos" | "centro") => {
+    const c = sigmaRef.current?.getCamera();
+    if (!c) return;
+    if (acao === "mais") c.animatedZoom({ duration: 250 });
+    else if (acao === "menos") c.animatedUnzoom({ duration: 250 });
+    else {
+      setSelecionado(null);
+      c.animatedReset({ duration: 300 });
+    }
+  };
+
   // abas de verdade: setas, Home e End trocam a vista e levam o foco junto
   const teclaNasAbas = (e: React.KeyboardEvent<HTMLDivElement>) => {
     const i = ABAS.findIndex(([v]) => v === vista);
@@ -267,11 +469,11 @@ export default function Grafo() {
       e.key === "ArrowRight" ? (i + 1) % ABAS.length : e.key === "ArrowLeft" ? (i - 1 + ABAS.length) % ABAS.length : e.key === "Home" ? 0 : e.key === "End" ? ABAS.length - 1 : -1;
     if (prox < 0) return;
     e.preventDefault();
-    setVista(ABAS[prox][0]);
+    trocarVista(ABAS[prox][0]);
     document.getElementById(`aba-${ABAS[prox][0]}`)?.focus();
   };
 
-  const noSel = dados?.nos.find((n) => n.id === selecionado) ?? null;
+  const noSel = (selecionado && dados?.nos.find((n) => n.id === selecionado)) || null;
   const ligacoes = useMemo(() => {
     if (!dados || !selecionado) return [];
     return dados.arestas
@@ -280,6 +482,9 @@ export default function Grafo() {
       .filter((a) => a.outro)
       .sort((x, y) => (y.peso ?? 0) - (x.peso ?? 0));
   }, [dados, selecionado]);
+
+  const carregando = !erro && (!dados || (!emLista && !desenhado));
+  const classeDesenho = "pointer-events-none absolute inset-0 h-full w-full p-[30px]";
 
   return (
     <div className="relative flex h-full min-h-[560px] flex-col">
@@ -294,8 +499,8 @@ export default function Grafo() {
               aria-selected={vista === v}
               aria-controls="painel-grafo"
               tabIndex={vista === v ? 0 : -1}
-              onClick={() => setVista(v)}
-              className={`rounded-t-[5px] px-3 pb-1.5 pt-2 font-titulo text-[0.9rem] font-medium ${vista === v ? "bg-manilha text-manilha-tinta" : "bg-gaveta-3 text-tinta-2 hover:text-tinta"}`}
+              onClick={() => trocarVista(v)}
+              className={`min-h-10 rounded-t-[5px] px-3 pb-1.5 pt-2 font-titulo text-[0.9rem] font-medium ${vista === v ? "bg-manilha text-manilha-tinta" : "bg-gaveta-3 text-tinta-2 hover:text-tinta"}`}
             >
               {r}
               <span className="hidden sm:inline">{resto}</span>
@@ -305,106 +510,198 @@ export default function Grafo() {
         <button
           type="button"
           onClick={() => setEmLista((l) => !l)}
-          className="ml-auto text-sm text-tinta-2 underline hover:text-tinta"
+          className="-my-2 ml-auto py-2 text-sm text-tinta-2 underline hover:text-tinta"
           aria-pressed={emLista}
         >
           {emLista ? "Voltar ao grafo" : "Ver em lista"}
         </button>
       </div>
+      <p className="px-4 pb-2 pt-2 text-[0.82rem] text-tinta-3 sm:px-8">
+        Toque ou passe o mouse num ponto para ver com quem ele se liga; aproxime com + e −.
+      </p>
 
-      <div
-        id="painel-grafo"
-        role="tabpanel"
-        aria-labelledby={`aba-${vista}`}
-        className="relative mx-4 min-h-[440px] flex-1 overflow-hidden border-t-2 border-manilha bg-gaveta-2 sm:mx-8"
-      >
-        {erro && <p className="p-6 text-tinta-2">{erro}</p>}
-        {!dados && !erro && <p className="p-6 text-tinta-3">Abrindo o grafo…</p>}
-        {dados && !emLista && <div ref={caixa} className="absolute inset-0" aria-label="Grafo de parlamentares; use a lista para navegar pelo teclado" role="img" />}
-        {dados && emLista && <Lista dados={dados} escolher={escolher} vista={vista} />}
-
-        {noSel && !emLista && (
-          <aside className="ficha-sai absolute bottom-4 left-4 z-10 w-[min(26rem,calc(100%-2rem))] rounded-[3px] bg-manilha p-4 text-manilha-tinta shadow-[0_18px_36px_-12px_rgba(0,0,0,0.7)]">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 ref={tituloFicha} tabIndex={-1} className="font-titulo text-lg font-semibold leading-tight focus:outline-none">
-                  {noSel.rotulo}
-                </h2>
-                <p className="text-sm text-manilha-tinta-2">
-                  {noSel.tipo === "partido"
-                    ? "Partido"
-                    : `${noSel.partido ?? "sem partido"} · ${noSel.tipo === "vereador" ? "vereador(a) de Curitiba" : `deputado(a) · ${noSel.uf ?? "PR"}`}`}
-                </p>
-              </div>
-              <button type="button" onClick={() => setSelecionado(null)} className="text-sm text-manilha-tinta-2 hover:text-manilha-tinta">
-                fechar
-              </button>
-            </div>
-            {vista === "brasil" && ligacoes.length > 0 && (
-              <div className="mt-3 border-t border-manilha-tinta/20 pt-2 text-sm">
-                <p className="text-manilha-tinta-2">Contratou os mesmos fornecedores que:</p>
-                <ul className="mt-1 space-y-1">
-                  {ligacoes.slice(0, 4).map((l) => (
-                    <li key={l.outro.id}>
-                      <button type="button" onClick={() => setSelecionado(l.outro.id)} className="font-medium underline">
-                        {l.outro.rotulo}
-                      </button>
-                      <span className="text-manilha-tinta-2"> ({l.outro.partido ?? "—"}/{l.outro.uf})</span>
-                      {l.fornecedores && l.fornecedores.length > 0 && (
-                        <span className="block truncate text-[0.78rem] text-manilha-tinta-2">
-                          {l.fornecedores.map((f) => f.nome ?? f.doc).join(" · ")}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {vista === "parana" && noSel.tipo !== "partido" && (
-              <p className="mt-2 text-sm text-manilha-tinta-2">
-                Ligado aos partidos pelos quais teve mandato; a linha mais forte é o partido atual.
-              </p>
-            )}
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-              {noSel.tipo === "partido" ? (
-                <Link href={`/partidos/${slug(noSel.rotulo)}/`} className="font-medium text-carimbo-escuro underline">
-                  Abrir o partido {noSel.rotulo}
-                </Link>
+      <div className="relative mx-4 flex flex-1 flex-col sm:mx-8">
+        <div
+          ref={quadro}
+          id="painel-grafo"
+          role="tabpanel"
+          aria-labelledby={`aba-${vista}`}
+          className="relative min-h-[440px] flex-1 overflow-hidden border-t-2 border-manilha bg-gaveta-2"
+        >
+          {/* o desenho do grafo, gerado no build, enquanto o canvas carrega */}
+          {carregando && !emLista && (
+            <>
+              {iniciado ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={`/grafo/${vista}.svg`} alt="" aria-hidden="true" className={classeDesenho} />
               ) : (
-                <Link href={`/parlamentares/${noSel.id}/`} className="font-medium text-carimbo-escuro underline">
-                  Abrir as despesas de {noSel.rotulo}
-                </Link>
+                <picture>
+                  <source media={TELA_ESTREITA} srcSet="/grafo/parana.svg" />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/grafo/brasil.svg" alt="" aria-hidden="true" className={classeDesenho} />
+                </picture>
               )}
-            </div>
-          </aside>
-        )}
+              <p role="status" className="absolute bottom-3 left-3 z-10 rounded-[3px] bg-gaveta/90 px-2.5 py-1 text-[0.82rem] text-tinta-3">
+                Abrindo o grafo…
+              </p>
+            </>
+          )}
+          {erro && <p className="relative p-6 text-tinta-2">{erro}</p>}
+          {dados && !emLista && (
+            <div
+              ref={caixa}
+              className={`absolute inset-0 ${desenhado ? "" : "opacity-0"}`}
+              aria-label={`Grafo ${vista === "brasil" ? "Brasil, por fornecedor em comum" : "Paraná, por partido"}. Use a busca do grafo ou a lista para navegar pelo teclado.`}
+              role="img"
+              onPointerDown={(e) => {
+                ultimoToque.current = e.pointerType !== "mouse";
+              }}
+            />
+          )}
+          {dados && emLista && <Lista dados={dados} escolher={escolher} vista={vista} />}
+
+          {!emLista && (
+            <>
+              <div className="absolute left-3 right-[3.75rem] top-3 z-20 sm:right-auto sm:w-72">
+                <Busca aoEscolher={achar} rotulo="Achar alguém no grafo" placeholder="Achar alguém no grafo" className="" />
+                {aviso && (
+                  <p role="status" className="mt-1.5 rounded-[3px] bg-gaveta/95 px-2.5 py-1.5 text-[0.82rem] leading-snug text-tinta-2">
+                    {aviso.nome} não aparece {vista === "brasil" ? "nesta vista: não divide fornecedor com outro deputado acima do corte" : "nesta vista"}.{" "}
+                    <Link href={`/parlamentares/${aviso.id}/`} className="text-carimbo-claro underline">
+                      Abrir as despesas
+                    </Link>
+                  </p>
+                )}
+              </div>
+              <div className="absolute right-3 top-3 z-10 flex flex-col overflow-hidden rounded-md border border-contorno bg-gaveta/90">
+                {(
+                  [
+                    ["mais", "Aproximar", "M10 4v12M4 10h12"],
+                    ["menos", "Afastar", "M4 10h12"],
+                    ["centro", "Ver o grafo inteiro", "M4 8V4h4M12 4h4v4M16 12v4h-4M8 16H4v-4"],
+                  ] as const
+                ).map(([acao, nome, d], i) => (
+                  <button
+                    key={acao}
+                    type="button"
+                    onClick={() => camera(acao)}
+                    aria-label={nome}
+                    title={nome}
+                    disabled={!desenhado}
+                    className={`grid size-10 place-items-center text-tinta-2 hover:bg-gaveta-3 hover:text-tinta disabled:text-tinta-3/50 ${i > 0 ? "border-t border-contorno" : ""}`}
+                  >
+                    <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d={d} />
+                    </svg>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {noSel && !emLista && (
+            <aside
+              ref={ficha}
+              aria-labelledby="ficha-no-titulo"
+              className={
+                estreita
+                  ? "ficha-sobe fixed inset-x-0 bottom-0 z-40 max-h-[55dvh] overflow-y-auto overscroll-contain rounded-t-[3px] bg-manilha px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-4 text-manilha-tinta shadow-[0_-14px_30px_-8px_rgba(0,0,0,0.6)]"
+                  : "ficha-sai absolute bottom-4 left-4 z-30 max-h-[calc(100%-5.5rem)] w-[min(26rem,calc(100%-2rem))] overflow-y-auto overscroll-contain rounded-[3px] bg-manilha p-4 text-manilha-tinta shadow-[0_18px_36px_-12px_rgba(0,0,0,0.7)]"
+              }
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 id="ficha-no-titulo" ref={tituloFicha} tabIndex={-1} className="font-titulo text-lg font-semibold leading-tight focus:outline-none">
+                    {noSel.rotulo}
+                  </h2>
+                  <p className="text-sm text-manilha-tinta-2">
+                    {noSel.tipo === "partido"
+                      ? "Partido"
+                      : `${noSel.partido ?? "sem partido"} · ${noSel.tipo === "vereador" ? "vereador(a) de Curitiba" : `deputado(a) · ${noSel.uf ?? "PR"}`}`}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelecionado(null)}
+                  className="-mr-2 -mt-2 min-h-11 shrink-0 px-2 text-sm text-manilha-tinta-2 hover:text-manilha-tinta hover:underline"
+                >
+                  fechar
+                </button>
+              </div>
+              {vista === "brasil" && ligacoes.length > 0 && (
+                <div className="mt-3 border-t border-manilha-tinta/20 pt-2 text-sm">
+                  <p className="text-manilha-tinta-2">Contratou os mesmos fornecedores que:</p>
+                  <ul className="mt-1 space-y-2">
+                    {ligacoes.map((l) => (
+                      <li key={l.outro.id}>
+                        <button type="button" onClick={() => setSelecionado(l.outro.id)} className="text-left font-medium underline">
+                          {l.outro.rotulo}
+                        </button>
+                        <span className="text-manilha-tinta-2">
+                          {" "}
+                          ({l.outro.partido ?? "—"}/{l.outro.uf})
+                        </span>
+                        {l.f && l.f.length > 0 && (
+                          <span className="block text-[0.78rem] leading-snug text-manilha-tinta-2">
+                            {fornecedores ? l.f.map((i) => fornecedores[i]?.[1] ?? fornecedores[i]?.[0]).join(" · ") : "abrindo os nomes dos fornecedores…"}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {vista === "parana" && noSel.tipo !== "partido" && (
+                <p className="mt-2 text-sm text-manilha-tinta-2">Ligado aos partidos pelos quais teve mandato; a linha mais forte é o partido atual.</p>
+              )}
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                {noSel.tipo === "partido" ? (
+                  <Link href={`/partidos/${slug(noSel.rotulo)}/`} className="inline-block py-1 font-medium text-carimbo-escuro underline">
+                    Abrir o partido {noSel.rotulo}
+                  </Link>
+                ) : (
+                  <Link href={`/parlamentares/${noSel.id}/`} className="inline-block py-1 font-medium text-carimbo-escuro underline">
+                    Abrir as despesas de {noSel.rotulo}
+                  </Link>
+                )}
+              </div>
+            </aside>
+          )}
+        </div>
+
+        {/* legenda: embaixo do quadro no celular; dentro dele, no canto, no computador */}
+        <div className="pt-3 lg:pointer-events-none lg:absolute lg:bottom-3 lg:right-3 lg:z-10 lg:max-w-[23rem] lg:pt-0">
+          <ul
+            className="flex flex-wrap gap-1.5 lg:pointer-events-auto lg:justify-end lg:rounded-[3px] lg:bg-gaveta/90 lg:p-1.5"
+            aria-label="Partidos; clique para destacar"
+          >
+            {legenda.slice(0, 10).map(([sigla, n]) => (
+              <li key={sigla}>
+                <button
+                  type="button"
+                  onClick={() => setPartidoFoco((p) => (p === sigla ? null : sigla))}
+                  aria-pressed={partidoFoco === sigla}
+                  className={`flex min-h-8 items-center gap-1.5 rounded-[3px] px-2 py-1 text-[0.8rem] ${partidoFoco === sigla ? "bg-gaveta-3 text-tinta ring-1 ring-carimbo-claro" : "text-tinta-2 hover:text-tinta"}`}
+                >
+                  <span className="inline-block h-2 w-3.5 rounded-t-[3px]" style={{ background: cores.get(sigla) }} />
+                  {sigla} <span className="num text-tinta-3">{n}</span>
+                </button>
+              </li>
+            ))}
+            {legenda.length > 10 && (
+              <li className="flex items-center gap-1.5 px-2 py-1 text-[0.8rem] text-tinta-3">
+                <span className="inline-block h-2 w-3.5 rounded-t-[3px]" style={{ background: ABA_DEMAIS }} />
+                demais {legenda.length - 10} partidos
+              </li>
+            )}
+          </ul>
+        </div>
       </div>
 
       <div className="px-4 pb-4 pt-3 sm:px-8">
         <p className="sr-only">Legenda: cor do ponto = partido.</p>
-        <ul className="flex flex-wrap gap-1.5" aria-label="Partidos; clique para destacar">
-          {legenda.slice(0, 10).map(([sigla, n]) => (
-            <li key={sigla}>
-              <button
-                type="button"
-                onClick={() => setPartidoFoco((p) => (p === sigla ? null : sigla))}
-                aria-pressed={partidoFoco === sigla}
-                className={`flex items-center gap-1.5 rounded-[3px] px-2 py-1 text-[0.8rem] ${partidoFoco === sigla ? "bg-gaveta-3 text-tinta ring-1 ring-carimbo-claro" : "text-tinta-2 hover:text-tinta"}`}
-              >
-                <span className="inline-block h-2 w-3.5 rounded-t-[3px]" style={{ background: cores.get(sigla) }} />
-                {sigla} <span className="num text-tinta-3">{n}</span>
-              </button>
-            </li>
-          ))}
-          {legenda.length > 10 && (
-            <li className="flex items-center gap-1.5 px-2 py-1 text-[0.8rem] text-tinta-3">
-              <span className="inline-block h-2 w-3.5 rounded-t-[3px]" style={{ background: ABA_DEMAIS }} />
-              demais {legenda.length - 10} partidos
-            </li>
-          )}
-        </ul>
         {dados && (
-          <div className="mt-2 max-w-[80ch] text-[0.82rem] leading-relaxed text-tinta-3">
+          <div className="max-w-[80ch] text-[0.82rem] leading-relaxed text-tinta-3">
             <p>{dados.regra}</p>
             {dados.regra_tecnica && (
               <details className="mt-1">
@@ -430,7 +727,7 @@ function slug(s: string) {
 
 function Lista({ dados, escolher, vista }: { dados: DadosGrafo; escolher: (id: string) => void; vista: Vista }) {
   const nos = dados.nos.filter((n) => n.tipo !== "partido").sort((a, b) => a.rotulo.localeCompare(b.rotulo, "pt-BR"));
-  const fora = (n: No) => vista === "brasil" && !n.grau;
+  const fora = (n: No) => !entraNoGrafo(vista, n);
   return (
     <div className="absolute inset-0 overflow-auto">
       <table className="w-full text-left text-sm">
