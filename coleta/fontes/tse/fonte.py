@@ -25,7 +25,7 @@ ELEICOES = [2012, 2016, 2020, 2024]  # mandatos de 2013 a 2028
 
 def municipios() -> dict[str, str]:
     """Nome normalizado do município (como o TSE escreve em NM_UE) -> nome para exibir."""
-    return {normalizar_nome(e.municipio): e.municipio for e in entidades.elotech()} | {"CURITIBA": "Curitiba"}
+    return {normalizar_nome(e.municipio): e.municipio for e in entidades.municipais()} | {"CURITIBA": "Curitiba"}
 
 COLUNAS = {"ANO_ELEICAO", "NM_TIPO_ELEICAO", "SG_UE", "NM_UE", "DS_CARGO", "SQ_CANDIDATO", "NM_CANDIDATO",
            "NM_URNA_CANDIDATO", "SG_PARTIDO", "DS_SIT_TOT_TURNO"}

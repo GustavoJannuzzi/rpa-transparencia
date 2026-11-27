@@ -233,6 +233,8 @@ export type CamaraCobertura = {
   situacao: SituacaoCobertura;
   motivo: string | null;
   base: string | null;
+  /** Câmara configurada que ficou de fora: o que a coleta achou no portal dela. */
+  detalhe?: string;
   casa?: string;
   parlamentares?: number;
   linhas?: number;

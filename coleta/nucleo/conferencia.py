@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from collections import defaultdict
+from collections import Counter, defaultdict
 from decimal import Decimal
 from itertools import pairwise
 from typing import Any
@@ -36,6 +36,30 @@ def fontes_por_casa() -> dict[str, list[str]]:
 
 def eh_elotech(fonte: str) -> bool:
     return fonte == "cmc_elotech" or fonte.startswith("elotech_")
+
+
+def eh_betha(fonte: str) -> bool:
+    return fonte == "cmc_betha" or fonte.startswith("betha_")
+
+
+# Fontes de câmara lidas pela tela, sem a tabela de cargos revisada à mão: nelas a
+# conferência procura cargo do Executivo misturado na consulta da Câmara.
+GRUPOS_TELA_MUNICIPAL = ("betha_",)
+MOTIVO_EXECUTIVO = ("a consulta de diárias da Câmara traz cargos do Executivo municipal (Prefeitura), e a fonte não separa as "
+                    "duas entidades; as diárias de servidor ficam fora da soma até alguém conferir")
+
+
+def _consultas_com_executivo(con, rv: Revisor) -> frozenset[str]:
+    """Fontes de câmara cuja consulta de diárias traz cargo do Executivo: a revisão ganha um item, com os cargos."""
+    achados: dict[str, Counter] = defaultdict(Counter)
+    for r in con.execute("""SELECT fonte, cargo_original, COUNT(*) FROM despesas
+                            WHERE tipo='diaria_municipal' AND beneficiario_tipo='servidor' GROUP BY 1, 2"""):
+        if r[0].startswith(GRUPOS_TELA_MUNICIPAL) and de_para.eh_cargo_do_executivo(r[1]):
+            achados[r[0]][r[1]] += r[2]
+    for fonte, cargos in achados.items():
+        rv.revisao(fonte, "consulta", "consulta-inteira", MOTIVO_EXECUTIVO,
+                   {"cargos_do_executivo": [f"{c} ({n})" for c, n in cargos.most_common(8)], "linhas": sum(cargos.values())})
+    return frozenset(achados)
 
 
 def prefixo_vereador(casa: Casa) -> str:
@@ -404,6 +428,7 @@ def situacoes(con: sqlite3.Connection, rv: Revisor) -> None:
                        "dois caminhos independentes de consulta no portal, que não publica total")
     prefeitura_fixo = frozenset(prefeitura_divergente)
     estaduais = _divergencias_estaduais(con, rv)
+    mistas = _consultas_com_executivo(con, rv)
     lote = []
     cur = con.execute("""SELECT chave, fonte, tipo, ref_parlamentar, beneficiario_tipo, cargo_original, categoria_original,
                                 valor, ano, competencia, fornecedor_nome, fornecedor_doc, granularidade, extra FROM despesas""")
@@ -412,13 +437,13 @@ def situacoes(con: sqlite3.Connection, rv: Revisor) -> None:
         if not linhas:
             break
         for d in linhas:
-            lote.append(_situacao(d, ids, divergentes, legado, rv, prefeitura_fixo, estaduais))
+            lote.append(_situacao(d, ids, divergentes, legado, rv, prefeitura_fixo, estaduais, mistas))
         con.executemany("INSERT OR REPLACE INTO despesa_situacao(chave, situacao, motivo, parlamentar_id, categoria) VALUES(?,?,?,?,?)", lote)
         lote.clear()
 
 
 def _situacao(d, ids, divergentes, legado, rv: Revisor, prefeitura_divergente: frozenset = frozenset(),
-              divergentes_estaduais: frozenset = frozenset()):
+              divergentes_estaduais: frozenset = frozenset(), consultas_mistas: frozenset = frozenset()):
     fonte = d["fonte"]
     extra = json.loads(d["extra"] or "{}")
     valor = Decimal(d["valor"])
@@ -480,7 +505,8 @@ def _situacao(d, ids, divergentes, legado, rv: Revisor, prefeitura_divergente: f
             papel = "vereador"
             motivos.append("cargo vazio na fonte; vereador pelo cadastro de pessoal da Câmara")
         if papel is None and not (d["cargo_original"] or "").strip():
-            rev("a fonte não informa o cargo, e o nome não está no cadastro de vereadores da Câmara no mesmo ano; o nome foi descartado na leitura")
+            rev("a fonte não informa o cargo, e o nome não está no cadastro de vereadores da Câmara no mesmo ano; o nome foi descartado na leitura"
+                if eh_elotech(fonte) else "a fonte não informa o cargo; o nome foi descartado na leitura")
         elif papel is None:
             rev("cargo sem de-para", cargo_original=d["cargo_original"])
         elif papel == "vereador" and d["beneficiario_tipo"] != "parlamentar":
@@ -518,8 +544,10 @@ def _situacao(d, ids, divergentes, legado, rv: Revisor, prefeitura_divergente: f
                 motivos.append("2026 é do Betha; a linha da Prefeitura serve para conferir a fronteira")
             if extra.get("devolvido") and Decimal(extra["devolvido"]) > 0:
                 motivos.append(f"devolvido R$ {extra['devolvido']}")
-        elif fonte == "cmc_betha":
+        elif eh_betha(fonte):
             motivos.append("valor previsto da diária (como a fonte rotula)")
+        if fonte in consultas_mistas and d["beneficiario_tipo"] == "servidor":
+            rev(MOTIVO_EXECUTIVO, escopo=True)
     if situacao == REVISAO and por_linha:
         rv.revisao(fonte, "despesa", d["chave"], "; ".join(m for m in motivos if m), {"ano": d["ano"], "cargo": d["cargo_original"],
                    "categoria": d["categoria_original"], "valor": d["valor"], **detalhes})
@@ -709,7 +737,7 @@ def equacoes(con, rv: Revisor) -> None:
             return int(n("SELECT SUM(CAST(valor AS INTEGER)) FROM totais_oficiais WHERE fonte=? AND metrica='linhas_na_origem'", fonte)), "notas nas respostas da API, mês a mês"
         if fonte == "alesp":
             return int(n("SELECT SUM(CAST(valor AS INTEGER)) FROM totais_oficiais WHERE fonte=? AND metrica='linhas_na_origem'", fonte)), "registros do período no arquivo"
-        if fonte == "cmc_betha":
+        if eh_betha(fonte):
             return int(n("SELECT SUM(CAST(valor AS INTEGER)) FROM totais_oficiais WHERE fonte=? AND metrica='registros' AND escopo LIKE 'diarias-%'", fonte)), "contador 'Registros encontrados' da tela"
         if fonte == "cmc_legado":
             return int(n("SELECT SUM(CAST(valor AS INTEGER)) FROM totais_oficiais WHERE fonte=? AND metrica='linhas_lidas'", fonte)), "linhas de diária nas tabelas dos PDFs"
@@ -764,6 +792,16 @@ def contagens(con, rv: Revisor) -> None:
             rv.conferencia(e.fonte, "vereadores_ativos_x_eleitos_2024", agora()[:4], eleitos[0] if eleitos else None, ativos,
                            "confere" if eleitos and str(ativos) == eleitos[0] else "observacao",
                            "vereadores ativos no cadastro de pessoal da Câmara hoje × eleitos em 2024 no TSE (suplente em exercício muda a conta)")
+    # Betha: a câmara tem a consulta de diárias no menu e não a alimenta; e o que o robô
+    # achou com o mesmo texto no menu e descartou pelas colunas
+    for r in con.execute("""SELECT fonte, escopo FROM totais_oficiais WHERE fonte LIKE 'betha_%' AND metrica='registros'
+                            AND escopo LIKE 'diarias-%' AND valor='0'"""):
+        rv.conferencia(r["fonte"], "consulta_vazia", r["escopo"], None, 0, "observacao",
+                       "a câmara tem a consulta de diárias no menu do portal, e ela não traz nenhum registro")
+    for r in con.execute("""SELECT fonte, escopo, valor, texto_original FROM totais_oficiais
+                            WHERE fonte LIKE 'betha_%' AND metrica='consulta_descartada'"""):
+        rv.conferencia(r["fonte"], "consulta_descartada", r["escopo"], None, r["valor"], "observacao",
+                       f"item de menu com o mesmo texto, mas sem as colunas de diária por pessoa ({r['texto_original']})")
     v = con.execute("SELECT valor FROM totais_oficiais WHERE fonte='cmc_betha' AND escopo='vereadores' AND metrica='registros'").fetchone()
     if v:
         lidos = con.execute("SELECT COUNT(*) FROM pessoas_fonte WHERE fonte='cmc_betha' AND periodo='atual'").fetchone()[0]

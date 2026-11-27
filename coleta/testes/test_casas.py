@@ -49,7 +49,8 @@ def test_toda_entidade_tem_fonte_casa_e_id_que_a_plataforma_aceita():
     casas = entidades.casas()
     assert all(f.sistema.casa in casas for f in FONTES)
     assert {c.uf for c in casas.values() if c.tipo == "assembleia"} == {"DF", "MG", "SP"}
-    assert sum(1 for c in casas.values() if c.tipo == "camara_municipal") == 13
+    # Curitiba, 12 no Elotech e 13 no Betha
+    assert sum(1 for c in casas.values() if c.tipo == "camara_municipal") == 1 + 12 + 13
 
 
 # ---------------------------------------------------------------- robots.txt

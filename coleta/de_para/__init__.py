@@ -25,7 +25,11 @@ RE_CARGO_PARLAMENTAR = re.compile(
     r"(VEREADORA?|VEREADORA? PRESIDENTE|PRESIDENTE|PRESIDENTE (D[AE] )?CAMARA( MUNICIPAL)?( DE [A-Z]+( [A-Z]+){0,3})?)")
 # O que parece cargo de vereador escrito de outro jeito (erro de digitação, abreviação):
 # não guarda nome e vai para revisão, em vez de virar servidor.
-RE_PARECE_PARLAMENTAR = re.compile(r"\bV[EA]?R[EIA]{0,2}A?DOR|\bVEREA|\bVER\b|\bPRESID|\bEDIL")
+# "Primeiro Secretário" e "Segundo Secretário" são cargos da Mesa, de vereador.
+RE_PARECE_PARLAMENTAR = re.compile(r"\bV[EA]?R[EIA]{0,2}A?DOR|\bVEREA|\bVER\b|\bPRESID|\bEDIL|\b(PRIMEIR|SEGUND|TERCEIR)[OA] SECRETARI")
+# Cargo do Executivo municipal (Prefeitura) numa consulta de diárias da Câmara: a
+# fonte está misturando entidades (visto no Betha de Cornélio Procópio, 26/11/2026).
+RE_CARGO_EXECUTIVO = re.compile(r"\bPREFEIT|\bSUBPREFEIT|\bSECRETARI[OA] MUN|\bSECRETARIA MUNICIPAL|\bDO MUNICIPIO\b")
 # Fontes com a tabela de cargos revisada à mão (cargos.csv). Nas outras, cargo que
 # não é de parlamentar e não se parece com um é de servidor: entra só no agregado.
 FONTES_COM_TABELA = frozenset({"cmc_legado", "cmc_elotech", "cmc_prefeitura", "cmc_betha"})
@@ -33,6 +37,10 @@ FONTES_COM_TABELA = frozenset({"cmc_legado", "cmc_elotech", "cmc_prefeitura", "c
 
 def eh_cargo_parlamentar(cargo: str | None) -> bool:
     return bool(RE_CARGO_PARLAMENTAR.fullmatch(normalizar_nome(cargo)))
+
+
+def eh_cargo_do_executivo(cargo: str | None) -> bool:
+    return bool(RE_CARGO_EXECUTIVO.search(normalizar_nome(cargo)))
 
 
 def papel_por_regra(original: str | None) -> str | None:

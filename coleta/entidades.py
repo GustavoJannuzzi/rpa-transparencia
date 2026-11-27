@@ -35,6 +35,30 @@ class EntidadeElotech:
 
 
 @dataclass(frozen=True)
+class EntidadeBetha:
+    """Uma câmara no Betha Cloud. `portal` é o código do portal na URL
+    (`transparencia.betha.cloud/#/<portal>`); a consulta de diárias não fica
+    aqui: o robô a acha pelo texto do menu, porque cada câmara monta o seu.
+    `fora`: a câmara está no fornecedor, mas não dá para coletar (o motivo vai
+    para a página Cobertura, com o `detalhe`)."""
+
+    fonte: str
+    casa: str
+    municipio: str
+    ibge: int
+    regiao: str
+    portal: str
+    de: int
+    ate: int
+    fora: str | None = None
+    detalhe: str | None = None
+
+    @property
+    def tela(self) -> str:
+        return f"https://transparencia.betha.cloud/#/{self.portal}"
+
+
+@dataclass(frozen=True)
 class EntidadeAssembleia:
     fonte: str
     casa: str
@@ -71,6 +95,30 @@ def elotech() -> tuple[EntidadeElotech, ...]:
 
 
 @cache
+def betha(todas: bool = False) -> tuple[EntidadeBetha, ...]:
+    """As câmaras do Betha que a coleta cobre; com `todas`, também as que ficaram de fora."""
+    de, ate = periodo()
+    out = []
+    for e in _bruto().get("betha", []):
+        ent = EntidadeBetha(
+            fonte=e["fonte"], casa=e["casa"], municipio=e["municipio"], ibge=int(e["ibge"]), regiao=e["regiao"],
+            portal=e["portal"], de=int(e.get("de", de)), ate=int(e.get("ate", ate)), fora=e.get("fora"), detalhe=e.get("detalhe"))
+        if todas or not ent.fora:
+            out.append(ent)
+    return tuple(out)
+
+
+def municipais() -> tuple:
+    """Toda câmara municipal coletada, de qualquer fornecedor (o TSE dá o partido de todas)."""
+    return (*elotech(), *betha())
+
+
+def de_fora() -> dict[int, tuple[str, str | None, str]]:
+    """Câmaras configuradas que ficaram de fora, pelo IBGE: (motivo, detalhe, fornecedor)."""
+    return {e.ibge: (e.fora, e.detalhe, "betha") for e in betha(todas=True) if e.fora}
+
+
+@cache
 def assembleias() -> dict[str, EntidadeAssembleia]:
     out = {}
     chaves = {"fonte", "casa", "uf", "nome", "cargo", "sistema", "modo"}
@@ -85,7 +133,7 @@ def assembleias() -> dict[str, EntidadeAssembleia]:
 def casas() -> dict[str, Casa]:
     """Todas as casas que a coleta cobre, pelo id usado no banco e na plataforma."""
     out = dict(CASAS_FIXAS)
-    for e in elotech():
+    for e in municipais():
         if e.casa not in out:
             out[e.casa] = Casa(id=e.casa, tipo="camara_municipal", esfera="municipal", nome=f"Câmara Municipal de {e.municipio}",
                                uf="PR", municipio=e.municipio, ibge=e.ibge, cargo="vereador")

@@ -154,6 +154,175 @@ entidade = 2
 cnpj = "01603715000100"
 
 # ---------------------------------------------------------------------------
+# Betha Cloud: robô de navegador. `portal` é o código do portal na URL
+# (transparencia.betha.cloud/#/<portal>), conferido no `descobrir` contra o
+# código IBGE que o próprio portal informa. A consulta de diárias não está
+# aqui: cada câmara monta o próprio menu, e o robô acha a consulta pelo texto
+# do item ("Diárias", "Diárias.", "Diárias 2026"). Levantamento de 26/11/2026:
+# 58 câmaras do PR no Betha; estas são a lista inicial (cidades grandes e uma
+# por região). `fora` = está no Betha, mas não dá para coletar; o motivo vai
+# para a página Cobertura.
+# ---------------------------------------------------------------------------
+
+# Curitiba: a consulta de 2026, os servidores por gabinete e a lista de
+# vereadores, revisados à mão na fase 1 (as três consultas são fixas).
+[[betha]]
+fonte = "cmc_betha"
+casa = "cmc"
+municipio = "Curitiba"
+ibge = 4106902
+regiao = "Metropolitana de Curitiba"
+portal = "pYH4AbLiIyAHwETflX8gpQ=="
+de = 2026
+ate = 2026
+
+[[betha]]
+fonte = "betha_fazenda_rio_grande"
+casa = "cm-fazenda-rio-grande"
+municipio = "Fazenda Rio Grande"
+ibge = 4107652
+regiao = "Metropolitana de Curitiba"
+portal = "-l6BWho9dyNHziT0yzQPaA=="
+
+[[betha]]
+fonte = "betha_almirante_tamandare"
+casa = "cm-almirante-tamandare"
+municipio = "Almirante Tamandaré"
+ibge = 4100400
+regiao = "Metropolitana de Curitiba"
+portal = "16biRUGRqNG_5Yb7Buc8mA=="
+
+[[betha]]
+fonte = "betha_campo_magro"
+casa = "cm-campo-magro"
+municipio = "Campo Magro"
+ibge = 4104253
+regiao = "Metropolitana de Curitiba"
+portal = "BngSjcKJ-kc0fhz1-STQUg=="
+
+[[betha]]
+fonte = "betha_palmas"
+casa = "cm-palmas"
+municipio = "Palmas"
+ibge = 4117602
+regiao = "Centro-Sul"
+portal = "FgtT675kKrNH7Bsg6zR0hA=="
+
+[[betha]]
+fonte = "betha_cornelio_procopio"
+casa = "cm-cornelio-procopio"
+municipio = "Cornélio Procópio"
+ibge = 4106407
+regiao = "Norte Pioneiro"
+portal = "1XnW9RIsContu-ezQxEtlw=="
+
+[[betha]]
+fonte = "betha_bandeirantes"
+casa = "cm-bandeirantes"
+municipio = "Bandeirantes"
+ibge = 4102406
+regiao = "Norte Pioneiro"
+portal = "A-ZdFhQMXzgX-Q6UtbqIHA=="
+
+[[betha]]
+fonte = "betha_siqueira_campos"
+casa = "cm-siqueira-campos"
+municipio = "Siqueira Campos"
+ibge = 4126603
+regiao = "Norte Pioneiro"
+portal = "GMiDu6Z163o1wpb0AuOgHA=="
+
+[[betha]]
+fonte = "betha_wenceslau_braz"
+casa = "cm-wenceslau-braz"
+municipio = "Wenceslau Braz"
+ibge = 4128500
+regiao = "Norte Pioneiro"
+portal = "84H9XJZ0CioYhGU8LMhogg=="
+
+[[betha]]
+fonte = "betha_mandaguacu"
+casa = "cm-mandaguacu"
+municipio = "Mandaguaçu"
+ibge = 4114104
+regiao = "Norte Central"
+portal = "JWdaAC6qJ2iKSa5SDAOx2w=="
+
+[[betha]]
+fonte = "betha_ortigueira"
+casa = "cm-ortigueira"
+municipio = "Ortigueira"
+ibge = 4117305
+regiao = "Centro Oriental"
+portal = "cHtd_ybdF5IneZnNKVuhMA=="
+
+[[betha]]
+fonte = "betha_capitao_leonidas_marques"
+casa = "cm-capitao-leonidas-marques"
+municipio = "Capitão Leônidas Marques"
+ibge = 4104600
+regiao = "Oeste"
+portal = "3mvtlRSmvF5UemnT5_lUVA=="
+
+[[betha]]
+fonte = "betha_alto_parana"
+casa = "cm-alto-parana"
+municipio = "Alto Paraná"
+ibge = 4100608
+regiao = "Noroeste"
+portal = "LlekpEGCy1FiDnfsvolYjQ=="
+
+[[betha]]
+fonte = "betha_vitorino"
+casa = "cm-vitorino"
+municipio = "Vitorino"
+ibge = 4128708
+regiao = "Sudoeste"
+portal = "it3gtmZmlb4qVC14-OUoCQ=="
+
+# Estão no Betha, mas a consulta de diárias com o cargo de quem recebeu não existe.
+
+[[betha]]
+fonte = "betha_uniao_da_vitoria"
+casa = "cm-uniao-da-vitoria"
+municipio = "União da Vitória"
+ibge = 4128203
+regiao = "Sudeste"
+portal = "B11BMKtmX7wo1InHUshDwg=="
+fora = "sem_consulta_diarias"
+detalhe = "A única consulta de diárias do portal é a de empenhos de viagem (1.418 registros desde 2016): mistura passagem, táxi e diária, e a coluna de cargo vem vazia."
+
+[[betha]]
+fonte = "betha_goioere"
+casa = "cm-goioere"
+municipio = "Goioerê"
+ibge = 4108601
+regiao = "Centro Ocidental"
+portal = "ykA6FHb_bv4Y-hW7su8ciw=="
+fora = "sem_consulta_diarias"
+detalhe = "A única consulta de diárias do portal é a de empenhos de viagem, sem o cargo de quem viajou; o resto são relatórios em PDF."
+
+[[betha]]
+fonte = "betha_jaguariaiva"
+casa = "cm-jaguariaiva"
+municipio = "Jaguariaíva"
+ibge = 4112009
+regiao = "Centro Oriental"
+portal = "0WL-B2wft5zRigXvxt9igQ=="
+fora = "sem_consulta_diarias"
+detalhe = "A consulta de diárias concedidas está vazia e manda para uma pasta de PDFs no site da própria câmara; a outra consulta é a de empenhos de viagem, sem cargo."
+
+[[betha]]
+fonte = "betha_mandirituba"
+casa = "cm-mandirituba"
+municipio = "Mandirituba"
+ibge = 4114302
+regiao = "Metropolitana de Curitiba"
+portal = "t_cfYwPxqZMTDe9wi0SUvw=="
+fora = "sem_consulta_diarias"
+detalhe = "A única consulta de diárias do portal é a de empenhos de viagem, sem o cargo de quem viajou."
+
+# ---------------------------------------------------------------------------
 # Assembleias: cada uma é o seu próprio sistema, então cada uma tem o seu
 # adaptador. O bloco diz onde está o dado e como a casa se chama.
 # ---------------------------------------------------------------------------
