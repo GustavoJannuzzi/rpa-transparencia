@@ -241,7 +241,7 @@ class FonteAssembleiaTela(FonteAssembleia, FonteNavegador):
         return urljoin(base or self.inicio, href)
 
     async def gesto(self, acao: Callable[[], Awaitable[Any]], quer: Callable[[Response], bool] | None = None, *,
-                    tipo: str = "html", timeout: int | None = None) -> tuple[Response | None, bytes, str | None]:
+                    tipo: str = "html", timeout: int | None = None, guardar: bool = True) -> tuple[Response | None, bytes, str | None]:
         """Um gesto na tela (escolher, clicar) que faz a página pedir algo ao servidor.
         Espera a vez do domínio, faz o gesto, espera a resposta que casa com `quer` e
         guarda o corpo dela como original. Sem `quer`, só espera a vez e faz o gesto."""
@@ -264,5 +264,6 @@ class FonteAssembleiaTela(FonteAssembleia, FonteNavegador):
             corpo = await r.body()
         except Exception as e:  # a página navegou antes de o corpo ser lido
             raise FalhaTransitoria(f"corpo da resposta indisponível ({type(e).__name__}) em {r.url}") from e
-        h = guardar_original(self.con, self.id, corpo, r.url, tipo)
+        # guardar=False: a fonte guarda ela mesma um trecho (a página inteira é menu repetido)
+        h = guardar_original(self.con, self.id, corpo, r.url, tipo) if guardar else None
         return r, corpo, h

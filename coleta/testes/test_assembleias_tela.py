@@ -149,3 +149,59 @@ def test_conferencia_da_tela_manda_para_revisao_o_escopo_que_nao_fecha_e_o_nome_
     assert conf["origem_igual_coletado_mais_revisao"] == ("5", "5", "confere")
     motivos = [r[0] for r in con.execute("SELECT motivo FROM revisao WHERE fonte='alece' AND tipo='identidade'")]
     assert any("ANTONIO HENRIQUE" in m for m in motivos)
+
+
+# ---------------------------------------------------------------- BA
+def test_alba_lista_paginada_e_detalhe_da_nota():
+    from coleta.fontes.alba.fonte import ler_detalhe as ba_detalhe, ler_lista as ba_lista, ultima_pagina
+
+    html = _ler("alba/lista_hassan_2026.html")
+    linhas = ba_lista(html)
+    assert len(linhas) == 20 and ultima_pagina(html) == 1  # duas páginas: 0 e 1
+    l = next(x for x in linhas if x["id"] == "103334")
+    assert (l["processo"], l["nf"], l["competencia"], l["valor_texto"]) == ("217140", "3", "11/2026", "R$ 10.000,00")
+    (n,) = ba_detalhe(_ler("alba/detalhe_103334.html"))
+    assert n["documento"] == "05.087.278/0001-61" and n["valor_texto"] == "R$ 10.000,00" and n["glosa_texto"] == "R$ 0,00"
+    assert n["anexo"] and n["anexo"].endswith(".pdf")
+
+
+def test_alba_a_paginacao_vem_com_amp_no_html():
+    from coleta.fontes.alba.fonte import ultima_pagina
+
+    assert ultima_pagina('<a href="?ano=2026&amp;inicio=0&amp;page=176&amp;size=20" title="Última Página">') == 176
+    assert ultima_pagina("<p>sem paginação</p>") == 0
+
+
+# ---------------------------------------------------------------- GO
+def test_alego_lancamentos_somam_o_grupo_o_total_e_o_dado_aberto():
+    from coleta.fontes.alego.fonte import _dec, ler_exibir, sem_numero
+
+    det = ler_exibir(json.loads((AMOSTRAS / "alego/exibir_808_2026_09.json").read_text(encoding="utf-8")))
+    (aberto,) = json.loads((AMOSTRAS / "alego/aberto_2026_09_808.json").read_text(encoding="utf-8"))
+    soma = Decimal(0)
+    for g in det["grupos"]:
+        s = sum((_dec(l["valor_indenizado"]) for l in g["lancamentos"]), Decimal(0))
+        assert s == _dec(g["indenizado"]), g["descricao"]
+        soma += s
+    assert soma == _dec(det["indenizado"]) == _dec(aberto["valor_indenizado"]) == Decimal("26417.08")
+    assert sem_numero("02 -  COMUNICAÇÃO, TELEFONE E DADOS") == "COMUNICAÇÃO, TELEFONE E DADOS"
+
+
+# ---------------------------------------------------------------- PE
+def test_alepe_notas_do_pedido_somam_o_total_e_a_rubrica_vem_do_numero_da_categoria():
+    pedidos = json.loads((AMOSTRAS / "alepe/pedidos_4508_2025_01.json").read_text(encoding="utf-8"))
+    notas = json.loads((AMOSTRAS / f"alepe/notas_{pedidos[0]['docid']}.json").read_text(encoding="utf-8"))
+    rubricas = {int(r["numero_categoria"]): r["nome_categoria"] for r in json.loads((AMOSTRAS / "alepe/rubricas_2025.json").read_text(encoding="utf-8"))}
+    assert sum(Decimal(n["valor"]) for n in notas) == Decimal(pedidos[0]["total"])
+    assert rubricas[int(notas[0]["rubrica"])] == "ASSESSORIA JURÍDICA"
+
+
+# ---------------------------------------------------------------- RN
+def test_alrn_a_linha_da_resposta_e_a_da_tabela_da_tela_sao_a_mesma():
+    from coleta.fontes.alrn.fonte import centavos, chave_resposta, chave_tela, ler_despesas
+
+    j = ler_despesas(json.loads((AMOSTRAS / "alrn/despesas_amostra.json").read_text(encoding="utf-8")))
+    x = j["data"][0]
+    assert chave_resposta(x) == chave_tela("TOMBA FARIAS", "31/07/2025", "35.304.542/0008-09", "R$ 278,46")
+    assert centavos(7215827.399999997) == Decimal("7215827.40")
+    assert sum(Decimal(l["valor"]) for l in j["data"]) == centavos(j["somatorio"]) and j["count"] == len(j["data"])

@@ -623,3 +623,47 @@ cargo = "deputado estadual"
 sistema = "Portal da Transparência da ALETO (CODAP em PDF)"
 modo = "robo_pdf"
 inicio = "https://www.al.to.leg.br/transparencia/verbaIndenizatoria"
+
+# BA: cada nota é uma página de detalhe (~3.500 por ano). Pelo tempo de coleta
+# (~2 h por ano com a pausa de 1 s), a janela é 2025–2026; 2023–2024 ficam para
+# uma rodada longa à parte (basta mudar `de`).
+[[assembleia]]
+fonte = "alba"
+casa = "al-ba"
+uf = "BA"
+nome = "Assembleia Legislativa do Estado da Bahia"
+cargo = "deputado estadual"
+sistema = "Portal da Transparência da ALBA (verbas indenizatórias)"
+modo = "robo"
+inicio = "https://www.al.ba.gov.br/transparencia/verbas-idenizatorias"
+de = 2025
+
+[[assembleia]]
+fonte = "alego"
+casa = "al-go"
+uf = "GO"
+nome = "Assembleia Legislativa do Estado de Goiás"
+cargo = "deputado estadual"
+sistema = "Portal da Transparência da ALEGO (app AngularJS)"
+modo = "robo"
+inicio = "https://transparencia.al.go.leg.br/gestao-parlamentar/verba-indenizatoria"
+
+[[assembleia]]
+fonte = "alepe"
+casa = "al-pe"
+uf = "PE"
+nome = "Assembleia Legislativa do Estado de Pernambuco"
+cargo = "deputado estadual"
+sistema = "Portal da Transparência da ALEPE (app React)"
+modo = "robo"
+inicio = "https://transparencia.alepe.pe.gov.br/financas/verbas-indenizatorias"
+
+[[assembleia]]
+fonte = "alrn"
+casa = "al-rn"
+uf = "RN"
+nome = "Assembleia Legislativa do Estado do Rio Grande do Norte"
+cargo = "deputado estadual"
+sistema = "Portal da Transparência da ALRN (app Angular)"
+modo = "robo"
+inicio = "https://transparencia.al.rn.leg.br/verbas"

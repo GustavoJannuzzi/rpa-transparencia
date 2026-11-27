@@ -358,3 +358,92 @@ def test_aleto_formulario_por_nome_e_crawl_delay():
             assert re.search(r'<option value="[A-ZÀ-Ú][^"0-9]+"', h)
     except (httpx.ConnectTimeout, httpx.ConnectError, httpx.ReadTimeout) as erro:
         _sem_rede(erro)
+
+
+def test_alba_lista_paginada_e_detalhe():
+    from coleta import entidades
+    from coleta.fontes.alba.fonte import ler_detalhe, ler_lista, opcoes_deputado, ultima_pagina
+
+    inicio = entidades.assembleias()["alba"].extra["inicio"]
+    try:
+        with _cliente(follow_redirects=True) as c:
+            h = c.get(inicio, params={"ano": "2026", "page": "0", "size": "20"}).text
+            assert opcoes_deputado(h) and ultima_pagina(h) > 10
+            linhas = ler_lista(h)  # PortalMudou se as colunas mudarem
+            assert linhas
+            assert ler_detalhe(c.get(f"https://www.al.ba.gov.br{linhas[0]['detalhe']}").text)
+    except (httpx.ConnectTimeout, httpx.ConnectError, httpx.ReadTimeout) as erro:
+        _sem_rede(erro)
+
+
+def test_alego_dado_aberto_so_tem_o_total_e_a_tela_pede_o_detalhe():
+    from coleta.fontes.alego.fonte import API
+
+    try:
+        with _cliente(follow_redirects=True) as c:
+            aberto = c.get(f"{API}.json", params={"ano": "2025", "mes": "9", "todos": "true"}).json()
+            assert aberto and {"deputado", "valor_indenizado", "valor_apresentado"} <= set(aberto[0]) and "grupos" not in aberto[0]
+    except (httpx.ConnectTimeout, httpx.ConnectError, httpx.ReadTimeout) as erro:
+        _sem_rede(erro)
+
+
+async def test_alego_a_rota_do_deputado_pede_o_detalhe_com_cnpj():
+    from coleta import entidades
+
+    inicio = entidades.assembleias()["alego"].extra["inicio"]
+    pw, nav, p = await _pagina(config.UA_ROBO)
+    try:
+        async with p.expect_response(lambda r: "/verbas_indenizatorias/exibir?" in r.url, timeout=60000) as info:
+            await p.goto(f"{inicio}/exibir/808/2025/9", wait_until="domcontentloaded")
+        j = await (await info.value).json()
+        assert {"grupos", "valor_indenizado"} <= set(j)
+    except Exception as erro:
+        if "Timeout" in type(erro).__name__ or "net::" in str(erro):
+            _sem_rede(erro)
+        raise
+    finally:
+        await nav.close()
+        await pw.stop()
+
+
+async def test_alepe_selects_puxam_meses_pedidos_e_notas():
+    from coleta import entidades
+
+    inicio = entidades.assembleias()["alepe"].extra["inicio"]
+    pw, nav, p = await _pagina(config.UA_ROBO)
+    try:
+        await p.goto(inicio, wait_until="networkidle")
+        assert await p.locator("select#parlamentar option").count() > 50
+        async with p.expect_response(lambda r: "dep-meses.php" in r.url, timeout=60000):
+            await p.select_option("select#parlamentar", "4508")
+        async with p.expect_response(lambda r: "verbaindenizatorianotas.php" in r.url, timeout=60000):
+            await p.select_option("select#mes", "1")
+    except Exception as erro:
+        if "Timeout" in type(erro).__name__ or "net::" in str(erro):
+            _sem_rede(erro)
+        raise
+    finally:
+        await nav.close()
+        await pw.stop()
+
+
+async def test_alrn_so_pela_tela_mat_select_e_resposta_da_pesquisa():
+    from coleta import entidades
+
+    inicio = entidades.assembleias()["alrn"].extra["inicio"]
+    pw, nav, p = await _pagina(config.UA_ROBO)
+    try:
+        await p.goto(inicio, wait_until="networkidle")
+        for controle in ("legislaturasControl", "anoControl", "mesesControl", "parlamentaresControl"):
+            assert await p.locator(f"mat-select[formcontrolname='{controle}']").count() == 1
+        async with p.expect_response(lambda r: "/verbas/despesas/" in r.url, timeout=90000) as info:
+            await p.get_by_role("button", name="PESQUISAR").click()
+        j = await (await info.value).json()
+        assert {"data", "count", "somatorio"} <= set(j)
+    except Exception as erro:
+        if "Timeout" in type(erro).__name__ or "net::" in str(erro):
+            _sem_rede(erro)
+        raise
+    finally:
+        await nav.close()
+        await pw.stop()

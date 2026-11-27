@@ -721,6 +721,13 @@ CONFERENCIA_DA_TELA = {
              "está no CSV do mês que a própria casa publica (mesmo CNPJ, mesmo valor), e o contrário",
     "aleto": "o PDF de cada mês traz as notas com o saldo corrido; o saldo de cada linha é o anterior menos a nota, as notas somam o total "
              "das despesas do quadro do mês, e o valor ressarcido é esse total",
+    "alba": "cada linha da lista (processo, NF, valor) tem de bater com a página de detalhe da nota; no ano, as linhas de todos os "
+            "deputados somam as linhas da lista sem filtro",
+    "alego": "a tela de cada deputado no mês dá os lançamentos, o total de cada grupo e o total do mês; os lançamentos somam o grupo e "
+             "o total, e o total é o do dado aberto da casa (indenizado e apresentado)",
+    "alepe": "a tela dá os pedidos de cada mês com o total e, para cada pedido, as notas; as notas somam o total do pedido",
+    "alrn": "a resposta que a tela recebe ao pesquisar traz as linhas, a contagem e a soma; a soma é o total escrito na tela, a contagem "
+            "é a do paginador, cada linha aparece na tabela da tela, e os totais por categoria fecham",
 }
 
 
@@ -760,6 +767,18 @@ def _divergencias_da_tela(con, rv: Revisor) -> set[tuple[str, str]]:
             rv.conferencia(fonte, "contador_da_tela_x_linhas_lidas", "todos os itens", contados, lidos,
                            "confere" if lidos == contados else "observacao",
                            f"o contador 'Mostrando ... de N resultados' × as linhas que a lista mostrou; difere em {meses_diferentes} item(ns)")
+        # o ano inteiro: a soma das listas por deputado × a lista sem filtro
+        for r in con.execute("SELECT escopo, valor FROM totais_oficiais WHERE fonte=? AND metrica='linhas_da_lista_do_ano'", (fonte,)):
+            soma, itens_ok, itens = con.execute(
+                """SELECT COALESCE(SUM(CAST(t.valor AS INTEGER)), 0), COUNT(DISTINCT t.escopo),
+                          (SELECT COUNT(*) FROM inventario WHERE fonte=? AND periodo=?)
+                   FROM totais_oficiais t JOIN inventario i ON i.fonte=t.fonte AND i.chave=t.escopo
+                   WHERE t.fonte=? AND t.metrica='linhas_da_lista' AND i.periodo=? AND i.situacao='ok'""",
+                (fonte, r["escopo"], fonte, r["escopo"])).fetchone()
+            completo = itens_ok == itens
+            rv.conferencia(fonte, "linhas_por_deputado_x_lista_do_ano", r["escopo"], r["valor"], soma,
+                           ("confere" if str(soma) == r["valor"] else "diverge") if completo else "parcial",
+                           f"a lista sem filtro do ano × a soma das listas de cada deputado ({itens_ok} de {itens} deputados coletados)")
         if divergentes:
             for r in con.execute("SELECT chave, extra FROM despesas WHERE fonte=?", (fonte,)):
                 if any(e in divergentes for e in json.loads(r["extra"] or "{}").get("escopos_conferencia") or ()):

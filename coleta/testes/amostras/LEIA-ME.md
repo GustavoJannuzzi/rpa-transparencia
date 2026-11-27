@@ -22,3 +22,20 @@ originais da coleta de 26/11/2026, com estas trocas:
   que não fecham o dígito verificador; o nome do fornecedor pessoa física é tarjado; a planilha XLSX é escrita de
   novo, só com as linhas escolhidas (datas nos dois formatos e duas linhas com as colunas deslocadas);
 - ALMG e ALESP: o mesmo para o emitente ou fornecedor pessoa física.
+
+## Assembleias lidas pela tela (2026-11-26)
+
+`alap/`, `alece/`, `aleto/`, `alba/`, `alego/`, `alepe/` e `alrn/` são originais da coleta de 26/11/2026 no
+navegador, escolhidos para os testes dos leitores:
+
+- AP: o bloco do resultado do POST (sem menu, scripts e gráfico), um iframe de detalhe e a resposta AJAX dos
+  gabinetes como veio (UTF-8 codificado duas vezes);
+- CE: a página 1 da lista (só a tabela e a paginação), um detalhe e as linhas do mesmo deputado no CSV do mês; o
+  CPF do próprio deputado, que a casa põe na coluna "CNPJ" do reembolso, virou `11111111111` (não fecha o dígito
+  verificador) e o nome civil dele, `DEPUTADO (NOME CIVIL TARJADO)`;
+- TO: as palavras com coordenadas de um PDF mensal (o que o robô guarda do PDF), com a data escrita errado e o
+  item 13 que a planilha da casa pula;
+- BA: o trecho da tabela de uma página da lista e de um detalhe (o original que o robô guarda);
+- GO: a resposta do detalhe de um deputado num mês (sem foto, e-mail e redes) e a linha dele no dado aberto;
+- PE: um pedido, as notas dele e as rubricas do ano;
+- RN: seis linhas da resposta da pesquisa, com a contagem, a soma e os totais por categoria recalculados.

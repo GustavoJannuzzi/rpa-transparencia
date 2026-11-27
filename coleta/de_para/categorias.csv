@@ -111,3 +111,68 @@ alap,Serviços de Publicidade Legal,divulgacao,Divulgação da atividade
 alap,Vigilância ostensiva,seguranca,Segurança
 alece,Verba de Desempenho Parlamentar,sem_tipo,A casa não separa por tipo de despesa
 aleto,Cota Despesa de Atividade Parlamentar,sem_tipo,A casa não separa por tipo de despesa
+alba,Aluguel de imóveis para escritório; despesas concernentes a eles,imovel,Imóvel: locação e manutenção
+alba,Aquisição de material de expediente,material_escritorio,Material de escritório e informática
+alba,Aquisição ou locação de software; serviços postais e de segurança; assinaturas de publicações; TV a cabo ou similar; acesso à Internet; e locação de móveis e equipamentos. Telefones.,servicos_gerais,"Software, internet, telefone, correio, segurança e locação de móveis"
+alba,Assessorias,consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+alba,Consultorias,consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+alba,"Consultorias, assessorias, pesquisas e trabalhos técnicos",consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+alba,Pesquisas,consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+alba,Trabalhos Técnicos,consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+alba,Divulgação da atividade parlamentar,divulgacao,Divulgação da atividade
+alba,Divulgação da atividade parlamentar em redes sociais,divulgacao,Divulgação da atividade
+alba,Fretamento,fretamento,Fretamento
+alba,"Inscrições dos Parlamentares e secretários em cursos, palestras, seminários, simpósios, congressos.",cursos,"Cursos, palestras e eventos"
+alba,Locação de veículo terrestre,locacao_veiculos,Locação de veículos
+alba,"Locomoção, hospedagem",viagens,"Viagem: passagens, hospedagem e alimentação"
+alego,TRANSPORTES,viagens,"Viagem: passagens, hospedagem e alimentação"
+alego,"COMUNICAÇÃO, TELEFONE E DADOS",utilidades,"Telefone, internet, energia e água"
+alego,SERVIÇOS POSTAIS,postais,Serviços postais
+alego,APOIO À ATIVIDADE PARLAMENTAR,apoio_atividade,Apoio à atividade parlamentar
+alego,ASSINATURA DE PUBLICAÇÕES,publicacoes,Assinatura de publicações
+alego,FORNECIMENTO DE ALIMENTAÇÃO,alimentacao,Alimentação
+alego,HOSPEDAGEM,hospedagem,Hospedagem
+alego,LOCAÇÃO OU FRETAMENTO,locacao_veiculos,Locação de veículos
+alego,VEÍCULOS,veiculos,"Veículos: combustível e outros gastos"
+alego,SERVIÇOS DE SEGURANÇA,seguranca,Segurança
+alego,APOIO TÉCNICO JURIDICO,consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+alego,DIVULGAÇÃO DE ATIVIDADE PARLAMENTAR,divulgacao,Divulgação da atividade
+alego,MANUTENÇÃO E DESPESAS GERAIS COM VEICULOS,manutencao_veiculos,Manutenção de veículos
+alego,SERVIÇOS GRÁFICOS,grafica,Gráfica e cópias
+alego,PARTICIPAÇÃO EM EVENTOS,eventos,Promoção e participação em eventos
+alego,LOCAÇÃO DE MÓVEIS E EQUIPAMENTOS,bens_moveis,Locação de móveis e equipamentos
+alego,"MATERIAL DE EXPEDIENTE, SUPRIMENTOS DE INFORMÁTICA E MANUTENÇÃO",material_escritorio,Material de escritório e informática
+alego,LOCAÇÃO OU AQUISIÇÃO DE LICENÇA DE USO DE SOFTWARE,assinaturas,"Assinaturas, internet e software"
+alego,CONSERVAÇÃO E REFORMA DE IMÓVEL USADO PARA ESCRITÓRIO DE APOIO,imovel,Imóvel: locação e manutenção
+alego,APOIO TÉCNICO EM CONTABILIDADE E FINANÇAS PÚBLICAS,consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+alego,APOIO TÉCNICO EM MARKETING E COMUNICAÇÃO PARLAMENTAR,comunicacao,Serviços de comunicação
+alego,APOIO TÉCNICO ESPECIALIZADO,consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+alego,APOIO TÉCNICO EM PESQUISAS,consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+alego,MATERIAL PARA FESTIVIDADES E HOMENAGENS,eventos,Promoção e participação em eventos
+alepe,ASSESSORIA JURÍDICA,consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+alepe,ASSINATURAS DE PUBLICAÇÕES,publicacoes,Assinatura de publicações
+alepe,CONSULTORIAS E TRABALHOS TÉCNICOS,consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+alepe,DIVULGAÇÃO DA ATIVIDADE PARLAMENTAR,divulgacao,Divulgação da atividade
+alepe,FORNECIMENTO DE ALIMENTAÇÃO DO PARLAMENTAR,alimentacao,Alimentação
+alepe,IMÓVEIS,imovel,Imóvel: locação e manutenção
+alepe,LOCAÇÃO DE VEÍCULOS,locacao_veiculos,Locação de veículos
+alepe,SERVIÇOS DE SEGURANÇA,seguranca,Segurança
+alepe,SERVIÇOS DE TELECOMUNICAÇÕES EM GERAL,telefonia,Telefonia
+alepe,SERVIÇOS E PRODUTOS POSTAIS,postais,Serviços postais
+alrn,Combustível e Lubrificante,combustivel,Combustível
+alrn,"Locação e Manutenção de bens imóveis, móveis e equipamentos",imovel,Imóvel: locação e manutenção
+alrn,Divulgação da Atividade Parlamentar,divulgacao,Divulgação da atividade
+alrn,Locação de veículos automotores,locacao_veiculos,Locação de veículos
+alrn,Locomoção/ Hospedagem / Passagens / Alimentação durante Locomoção,viagens,"Viagem: passagens, hospedagem e alimentação"
+alrn,Serviços de Provedores de Internet para projeções do Gabinete,assinaturas,"Assinaturas, internet e software"
+alrn,Materiais e Serviços de Manutenção e Conservação de Veículos,manutencao_veiculos,Manutenção de veículos
+alrn,Alimentação do Parlamentar,alimentacao,Alimentação
+alrn,Telefonia movel,telefonia,Telefonia
+alrn,Material Gráfico / Serviços Postais,grafica,Gráfica e cópias
+alrn,Materiais de Consumo para Gabinete Parlamentar,material_escritorio,Material de escritório e informática
+alrn,"Cópias reprográficas, digitais e similares",grafica,Gráfica e cópias
+alrn,"Consultorias, pesquisas e trabalhos técnicos",consultorias,"Consultorias, pesquisas e trabalhos técnicos"
+alrn,Segurança,seguranca,Segurança
+alrn,Assinatura de Publicações,publicacoes,Assinatura de publicações
+alrn,Serviço de taxi/ pedágio/ estacionamento,taxi_pedagio,"Táxi, pedágio e estacionamento"
+alrn,Curso/ palestra/ seminário/ simpósio/ congresso/ evento,cursos,"Cursos, palestras e eventos"
