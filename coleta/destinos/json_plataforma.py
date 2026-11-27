@@ -657,6 +657,8 @@ def _fontes(con, coleta, camara_cmc_ano) -> dict:
         sit = {r[0]: r[1] for r in con.execute("SELECT s.situacao, COUNT(*) FROM despesas d JOIN despesa_situacao s USING(chave) WHERE d.fonte=? GROUP BY 1", (f.id,))}
         pend = con.execute("SELECT COUNT(*) FROM pendencias WHERE fonte=?", (f.id,)).fetchone()[0]
         inv = {r[0]: r[1] for r in con.execute("SELECT situacao, COUNT(*) FROM inventario WHERE fonte=? GROUP BY 1", (f.id,))}
+        if not inv:
+            continue  # fonte que este banco ainda não coletou não vai para o ar como se tivesse dado
         ult = con.execute("""SELECT inicio, fim, situacao, totais FROM coletas WHERE fonte=? AND etapa='coletar'
                              AND json_extract(totais, '$.ok') > 0 ORDER BY id DESC LIMIT 1""", (f.id,)).fetchone()
         fontes.append({
