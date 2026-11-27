@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from datetime import date
 from decimal import Decimal
 
@@ -28,12 +29,23 @@ from ...modelo import Descoberta, ItemInventario, Pendencia, PessoaFonte, Result
 from ...nucleo.banco import agora
 from ...nucleo.erros import FalhaTransitoria, PortalMudou
 from ...nucleo.evidencia import guardar_original
-from ...nucleo.texto import ValorIlegivel, chave_hash, data_br, decimal_ponto
+from ...nucleo.texto import ValorIlegivel, chave_hash, data_br
 from ..assembleia_tela import Conferencias, FonteAssembleiaTela
 
 SERVICOS = "https://www.alepe.pe.gov.br/servicos/transparencia/adm"
 CAMPOS_NOTA = {"rubrica", "data", "cnpj", "empresa", "valor"}
 CAMPOS_PEDIDO = {"docid", "numero", "total"}
+# O valor da nota e o total do pedido vêm como texto, em reais: inteiro ("21880") ou
+# com vírgula decimal de uma ou duas casas ("8372,5" é 8.372,50), sem separador de
+# milhar. O teto das rubricas vem com ponto ("25326.00"). Outra forma é ilegível.
+RE_VALOR = re.compile(r"\d+(?:,\d{1,2})?")
+
+
+def valor_da_alepe(texto: str | None) -> Decimal:
+    t = (texto or "").strip()
+    if not RE_VALOR.fullmatch(t):
+        raise ValorIlegivel(t or "vazio")
+    return Decimal(t.replace(",", "."))
 
 
 class Alepe(FonteAssembleiaTela):
@@ -185,7 +197,7 @@ class Alepe(FonteAssembleiaTela):
                     proc = self.procedencia(url_n, h_n, f"pedido {ped['numero']}, nota {k + 1}")
                     chave = chave_hash(self.id, doc, k, n.get("rubrica"), n.get("sequencial"), n.get("cnpj"), n.get("valor"))
                     try:
-                        valor = decimal_ponto(n["valor"])
+                        valor = valor_da_alepe(n["valor"])
                     except ValorIlegivel as e:
                         res.pendencias.append(Pendencia(fonte=self.id, chave=chave, motivo="valor ilegível",
                                                         texto_original=f"{nome} {mes:02d}/{ano} pedido {ped['numero']}: {e}", procedencia=proc))
@@ -204,7 +216,7 @@ class Alepe(FonteAssembleiaTela):
                         extra={"pedido": ped["numero"], "docid": doc, "rubrica": n.get("rubrica"), "sequencial": n.get("sequencial"),
                                "escopos_conferencia": [escopo], **({"rubrica_sem_nome": True} if rubrica is None else {})}))
                 try:
-                    total: Decimal | None = decimal_ponto(ped["total"])
+                    total: Decimal | None = valor_da_alepe(ped["total"])
                 except ValorIlegivel:
                     total = None
                 conf.conferir(escopo, total, soma, self.procedencia(pedidos_r[0].url, h_ped, f"pedido {ped['numero']}"),

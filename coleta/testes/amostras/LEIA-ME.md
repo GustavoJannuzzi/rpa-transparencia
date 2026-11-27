@@ -34,8 +34,12 @@ navegador, escolhidos para os testes dos leitores:
   CPF do próprio deputado, que a casa põe na coluna "CNPJ" do reembolso, virou `11111111111` (não fecha o dígito
   verificador) e o nome civil dele, `DEPUTADO (NOME CIVIL TARJADO)`;
 - TO: as palavras com coordenadas de um PDF mensal (o que o robô guarda do PDF), com a data escrita errado e o
-  item 13 que a planilha da casa pula;
-- BA: o trecho da tabela de uma página da lista e de um detalhe (o original que o robô guarda);
+  item 13 que a planilha da casa pula; e mais sete PDFs da coleta de 27/11/2026, um para cada forma da planilha
+  (os rótulos de 2023 com o saldo negativo entre parênteses, o transporte do mês anterior, o número que o PDF
+  parte em dois, a nota sem item, o valor com uma casa decimal, a coluna de saldo que não fecha e a cota
+  proporcional sem saldo atual); o emitente pessoa física vira `TARJADO` e o CPF dele, `111.111.111-11`;
+- BA: o trecho da tabela de uma página da lista e de dois detalhes (o original que o robô guarda), um deles
+  com glosa;
 - GO: a resposta do detalhe de um deputado num mês (sem foto, e-mail e redes) e a linha dele no dado aberto;
 - PE: um pedido, as notas dele e as rubricas do ano;
 - RN: seis linhas da resposta da pesquisa, com a contagem, a soma e os totais por categoria recalculados.

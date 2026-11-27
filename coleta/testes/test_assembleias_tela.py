@@ -6,6 +6,8 @@ from __future__ import annotations
 import json
 from decimal import Decimal
 
+import pytest
+
 from coleta.fontes.alap.fonte import ler_detalhe as ap_detalhe, ler_resultado, opcoes
 from coleta.fontes.alece.fonte import assinatura, codigo_do_detalhe, ler_csv, ler_detalhe as ce_detalhe, ler_lista, nome_sem_prefixo
 from coleta.fontes.aleto.fonte import conferir_pdf, ler_pdf
@@ -91,7 +93,7 @@ def test_aleto_o_saldo_de_cada_linha_fecha_pelas_coordenadas_mesmo_com_data_escr
     assert 13 not in itens and len(itens) == 41  # a planilha da casa pula o 13
     n29 = next(n for n in pdf["notas"] if n["item"] == 29)
     assert n29["data"] == "0107/2025" and n29["valor_texto"] == "250,00" and n29["saldo_texto"] == "20.583,56"
-    fecha, problemas = conferir_pdf(pdf)
+    fecha, problemas, _ = conferir_pdf(pdf)
     assert fecha, problemas
 
 
@@ -99,7 +101,7 @@ def test_aleto_uma_nota_a_menos_quebra_a_corrente_do_saldo():
     palavras = json.loads((AMOSTRAS / "aleto/pdf_2025_07.json").read_text(encoding="utf-8"))["palavras"]
     pdf = ler_pdf(palavras)
     pdf["notas"] = [n for n in pdf["notas"] if n["item"] != 20]
-    fecha, problemas = conferir_pdf(pdf)
+    fecha, problemas, _ = conferir_pdf(pdf)
     assert not fecha and any("saldo na linha" in p for p in problemas) and any("total das despesas" in p for p in problemas)
 
 
@@ -187,6 +189,15 @@ def test_alba_lista_paginada_e_detalhe_da_nota():
     assert n["anexo"] and n["anexo"].endswith(".pdf")
 
 
+def test_alba_a_lista_mostra_o_valor_menos_a_glosa():
+    """Processo 220579 (nov/2025): R$ 538,43 com R$ 55,89 de glosa; a lista mostra R$ 482,54."""
+    from coleta.fontes.alba.fonte import dinheiro_da_alba, ler_detalhe as ba_detalhe
+
+    (n,) = ba_detalhe(_ler("alba/detalhe_98412_glosa.html"))
+    assert dinheiro_da_alba(n["valor_texto"]) - dinheiro_da_alba(n["glosa_texto"]) == Decimal("482.54")
+    assert dinheiro_da_alba("R$ ,17") == Decimal("0.17")  # a glosa de centavos vem sem o zero
+
+
 def test_alba_a_paginacao_vem_com_amp_no_html():
     from coleta.fontes.alba.fonte import ultima_pagina
 
@@ -214,8 +225,23 @@ def test_alepe_notas_do_pedido_somam_o_total_e_a_rubrica_vem_do_numero_da_catego
     pedidos = json.loads((AMOSTRAS / "alepe/pedidos_4508_2025_01.json").read_text(encoding="utf-8"))
     notas = json.loads((AMOSTRAS / f"alepe/notas_{pedidos[0]['docid']}.json").read_text(encoding="utf-8"))
     rubricas = {int(r["numero_categoria"]): r["nome_categoria"] for r in json.loads((AMOSTRAS / "alepe/rubricas_2025.json").read_text(encoding="utf-8"))}
-    assert sum(Decimal(n["valor"]) for n in notas) == Decimal(pedidos[0]["total"])
+    from coleta.fontes.alepe.fonte import valor_da_alepe
+
+    assert sum(valor_da_alepe(n["valor"]) for n in notas) == valor_da_alepe(pedidos[0]["total"])
     assert rubricas[int(notas[0]["rubrica"])] == "ASSESSORIA JURÍDICA"
+
+
+def test_alepe_valor_vem_inteiro_ou_com_virgula_decimal():
+    from coleta.fontes.alepe.fonte import valor_da_alepe
+    from coleta.nucleo.texto import ValorIlegivel
+
+    # as três formas que a ALEPE manda (vistas nas respostas de 2023 a 2026)
+    assert valor_da_alepe("21880") == Decimal("21880")
+    assert valor_da_alepe("8372,5") == Decimal("8372.50")
+    assert valor_da_alepe("5345,86") == Decimal("5345.86")
+    for ruim in ("", None, "1.234,56", "12,345", "R$ 10", "-5"):
+        with pytest.raises(ValorIlegivel):
+            valor_da_alepe(ruim)
 
 
 # ---------------------------------------------------------------- RN
@@ -235,5 +261,75 @@ def test_aleto_pdf_sem_linha_de_cabecalho_acha_as_colunas_pelas_notas():
     pdf = ler_pdf(palavras)
     assert pdf["mes"] == 2 and len(pdf["notas"]) == 10
     assert pdf["quadro"]["total_despesas"] == Decimal("44978.72") and "saldo_anterior" in pdf["quadro"]
-    fecha, problemas = conferir_pdf(pdf)
+    fecha, problemas, _ = conferir_pdf(pdf)
     assert fecha, problemas
+
+
+def _pdf_to(nome: str) -> dict:
+    return ler_pdf(json.loads((AMOSTRAS / f"aleto/{nome}.json").read_text(encoding="utf-8"))["palavras"])
+
+
+def test_aleto_rotulos_de_2023_saldo_negativo_entre_parenteses_e_deducao_depois_do_teto():
+    """Jan/2023: "CODAP", "Saldo acumulado", "Gasto no mês"; o saldo que passa da cota vem "(368,42)"."""
+    pdf = _pdf_to("pdf_2023_01_rotulos_de_2023")
+    q = pdf["quadro"]
+    assert (q["valor_mensal"], q["saldo_atual"], q["total_despesas"], q["ressarcido"]) == (
+        Decimal("39503.61"), Decimal("39503.61"), Decimal("39872.03"), Decimal("39482.66"))
+    assert pdf["deduzido"] == Decimal("20.95") and pdf["notas"][-1]["saldo_texto"] == "(368,42)"
+    fecha, problemas, obs = conferir_pdf(pdf)
+    assert fecha and not obs, problemas  # 39.503,61 (o teto) − 20,95 = 39.482,66
+
+
+def test_aleto_transporte_do_mes_anterior_entra_no_saldo_e_nao_vira_nota():
+    """Jun/2023: a linha 1 é "Saldo de Notas mês anterior" (287,82), o que passou da cota em maio."""
+    pdf = _pdf_to("pdf_2023_06_transporte")
+    transp = [n for n in pdf["notas"] if n.get("transporte")]
+    assert [n["valor_texto"] for n in transp] == ["287,82"] and len(pdf["notas"]) == 8
+    fecha, problemas, _ = conferir_pdf(pdf)
+    assert fecha, problemas
+
+
+def test_aleto_numero_partido_pelo_pdf_volta_a_ser_um_so():
+    """Set/2024: o pdfplumber separa "45.308,14" em "4" e "5.308,14"."""
+    pdf = _pdf_to("pdf_2024_09_numero_partido")
+    assert pdf["quadro"]["saldo_atual"] == Decimal("45308.14")
+    assert conferir_pdf(pdf)[0]
+
+
+def test_aleto_nota_com_o_item_em_branco_e_lida_pela_data():
+    pdf = _pdf_to("pdf_2025_11_nota_sem_item")
+    sem_item = [n for n in pdf["notas"] if n["item"] is None]
+    assert [n["valor_texto"] for n in sem_item] == ["2.000,00", "2.000,00"] and all(n["data"] for n in sem_item)
+    fecha, problemas, _ = conferir_pdf(pdf)
+    assert fecha, problemas
+
+
+def test_aleto_valor_com_uma_casa_decimal():
+    pdf = _pdf_to("pdf_2023_04_uma_casa_decimal")
+    assert any(n["valor_texto"] == "316,2" for n in pdf["notas"])
+    fecha, problemas, _ = conferir_pdf(pdf)
+    assert fecha, problemas  # o total passa do saldo: ressarcido = o saldo atual
+
+
+def test_aleto_saldo_da_planilha_que_nao_fecha_fica_como_observacao_se_o_total_fecha():
+    """Out/2023: a linha 1 foi posta no topo depois do cálculo; as notas somam o total e o ressarcido fecha."""
+    pdf = _pdf_to("pdf_2023_10_saldo_da_planilha")
+    fecha, problemas, obs = conferir_pdf(pdf)
+    assert fecha and not problemas and obs and "coluna de saldo" in obs[0]
+    pdf["notas"] = pdf["notas"][1:]  # sem uma nota, o total não fecha, e o saldo vira motivo
+    fecha, problemas, obs = conferir_pdf(pdf)
+    assert not fecha and not obs and any("total das despesas" in p for p in problemas) and any("saldo na linha" in p for p in problemas)
+
+
+def test_aleto_cota_proporcional_sem_saldo_atual_abre_pela_primeira_linha():
+    pdf = _pdf_to("pdf_2024_09_sem_saldo_atual")
+    assert "saldo_atual" not in pdf["quadro"] and pdf["notas"][-1]["saldo_texto"] == "-"
+    fecha, problemas, _ = conferir_pdf(pdf)
+    assert fecha, problemas
+
+
+def test_aleto_glosa_sem_explicacao_nao_fecha():
+    pdf = _pdf_to("pdf_2023_06_transporte")
+    pdf["quadro"]["ressarcido"] -= Decimal("100")
+    fecha, problemas, _ = conferir_pdf(pdf)
+    assert not fecha and any("ressarcido" in p for p in problemas)

@@ -5,18 +5,18 @@ AC,ALEAC,Assembleia Legislativa do Acre,24,Java (.xhtml),nao_publica,Só o regul
 AL,ALE-AL,Assembleia Legislativa de Alagoas,27,Plone (PDF escaneado),reserva,"PDF escaneado, sem fornecedor: reserva para o robô de OCR."
 AM,ALEAM,Assembleia Legislativa do Amazonas,24,WordPress (POST e modais),reserva,"Tela com POST e modais; CNPJ com dados da Receita."
 AP,ALAP,Assembleia Legislativa do Amapá,24,PHP (cascata AJAX e iframe),sem_adaptador,"Navegador: três selects em cascata, POST e modal com iframe por categoria; notas, elementos e o histórico do ano conferidos."
-BA,ALBA,Assembleia Legislativa da Bahia,63,Java/Spring (lista e PDF da nota),sem_adaptador,"Navegador: 177 páginas só em 2026 e uma página de detalhe por nota; coletados 2025 e 2026, pelo tempo (cada ano leva ~2 h)."
+BA,ALBA,Assembleia Legislativa da Bahia,63,Java/Spring (lista e PDF da nota),em_coleta,"Navegador: 177 páginas só em 2026 e uma página de detalhe por nota, com a glosa; coletados 2025 e 2026, pelo tempo (cada ano leva ~2 h)."
 CE,ALECE,Assembleia Legislativa do Ceará,46,Laravel (modal com iframe),sem_adaptador,"Navegador: a chave do detalhe é base64 de ano, mês e nome; o CSV do mês, que a casa também publica, confere a tela."
 DF,CLDF,Câmara Legislativa do Distrito Federal,24,CKAN (CSV e XLSX por ano),coletada,
 ES,ALES,Assembleia Legislativa do Espírito Santo,30,ASP.NET MVC,sem_fornecedor,Só o total por produto: não diz quem recebeu.
-GO,ALEGO,Assembleia Legislativa de Goiás,41,AngularJS,sem_adaptador,"Navegador: o dado aberto só tem o total do mês, que confere as notas que só a tela mostra (com o CNPJ)."
+GO,ALEGO,Assembleia Legislativa de Goiás,41,AngularJS,sem_adaptador,"Navegador: o dado aberto só tem o total do mês, que confere as notas que só a tela mostra (com o CNPJ); coletados 2025 e 2026, pelo peso no site (2023–2024 somariam ~26 mil notas) e porque o portal recusa conexão em rajadas."
 MA,ALEMA,Assembleia Legislativa do Maranhão,42,JSF + PrimeFaces,nao_verificado,A pesquisa voltou vazia nos meses testados.
 MG,ALMG,Assembleia Legislativa de Minas Gerais,77,API REST de dados abertos,coletada,
 MS,ALEMS,Assembleia Legislativa de Mato Grosso do Sul,24,PHP (CSV por GET),reserva,CSV com CNPJ e link do comprovante.
 MT,ALMT,Assembleia Legislativa de Mato Grosso,24,não verificado,fora_do_ar,O portal não respondeu no dia do levantamento.
 PA,ALEPA,Assembleia Legislativa do Pará,41,DevExpress Dashboard,sem_fornecedor,"Auxílio de valor fixo, sem fornecedor."
 PB,ALPB,Assembleia Legislativa da Paraíba,36,WordPress (ODS por deputado),reserva,CNPJ mascarado na própria fonte.
-PE,ALEPE,Assembleia Legislativa de Pernambuco,49,React (cascata de 4 níveis),sem_adaptador,"Navegador: deputado, meses, pedidos e notas, cada nível pedido pela própria tela; notas conferidas com o total do pedido."
+PE,ALEPE,Assembleia Legislativa de Pernambuco,49,React (cascata de 4 níveis),em_coleta,"Navegador: deputado, meses, pedidos e notas, cada nível pedido pela própria tela; notas conferidas com o total do pedido."
 PI,ALEPI,Assembleia Legislativa do Piauí,30,ScriptCase + Akamai,anti_robo,O robots.txt e os PDFs devolvem 403 de proteção anti-robô.
 PR,ALEP,Assembleia Legislativa do Paraná,54,Laravel + Angular,captcha,"reCAPTCHA na consulta (2011 a 2019 e de 2020 em diante) e robots.txt que proíbe /api/."
 RJ,ALERJ,Assembleia Legislativa do Rio de Janeiro,70,Laravel,nao_existe,A casa não tem verba indenizatória (FAQ da própria ALERJ).
@@ -27,4 +27,4 @@ RS,ALRS,Assembleia Legislativa do Rio Grande do Sul,55,Drupal 10,reserva,"Só o 
 SC,ALESC,Assembleia Legislativa de Santa Catarina,40,CSV por ano,reserva,O favorecido vem só pelo nome (sem CNPJ).
 SE,ALESE,Assembleia Legislativa de Sergipe,24,WordPress (PDF Crystal),sem_fornecedor,"Total por item, sem CNPJ."
 SP,ALESP,Assembleia Legislativa do Estado de São Paulo,94,CKAN + arquivo JSON,coletada,
-TO,ALETO,Assembleia Legislativa do Tocantins,24,Java (POST e PDF),sem_adaptador,"Navegador: o select vai pelo nome, o PDF traz o saldo de cada nota (conferido linha a linha); robots pede 10 s."
+TO,ALETO,Assembleia Legislativa do Tocantins,24,Java (POST e PDF),em_coleta,"Navegador: o select vai pelo nome; o PDF do mês confere as notas com o total, o saldo e o ressarcido (o que passa da cota vai para o mês seguinte); robots pede 10 s."

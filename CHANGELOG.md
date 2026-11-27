@@ -7,6 +7,14 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ### Adicionado
 
+- **Assembleias pela tela, GO e RN** (frente D2). Goiás: a rota da tela de cada deputado
+  no mês, lida pela resposta que a tela recebe, conferida em três níveis contra o dado
+  aberto da casa; janela 2025–2026, pelo peso no site e porque o portal recusa conexão
+  em rajadas (o motivo está em `entidades.toml` e na Cobertura). Rio Grande do Norte:
+  `mat-select`, PESQUISAR e a resposta da tela (a API dá 401 fora do app), conferida
+  contra a frase do total, o paginador e a tabela lida página a página.
+- **"Em coleta" na Cobertura**: TO, BA e PE têm o robô pronto e a coleta em andamento, e
+  a página diz isso, em vez de "sem adaptador".
 - **Assembleias pela tela, AP e CE** (frente D2): `FonteAssembleiaTela`, que espera a
   vez do portal a cada gesto e guarda a resposta que a tela recebeu, e a conferência de
   cada uma contra os totais da própria tela. Amapá: cascata AJAX, POST e iframe por
@@ -61,6 +69,16 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+- **PE**: a casa manda o valor como texto, inteiro ("21880") ou com vírgula decimal
+  ("8372,5" é 8.372,50); a leitura só aceitava ponto e mandava a nota para pendência.
+- **TO**: a planilha tem duas formas (a de 2023 diz "CODAP", "Saldo acumulado" e "Gasto
+  no mês"), mostra saldo negativo entre parênteses, às vezes deixa o item em branco ou
+  escreve uma casa decimal só, e o PDF parte números em dois. A linha "Saldo de Notas
+  mês anterior" é o que passou da cota no mês anterior, não nota nova. O ressarcido é
+  conferido contra o que coube no saldo; a coluna de saldo da planilha que não fecha,
+  com o total fechando, vira observação.
+- **BA**: a lista mostra o valor da nota menos a glosa, e a conferência comparava com o
+  valor cheio; a glosa de centavos vem sem o zero ("R$ ,17").
 - **"Em revisão" de Curitiba em vereador de outra cidade**: os anos que o portal da
   Prefeitura de Curitiba manda para revisão (2024 e 2025) apareciam fora da soma na
   página de 580 vereadores de 38 outras câmaras. Agora só uma fonte da própria casa

@@ -14,7 +14,7 @@ de grafia na URL):
 O robô percorre um item por deputado e ano, filtrando pelo id do próprio select (que
 é a identidade do deputado aqui). Ele vai página a página pelo botão "Próxima" e abre
 cada detalhe. A conferência é a linha da lista × o detalhe (mesmo processo, mesma NF,
-mesmo valor) e, no ano, a soma das linhas de todos os deputados × as linhas da lista
+e o valor da lista é o do detalhe menos a glosa) e, no ano, a soma das linhas de todos os deputados × as linhas da lista
 sem filtro (o número de páginas que a própria paginação mostra).
 
 Janela: 2025–2026, escolhida pelo tempo. Cada nota é uma página, e o ano tem ~3.500
@@ -89,6 +89,11 @@ def ler_lista(html: str) -> list[dict]:
     return []
 
 
+def dinheiro_da_alba(texto: str) -> Decimal:
+    """'R$ 1.234,56'; a glosa de centavos vem sem o zero ("R$ ,17" é 0,17)."""
+    return dinheiro_br(re.sub(r"^(R\$\s*)?,", lambda m: (m.group(1) or "") + "0,", texto.strip()))
+
+
 def ler_detalhe(html: str) -> list[dict]:
     for t in tabelas_html(html):
         cab = [c.texto.upper() for c in (t[0] if t else [])]
@@ -108,12 +113,6 @@ class Alba(FonteAssembleiaTela):
     timeout_resposta = 90000  # o servidor às vezes demora
     o_que_tem = ("Verba indenizatória de cada deputado estadual, nota a nota, com o fornecedor e o CNPJ, lida na lista paginada e no "
                  "detalhe de cada nota, com o link do PDF da nota.")
-
-    def __init__(self, ent) -> None:
-        super().__init__(ent)
-        self.de = int(ent.extra.get("de", self.de))
-        self.ate = int(ent.extra.get("ate", self.ate))
-        self.sistema.cobre_de, self.sistema.cobre_ate = self.de, self.ate
 
     async def abrir(self, ctx) -> None:
         await super().abrir(ctx)
@@ -206,13 +205,13 @@ class Alba(FonteAssembleiaTela):
                 proc = self.procedencia(detalhe, hd, f"processo {l['processo']}, nota {n['nota']}")
                 chave = chave_hash(self.id, l["id"], j, n["nota"], n["documento"], n["valor_texto"])
                 try:
-                    valor = dinheiro_br(n["valor_texto"])
-                    glosa = dinheiro_br(n["glosa_texto"]) if n["glosa_texto"].strip() else Decimal(0)
+                    valor = dinheiro_da_alba(n["valor_texto"])
+                    glosa = dinheiro_da_alba(n["glosa_texto"]) if n["glosa_texto"].strip() else Decimal(0)
                 except ValorIlegivel as e:
                     res.pendencias.append(Pendencia(fonte=self.id, chave=chave, motivo="valor ilegível",
                                                     texto_original=f"{nome} processo {l['processo']}: {e}", procedencia=proc))
                     continue
-                soma += valor
+                soma += valor - glosa  # a lista mostra o valor já sem a glosa
                 lidas += 1
                 mes, _, ano_c = l["competencia"].partition("/")
                 competencia = f"{ano_c}-{mes.zfill(2)}" if ano_c.isdigit() and mes.isdigit() else f"{ano}-01"
@@ -225,10 +224,10 @@ class Alba(FonteAssembleiaTela):
                            "id_detalhe": l["id"], "competencia_na_fonte": l["competencia"], "escopos_conferencia": [escopo],
                            **({"competencia_ilegivel": True} if not (ano_c.isdigit() and mes.isdigit()) else {})}))
             try:
-                valor_lista: Decimal | None = dinheiro_br(l["valor_texto"])
+                valor_lista: Decimal | None = dinheiro_da_alba(l["valor_texto"])
             except ValorIlegivel:
                 valor_lista = None
-            conf.conferir(escopo, valor_lista, soma, proc_lista, f"{nome}, processo {l['processo']} NF {l['nf']}: valor da lista × detalhe",
+            conf.conferir(escopo, valor_lista, soma, proc_lista, f"{nome}, processo {l['processo']} NF {l['nf']}: valor da lista × detalhe menos a glosa",
                           lidas_todas=lidas == len(notas), outra=(len(notas) > 0, "o detalhe veio sem nota"))
         res.totais.append(TotalOficial(fonte=self.id, escopo=item.chave, metrica="linhas_da_lista", valor=str(len(linhas)),
                                        texto_original=f"{ultima + 1} página(s)", procedencia=proc_lista))
