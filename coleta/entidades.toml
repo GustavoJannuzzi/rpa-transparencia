@@ -515,6 +515,8 @@ cargo = "deputado estadual"
 sistema = "API de dados abertos da ALMG"
 modo = "api"
 api = "https://dadosabertos.almg.gov.br/api/v2"
+# o endereço que a plataforma mostra: a raiz da API não abre página nenhuma (404)
+documentacao = "https://dadosabertos.almg.gov.br/documentacao/index"
 legislatura = 20
 
 [[assembleia]]

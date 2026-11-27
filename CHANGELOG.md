@@ -61,6 +61,25 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+- **Achados da auditoria do site no ar (27/11)**:
+  - `/casas/camara-deputados/` dava 404, embora o JSON da casa fosse publicado. A
+    Câmara dos Deputados ganhou a página de casa, como as outras casas (sistema,
+    conferência, ano a ano, categorias, fornecedores em comum), e a Cobertura, a lista
+    de parlamentares e o cabeçalho do deputado passam a levar a ela.
+  - O endereço da ALMG mostrado na plataforma era a raiz da API (`/api/v2`), que
+    responde 404: passa a ser a página da documentação. Um teste reprova endereço de
+    fonte que seja só a raiz de uma API. O site muda na próxima republicação.
+  - `/parlamentares/` desenhava os 1.725 nomes de uma vez: 70 mil px de altura no
+    celular, 3,2 s de linha principal bloqueada só pelo HTML (Pixel 7 emulado, CPU 4x)
+    e 203 pedidos ao rolar
+    até o fim (cada link visível pedia de antemão a página do parlamentar). A lista
+    de cada casa agora começa recolhida (`<details>`, sem JavaScript), abre sozinha
+    quando o endereço aponta a casa (`#casa-<id>`), e os links não pedem nada de
+    antemão. Na casa, a lista de membros só começa recolhida acima de 200 nomes (a da
+    Câmara dos Deputados).
+  - Não eram defeito: os portais do Equiplano abrem no navegador (o servidor não
+    manda o certificado intermediário, e só um cliente HTTP sem o Chromium recusa), e
+    os 504 da nota fiscal eletrônica são do servidor da Câmara dos Deputados.
 - **"Em revisão" de Curitiba em vereador de outra cidade**: os anos que o portal da
   Prefeitura de Curitiba manda para revisão (2024 e 2025) apareciam fora da soma na
   página de 580 vereadores de 38 outras câmaras. Agora só uma fonte da própria casa

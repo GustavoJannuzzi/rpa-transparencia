@@ -58,6 +58,15 @@ def test_toda_entidade_tem_fonte_casa_e_id_que_a_plataforma_aceita():
     assert sum(1 for c in casas.values() if c.tipo == "camara_municipal") == 1 + 12 + 13 + 10 + 6
 
 
+def test_o_endereco_mostrado_e_uma_pagina_e_nao_a_raiz_de_uma_api():
+    import re
+
+    # a raiz da API da ALMG (/api/v2) responde 404 a quem clica: a plataforma mostra a documentação
+    raizes = [f.id for f in FONTES if re.search(r"/api(/v\d+)?/?$", f.sistema.endereco)]
+    assert raizes == []
+    assert next(f for f in FONTES if f.id == "almg").sistema.endereco == "https://dadosabertos.almg.gov.br/documentacao/index"
+
+
 # ---------------------------------------------------------------- robots.txt
 async def test_a_pausa_vem_do_crawl_delay_do_robots_com_piso():
     def responder(req: httpx.Request) -> httpx.Response:

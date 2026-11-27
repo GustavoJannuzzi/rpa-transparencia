@@ -86,7 +86,7 @@ export default function PaginaCobertura() {
       situacao: f.situacao,
       motivo: f.motivo ?? null,
       detalhe: null,
-      href: f.id === "camara-deputados" ? "/parlamentares/#casa-camara-deputados" : null,
+      href: f.id === "camara-deputados" ? "/casas/camara-deputados/" : null,
       parlamentares: f.parlamentares,
       linhas: f.linhas,
     })),
@@ -164,13 +164,9 @@ export default function PaginaCobertura() {
               <ul className={`mt-2.5 text-[0.88rem] ${g.casas.length > 3 ? "columns-1 gap-6 sm:columns-2 lg:columns-3" : ""}`}>
                 {g.casas.map(({ casa: c, s }) => (
                   <li key={`${c.id}-${s.fonte}`} className="break-inside-avoid py-0.5">
-                    {c.id === "camara-deputados" ? (
-                      <span>Câmara dos Deputados</span>
-                    ) : (
-                      <Link href={`/casas/${c.id}/`} className="underline decoration-manilha-tinta/35 underline-offset-[3px] hover:decoration-manilha-tinta">
-                        {c.tipo === "camara_municipal" ? c.municipio : c.nome}
-                      </Link>
-                    )}{" "}
+                    <Link href={`/casas/${c.id}/`} className="underline decoration-manilha-tinta/35 underline-offset-[3px] hover:decoration-manilha-tinta">
+                      {c.tipo === "camara_municipal" ? c.municipio : c.nome}
+                    </Link>{" "}
                     <span className="num text-manilha-tinta-2">{anos(s.de, s.ate)}</span>
                   </li>
                 ))}
