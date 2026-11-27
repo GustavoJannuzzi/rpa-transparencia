@@ -148,7 +148,6 @@ class Alrn(FonteAssembleiaTela):
         return Descoberta(itens=itens)
 
     async def coletar_item(self, item: ItemInventario) -> Resultado:
-        self.disco()
         assert self.pagina is not None
         p = item.parametros
         leg, ano = str(p["legislatura"]), int(p["ano"])

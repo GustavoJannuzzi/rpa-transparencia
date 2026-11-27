@@ -202,7 +202,6 @@ class Alece(FonteAssembleiaTela):
         return ler_csv(decodificar(corpo)), href, h
 
     async def coletar_item(self, item: ItemInventario) -> Resultado:
-        self.disco()
         assert self.pagina is not None
         p = item.parametros
         ano, mes = int(p["ano"]), str(p["mes"])

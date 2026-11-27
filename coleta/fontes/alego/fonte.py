@@ -124,7 +124,6 @@ class Alego(FonteAssembleiaTela):
         return j, r.url, h
 
     async def coletar_item(self, item: ItemInventario) -> Resultado:
-        self.disco()
         p = item.parametros
         ano, mes = int(p["ano"]), int(p["mes"])
         res = Resultado()
