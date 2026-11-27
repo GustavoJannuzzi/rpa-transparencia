@@ -7,7 +7,8 @@ import { casas, cobertura, mapa } from "@/lib/dados";
 import { MODO } from "@/lib/fontes";
 import { data, inteiro, listaE } from "@/lib/formato";
 import { metadadosDaPagina } from "@/lib/site";
-import type { ResumoCasa, SistemaDaCasa } from "@/lib/tipos";
+import { periodo } from "@/componentes/Atividade";
+import type { CoberturaAtividade, ResumoCasa, SistemaDaCasa } from "@/lib/tipos";
 
 export const metadata: Metadata = metadadosDaPagina({
   title: "Cobertura",
@@ -260,6 +261,8 @@ export default function PaginaCobertura() {
         </p>
       </section>
 
+      {cob.atividade && <AtividadeNaCobertura a={cob.atividade} casas={lista} />}
+
       <section aria-labelledby="todas" className="mt-16">
         <h2 id="todas" className="font-titulo text-2xl font-medium">
           Todas as casas
@@ -273,5 +276,90 @@ export default function PaginaCobertura() {
         </div>
       </section>
     </div>
+  );
+}
+
+/** Atividade nas sessões: outro tipo de dado, de outros sistemas, com a janela e o corte de cada câmara. */
+function AtividadeNaCobertura({ a, casas: lista }: { a: CoberturaAtividade; casas: ResumoCasa[] }) {
+  const nome = new Map(lista.map((c) => [c.id, c.tipo === "camara_municipal" ? `Câmara de ${c.municipio}` : c.nome]));
+  const sapl = a.coletadas.filter((c) => c.fonte.startsWith("sapl_"));
+  const quando = (d: string | null | undefined) => (d && d.length > 7 ? data(d) : periodo(d));
+  const lev = a.levantamento;
+  return (
+    <section aria-labelledby="atividade" className="mt-16">
+      <h2 id="atividade" className="font-titulo text-2xl font-medium">
+        Atividade nas sessões
+      </h2>
+      <p className="mt-1 max-w-[62ch] text-sm text-tinta-3">
+        Outro tipo de dado: sessões, presença, ausência justificada e voto nominal, que a câmara registra no seu sistema legislativo. Não é
+        despesa e não entra em soma nenhuma em reais. Vem de dois sistemas: o SAPL, do Interlegis, por uma API pública, e o relatório de
+        frequência que a Câmara de Curitiba publica em PDF.
+      </p>
+      <div className="mt-5 max-w-[920px] overflow-x-auto">
+      <table className="w-full text-left text-[0.92rem]">
+        <caption className="sr-only">Câmaras com atividade nas sessões coletada, e as que ficaram de fora com o motivo</caption>
+        <thead className="text-[0.78rem] text-tinta-3">
+          <tr className="border-b border-aco-2">
+            <th scope="col" className="py-2 pr-4 font-normal">
+              Câmara
+            </th>
+            <th scope="col" className="hidden py-2 pr-4 font-normal sm:table-cell">
+              Sistema
+            </th>
+            <th scope="col" className="py-2 font-normal">
+              Situação
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {a.coletadas.map((c) => (
+            <tr key={c.fonte} className="border-b border-aco align-baseline">
+              <th scope="row" className="py-2 pr-4 text-left font-normal">
+                <Link href={`/casas/${c.casa}/#nas-sessoes`} className="hover:text-carimbo-claro hover:underline">
+                  {nome.get(c.casa) ?? c.casa}
+                </Link>
+                <span className="block text-sm text-tinta-3 sm:hidden">{c.sistema}</span>
+              </th>
+              <td className="hidden py-2 pr-4 text-tinta-2 sm:table-cell">{c.sistema}</td>
+              <td className="py-2 text-tinta-2">
+                {c.situacao === "completa" ? "coletada" : "coleta parcial"}, de {quando(c.de)} a {quando(c.ate)}
+                {c.situacao === "parcial" && (
+                  <span className="block text-sm text-tinta-3">
+                    já lidos: presença {c.presenca_ate ? `até ${data(c.presenca_ate)}` : "ainda não"}, votos{" "}
+                    {c.votos_ate ? `até ${data(c.votos_ate)}` : "ainda não"}
+                  </span>
+                )}
+              </td>
+            </tr>
+          ))}
+          {a.fora
+            .filter((f) => f.no_site)
+            .map((f) => (
+              <tr key={f.municipio} className="border-b border-aco align-baseline">
+                <th scope="row" className="py-2 pr-4 text-left font-normal text-tinta-2">
+                  {f.casa ? (
+                    <Link href={`/casas/${f.casa}/`} className="hover:text-carimbo-claro hover:underline">
+                      Câmara de {f.municipio}
+                    </Link>
+                  ) : (
+                    `Câmara de ${f.municipio}`
+                  )}
+                  {f.sistema && <span className="block text-sm text-tinta-3 sm:hidden">{f.sistema}</span>}
+                </th>
+                <td className="hidden py-2 pr-4 text-tinta-3 sm:table-cell">{f.sistema ?? "—"}</td>
+                <td className="py-2 text-tinta-3 [overflow-wrap:anywhere]">fora: {f.motivo}</td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
+      </div>
+      <p className="mt-3 max-w-[62ch] text-sm text-tinta-3">
+        O levantamento de {data(lev.data)} contou <span className="num">{inteiro(lev.camaras_que_linkam)}</span> câmaras do Paraná com link para
+        o SAPL na página inicial, e <span className="num">{inteiro(lev.enderecos_no_dns)}</span> endereços sapl.&lt;cidade&gt;.pr.leg.br existem.
+        O robots.txt do SAPL pede {lev.crawl_delay} segundos entre pedidos, e a coleta respeita: um pedido por minuto em cada câmara. Por isso a
+        coleta começou pelas câmaras que já estão no site, para o vereador ter a atividade ao lado da despesa: {inteiro(sapl.length)} até agora.
+        As outras ficam para as próximas rodadas.
+      </p>
+    </section>
   );
 }

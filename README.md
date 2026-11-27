@@ -49,6 +49,8 @@ recortada acima da grade: nome de servidor não é publicado, nem em imagem.*
 | Betha em mais 13 câmaras do PR | 2014–2026 (o que cada câmara publica) | robô, o mesmo adaptador de Curitiba | Cada câmara monta o próprio menu, e a mesma consulta aparece com outro número, em outro grupo e com outro texto ("Diárias", "Diárias.", "DIÁRIAS"). O robô acha a consulta pelo texto do item na tela e tira o número do menu que a página recebe; quando dois itens têm o mesmo texto (Bandeirantes), fica o que tem as colunas de diária. "0 registros" é resultado: a câmara tem a consulta e não a alimenta (Almirante Tamandaré). A consulta de Cornélio Procópio traz cargos da Prefeitura: as diárias de servidor dela vão para revisão. |
 | Equiplano em 10 câmaras do PR | 2023–2026 | robô de tela + relatório | O formulário é uma cascata: a entidade dispara um AJAX que carrega os exercícios, o exercício recarrega a página, o período é obrigatório (sem ele, "Período de Empenho inválido" depois de recarregar) e tem máscara por tecla, e "Visualizar" devolve o arquivo como anexo. O "CSV" é o relatório impresso: cabeçalho de página repetido, rótulos e datas cortados pela largura do papel, descrição em várias linhas. A conta fecha com o próprio papel: a soma dos empenhos líquidos de cada ano dá, centavo a centavo, o total que o relatório imprime. Quem é vereador sai da natureza da despesa (agentes políticos). Em algumas câmaras o relatório traz **CPF e RG inteiros**: o robô intercepta a resposta e tira os dois na memória, antes de gravar o original. |
 | TSE | eleições 2012–2024 | arquivo | Partido de cada vereador na eleição do mandato, nos 36 municípios (nenhum sistema das câmaras traz partido). |
+| SAPL (Interlegis), atividade nas sessões | 2025–2026 | API, o mesmo adaptador em 6 câmaras do PR | O robots.txt pede 60 s entre pedidos, e a API devolve no máximo 100 registros por página: cada câmara tem uma janela, o inventário é uma lista de páginas com o filtro congelado na descoberta (data de corte e maior id), e a retomada só pede o que falta. Câmaras em servidores diferentes andam juntas (`--paralelo`), uma página por minuto em cada uma. O voto nominal não diz a sessão: o robô a acha pelo nome que o texto do próprio voto traz. A coleta longa roda num banco de trabalho e entra no banco principal pelo `importar`; as respostas ficam gravadas e podem ser reproduzidas sem pedido nenhum. |
+| Câmara de Curitiba, frequência (Betha) | 2019–2026 | robô + PDF | O PDF não tem link fixo: só aparece depois de "Ver arquivos", num link S3 que vence em 24 horas. O robô abre a consulta, clica, lê a lista que a própria tela recebe e baixa na hora. Quatro layouts de tabela em oito anos, nota colada ao nome ("Leprevost(B)", "13 [F]", "1[4]"), nome quebrado em duas linhas e o consolidado anual que repete os meses (não é somado). |
 
 O levantamento que decidiu cada uma dessas escolhas, feito antes de escrever o
 código, está em [`docs/etapa-0.md`](docs/etapa-0.md).
@@ -77,6 +79,30 @@ e as despesas das 27 assembleias. O que ficou de fora:
 
 A página [Cobertura](https://rpa-transparencia.vercel.app/cobertura/) traz essa
 tabela casa por casa, com o mapa do PR por município e o do Brasil por UF.
+
+## Atividade nas sessões
+
+Além da despesa, a plataforma mostra o que a câmara registra das sessões plenárias:
+sessão com presença registrada, ausência justificada com o motivo que a fonte der e
+voto nominal por tipo ("Sim", "Não", "Abstenção", como a fonte escreve). É outro tipo
+de dado (`Atividade` no modelo, tabela `atividades`), e não entra em soma nenhuma em
+reais. Só contagem bruta, com a ficha de procedência de cada número; nada de taxa,
+ranking ou ordem por quem falta mais.
+
+- **SAPL** (Interlegis): Foz do Iguaçu, Sarandi, Irati, Campina Grande do Sul e
+  Renascença desde 01/01/2025 (a legislatura atual) e Maringá em 2026. Maringá vota
+  quase tudo no painel eletrônico: só os votos nominais de 2025 e 2026 pediriam 837
+  páginas, perto de 14 horas a um pedido por minuto, e a janela ficou em 2026.
+- **Curitiba**: os 64 relatórios de frequência do portal Betha, de 2019 a 2026. A
+  Câmara publica "presença + faltas justificadas" numa coluna só, "faltas
+  (descontadas)" e "licença"; a plataforma mostra as colunas como a Câmara as escreve.
+- A atividade não cria vereador: o nome que cada fonte traz se liga a um vereador que
+  as fontes de despesa (e o TSE) já identificaram na mesma câmara. Nome que não fecha
+  com ninguém, ou fecha com dois, vai para a revisão e não é publicado.
+- O que a coleta ainda não fechou aparece como parcial, com a data até onde vale.
+
+A página Cobertura diz quais câmaras têm a atividade, a janela de cada uma e por que
+as outras ficaram de fora (SAPL sem sessão registrada, SAPL não encontrado).
 
 ## O resultado da última rodada (coleta de 25 e 26/11/2026)
 
@@ -186,8 +212,22 @@ python -m venv .venv
 mostra), `coletar` (percorre o inventário; rodar de novo só pega o que falta),
 `conferir`, `publicar` (os JSON da plataforma, só com o que passou) e `relatorio`.
 Cada comando também roda sozinho, e `--fonte` limita a uma fonte ou a um fornecedor
-inteiro (`--fonte elotech`, `--fonte assembleia`). `coletar --gravar-video` grava o
-navegador em `dados/evidencias/videos/`.
+inteiro (`--fonte elotech`, `--fonte assembleia`, `--fonte sapl`). `coletar --gravar-video` grava o
+navegador em `dados/evidencias/videos/`. `--paralelo N` roda N fontes ao mesmo tempo,
+cada uma no seu portal (dentro de um portal continua um pedido por vez).
+
+A coleta do SAPL é longa (um pedido por minuto em cada câmara) e roda num banco de
+trabalho, com as câmaras em paralelo; o `importar` (abaixo) leva ao canônico as que
+fecharam:
+
+```bash
+RPA_DADOS=dados-trabalho .venv/Scripts/python -m coleta descobrir --fonte sapl --paralelo 6
+RPA_DADOS=dados-trabalho .venv/Scripts/python -m coleta coletar --fonte sapl --paralelo 6
+```
+
+O SAPL guarda cada resposta comprimida em `cache/sapl/`. Com
+`RPA_SAPL_REPRODUZIR=<pasta>/cache/sapl`, a coleta de uma câmara é refeita a partir
+dessas respostas, sem pedido nenhum, com o mesmo hash e a mesma data de coleta.
 
 Coleta longa (horas no navegador) roda num banco de trabalho, sem segurar o
 canônico: `RPA_DADOS=<pasta de trabalho>` no `descobrir` e no `coletar`. Quando ela
@@ -245,7 +285,9 @@ valor em reais nas páginas tem procedência.
   e injeta erro 500, lentidão e queda de sessão; o resultado tem de ser igual ao da
   rodada limpa. O mesmo para a API do Elotech, com 503 e timeout, em Curitiba e no
   adaptador genérico (Maringá).
-- **Retomada:** a coleta é interrompida no meio, retomada, e não duplica nada.
+- **Retomada:** a coleta é interrompida no meio, retomada, e não duplica nada. No
+  SAPL, a retomada e a descoberta refeita não repetem pedido, e a reprodução da coleta
+  gravada não faz pedido nenhum e mantém hash e data de coleta.
 - **Conferência:** casos montados (total que não fecha, categoria sem de-para, mesmo
   registro em dois sistemas na fronteira, cargo fora da guarda de privacidade).
 - **Contrato:** um teste por fonte contra o portal de verdade, separado dos outros,
@@ -286,7 +328,8 @@ coleta/
                de planilha (não sabe de fonte nenhuma)
   fontes/      um adaptador por sistema: elotech (qualquer câmara), cldf, almg,
                betha e equiplano (qualquer câmara), alesp, camara_deputados, cmc_legado,
-               cmc_prefeitura, cmc_betha, tse
+               cmc_prefeitura, cmc_betha, tse; de atividade nas sessões: sapl
+               (qualquer câmara) e cmc_frequencia
   cobertura/   o levantamento das casas de fora e a malha do IBGE (mapas)
   modelo.py    o modelo único (pydantic, dinheiro em Decimal exato): N casas,
                despesa nota a nota ou agregada
@@ -334,6 +377,11 @@ não muda.
 - Partido de deputado estadual: o da lista de deputados da própria assembleia, hoje.
   A CLDF não publica partido, e quem saiu da ALESP fica sem.
 - O subsídio do vereador é um retrato da data da coleta, como o custo de gabinete.
+- Atividade nas sessões: o que cada câmara registra no SAPL varia. Irati, por exemplo,
+  registrou presença em 1 das 85 sessões de 2025–2026; a página do vereador diz quantas
+  sessões a câmara fez e em quantas registrou presença, para o número não parecer falta.
+- O SAPL de outras ~108 câmaras do PR fica para as próximas rodadas: a um pedido por
+  minuto, cada câmara custa de 15 minutos a mais de 10 horas, conforme o volume de votos.
 
 ## Licença
 

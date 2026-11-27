@@ -75,6 +75,18 @@ export const ESTADOS: Estado[] = [
   },
   { nome: "vereador", rota: "/parlamentares/ver-cwb-pedro-paulo-costa/" },
   { nome: "vereador-com-gabinete", rota: "/parlamentares/ver-cwb-alexandre-leprevost/", soAxe: true },
+  // atividade nas sessões: o SAPL (Sarandi) e o relatório de frequência de Curitiba, com a ficha de uma contagem aberta
+  { nome: "vereador-nas-sessoes", rota: "/parlamentares/ver-sarandi-aparecido-biancho/" },
+  {
+    nome: "vereador-frequencia-ficha-aberta",
+    rota: "/parlamentares/ver-cwb-alexandre-leprevost/",
+    soAxe: true,
+    preparar: async (page) => {
+      await page.locator("#nas-sessoes ~ div button.valor").first().click();
+      await expect(page.getByRole("dialog", { name: "Ficha de procedência" }).first()).toBeVisible();
+    },
+  },
+  { nome: "casa-camara-curitiba", rota: "/casas/cmc/", soAxe: true },
   { nome: "como-os-dados-chegam-aqui", rota: "/como-os-dados-chegam-aqui/" },
   // as casas novas: a vitrine dos vários sistemas, uma câmara do Elotech e uma assembleia de arquivo agregado
   { nome: "cobertura", rota: "/cobertura/" },

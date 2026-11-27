@@ -37,6 +37,12 @@ LEVANTAMENTO_CAMARAS = {
 # Fornecedores com adaptador na coleta: a câmara que usa um deles e ainda não está em
 # `entidades.toml` está "na fila", não "sem adaptador".
 COM_ADAPTADOR = frozenset({"elotech", "betha", "equiplano"})
+# Atividade legislativa (SAPL): o que o levantamento achou. Contagem do levantamento, com data.
+LEVANTAMENTO_SAPL = {
+    "camaras_que_linkam": 114,     # câmaras do PR com link para sapl.<cidade>.pr.leg.br na página inicial
+    "enderecos_no_dns": 177,       # endereços sapl.<cidade>.pr.leg.br que existem no DNS (399 nomes testados)
+    "crawl_delay": 60,
+}
 NOME_FORNECEDOR = {
     "elotech": "Elotech", "betha": "Betha Cloud", "equiplano": "Equiplano", "pronim": "Govbr Pronim", "ipm": "IPM Atende.net",
     "inga": "Inga Digital", "cr2": "CR2", "softcam": "SOFTCAM", "econtab": "eContab", "conexaogov": "Conexão Gov",
@@ -58,7 +64,7 @@ def casas(con: sqlite3.Connection, indice: list[dict], coleta: dict[str, str], m
     """Um resumo (para o índice) e um detalhe (para a página) de cada casa coletada."""
     por_casa: dict[str, list] = defaultdict(list)
     for f in FONTES:
-        if f.id != "tse":
+        if f.id != "tse" and f.dado == "despesa":
             por_casa[f.sistema.casa].append(f)
     membros: dict[str, list] = defaultdict(list)
     for i in indice:
@@ -137,6 +143,10 @@ def casas(con: sqlite3.Connection, indice: list[dict], coleta: dict[str, str], m
         }
         out.append({"resumo": resumo, "detalhe": detalhe})
     return out
+
+
+def levantamento_atividade() -> dict:
+    return {"levantamento": {"data": DATA_LEVANTAMENTO, **LEVANTAMENTO_SAPL}}
 
 
 def cobertura(casas_pub: list[dict]) -> dict:

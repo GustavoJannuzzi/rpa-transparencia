@@ -16,10 +16,12 @@ from .camara_deputados.fonte import CamaraDeputados
 from .cldf.fonte import Cldf
 from .cmc_betha.fonte import CmcBetha
 from .cmc_elotech.fonte import CmcElotechAPI
+from .cmc_frequencia.fonte import CmcFrequencia
 from .cmc_legado.fonte import CmcLegado
 from .cmc_prefeitura.fonte import CmcPrefeitura
 from .elotech.fonte import ElotechAPI
 from .equiplano.fonte import Equiplano
+from .sapl.fonte import Sapl
 from .tse.fonte import Tse
 
 ASSEMBLEIAS: dict[str, type[Fonte]] = {"cldf": Cldf, "almg": Almg, "alesp": Alesp}
@@ -33,6 +35,8 @@ def _construir() -> list[Fonte]:
     for b in entidades.betha():
         out.append(CmcBetha() if b.fonte == "cmc_betha" else BethaCloud(b))
     out += [Equiplano(e) for e in entidades.equiplano()]
+    # atividade legislativa (sessão, presença, voto): não é despesa
+    out += [CmcFrequencia(), *(Sapl(e) for e in entidades.sapl())]
     for fid, a in entidades.assembleias().items():
         out.append(ASSEMBLEIAS[fid](a))  # type: ignore[call-arg]
     # o TSE vem por último: o recorte dele depende das câmaras acima

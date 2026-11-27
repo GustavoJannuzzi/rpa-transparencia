@@ -1,0 +1,9 @@
+# Atividade legislativa (sessões, presença, votos): câmaras do site que ficaram de fora, com o motivo, como o levantamento de 26/11/2026 achou.
+# As que entram estão em entidades.toml ([[sapl]] e a frequência de Curitiba). base = onde o levantamento viu.
+casa,ibge,municipio,sistema,motivo,base
+cm-pitanga,4119608,Pitanga,SAPL (Interlegis),o SAPL da Câmara não tem nenhuma sessão registrada,API do SAPL: total_entries = 0 em sessões
+cm-cambara,4103602,Cambará,SAPL (Interlegis),o SAPL da Câmara não tem sessão registrada desde 01/01/2025,API do SAPL: 571 sessões no total e nenhuma com data a partir de 2025
+cm-ponta-grossa,4119905,Ponta Grossa,,não achamos o SAPL da Câmara (o endereço sapl.pontagrossa.pr.leg.br não existe); outra fonte de presença não foi procurada,DNS
+cm-umuarama,4128104,Umuarama,,não achamos o SAPL da Câmara (o endereço sapl.umuarama.pr.leg.br não existe); outra fonte de presença não foi procurada,DNS
+cm-cianorte,4105508,Cianorte,,não achamos o SAPL da Câmara (o endereço sapl.cianorte.pr.leg.br não existe); outra fonte de presença não foi procurada,DNS
+cm-ubirata,4128005,Ubiratã,,não achamos o SAPL da Câmara (o endereço sapl.ubirata.pr.leg.br não existe); outra fonte de presença não foi procurada,DNS

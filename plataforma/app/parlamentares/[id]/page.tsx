@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AtividadeDoParlamentar } from "@/componentes/Atividade";
 import Barras, { type ItemBarra } from "@/componentes/Barras";
 import { ForaDaSoma, SecaoEmRevisao } from "@/componentes/EmRevisao";
 import TabelaDespesas from "@/componentes/TabelaDespesas";
@@ -149,6 +150,7 @@ export default async function PaginaParlamentar({ params }: { params: Promise<{ 
             </section>
           )}
           <SecaoEmRevisao p={p} />
+          <AtividadeDoParlamentar atividade={p.atividade ?? []} nome={p.nome} />
           {(p.subsidio?.length ?? 0) > 0 && (
             <section aria-labelledby="subsidio">
               <h2 id="subsidio" className="font-titulo text-lg font-medium">

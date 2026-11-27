@@ -82,6 +82,7 @@ def _gravar_resultado(con, fonte_id: str, chave_item: str, r: Resultado, casa: s
     # Refazer um item apaga o que ele tinha gravado antes: rodar duas vezes não duplica.
     con.execute("DELETE FROM despesas WHERE fonte=? AND item=?", (fonte_id, chave_item))
     con.execute("DELETE FROM pendencias WHERE fonte=? AND item=?", (fonte_id, chave_item))
+    con.execute("DELETE FROM atividades WHERE fonte=? AND item=?", (fonte_id, chave_item))
     for pe in r.pendencias:
         p = pe.procedencia
         con.execute(
@@ -106,6 +107,16 @@ def _gravar_resultado(con, fonte_id: str, chave_item: str, r: Resultado, casa: s
              localizador=excluded.localizador, extra=excluded.extra, casa=excluded.casa,
              granularidade=excluded.granularidade""",
         linhas,
+    )
+    con.executemany(
+        """INSERT INTO atividades(chave, fonte, item, casa, tipo, ref_parlamentar, ref_sessao, data, competencia, rotulo,
+             quantidade, url, hash_original, localizador, coletado_em, extra) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+           ON CONFLICT(chave) DO UPDATE SET item=excluded.item, rotulo=excluded.rotulo, quantidade=excluded.quantidade,
+             url=excluded.url, hash_original=excluded.hash_original, localizador=excluded.localizador,
+             coletado_em=excluded.coletado_em, extra=excluded.extra""",
+        [(a.chave, a.fonte, chave_item, a.casa, a.tipo, a.ref_parlamentar, a.ref_sessao, a.data.isoformat() if a.data else None,
+          a.competencia, a.rotulo, a.quantidade, a.procedencia.url, a.procedencia.hash_original, a.procedencia.localizador,
+          a.procedencia.coletado_em, js(a.extra)) for a in r.atividades],
     )
     for m in r.remuneracoes:
         p = m.procedencia
@@ -221,7 +232,7 @@ async def coletar(fonte: Fonte, *, refazer: bool = False, parar_apos: int | None
                     )
                 placar.ok += 1
                 ultimo_erro = None
-                n = (len(r.despesas) + len(r.pendencias)) or len(r.pessoas) or len(r.candidaturas) or len(r.gabinetes) or len(r.remuneracoes)
+                n = (len(r.despesas) + len(r.pendencias)) or len(r.atividades) or len(r.pessoas) or len(r.candidaturas) or len(r.gabinetes) or len(r.remuneracoes)
                 eco(f"  {fonte.id} {item.chave}: ok ({n} registros{', ' + str(tentativa) + ' tentativas' if tentativa > 1 else ''})")
                 break
         if ultimo_erro is not None:

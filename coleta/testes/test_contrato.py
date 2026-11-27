@@ -217,3 +217,54 @@ def test_alesp_arquivo_e_campos():
             assert all(f'"{campo}"' in inicio for campo in CAMPOS)
     except (httpx.ConnectTimeout, httpx.ConnectError) as erro:
         _sem_rede(erro)
+
+
+# ---------------------------------------------------------------- atividade nas sessões
+def test_sapl_robots_e_campos_da_api():
+    """Um SAPL (Irati, o menor da lista): o robots.txt continua deixando a API e pedindo
+    60 s, e os recursos usados ainda trazem os campos. Dois pedidos, com a pausa pedida."""
+    import time
+    import urllib.robotparser
+
+    from coleta import entidades
+    from coleta.fontes.sapl.fonte import CAMPOS
+
+    e = next(x for x in entidades.sapl() if x.fonte == "sapl_irati")
+    try:
+        with _cliente() as c:
+            rp = urllib.robotparser.RobotFileParser()
+            rp.parse(c.get(f"{e.host}/robots.txt").text.splitlines())
+            assert rp.can_fetch(config.UA_ROBO, f"{e.api}/sessao/sessaoplenaria/")
+            atraso = rp.crawl_delay(config.UA_ROBO)
+            time.sleep(float(atraso or 1))
+            j = c.get(f"{e.api}/sessao/sessaoplenaria/?page_size=2&o=-id", headers={**H, "Accept": "application/json"}).json()
+            assert {"pagination", "results"} <= set(j) and isinstance(j["pagination"]["total_entries"], int)
+            assert CAMPOS["sessaoplenaria"] <= set(j["results"][0])
+    except (httpx.ConnectTimeout, httpx.ConnectError) as erro:
+        _sem_rede(erro)
+
+
+async def test_frequencia_curitiba_cartoes_e_anexos():
+    """A consulta de frequência do Betha: cartões com ano e período, e o "Ver arquivos"
+    que devolve o PDF num link pré-assinado."""
+    from coleta.fontes.cmc_frequencia.fonte import CONSULTA, URL_CONSULTA, competencia_do_cartao
+
+    pw, nav, p = await _pagina(config.UA_ROBO)
+    try:
+        hits: list[dict] = []
+
+        async def ao_responder(r):
+            if f"/busca-textual/{CONSULTA}?" in r.url and r.request.method == "POST":
+                hits.extend((await r.json()).get("hits", []))
+
+        p.on("response", ao_responder)
+        await p.goto(URL_CONSULTA, wait_until="networkidle")
+        await p.locator("table.table-card").first.wait_for(timeout=30000)
+        assert hits and all(competencia_do_cartao(int(h["sourceAsMap"]["ano"]), str(h["sourceAsMap"]["periodo"])) for h in hits)
+        async with p.expect_response(lambda r: f"/busca/{CONSULTA}/anexos/" in r.url, timeout=45000) as resp:
+            await p.locator("table.table-card tbody tr").first.locator("td.detalhamentoArquivos").click()
+        anexos = await (await resp.value).json()
+        assert anexos and {"url", "nome", "tipo"} <= set(anexos[0]) and "X-Amz-Expires" in anexos[0]["url"]
+    finally:
+        await nav.close()
+        await pw.stop()
