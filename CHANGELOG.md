@@ -143,6 +143,12 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ### Alterado
 
+- **Estrutura do núcleo, sem mudar a saída**: a gravação no SQLite sai do executor
+  para `nucleo/repositorio.py` (o executor fica com a retomada, a repetição, a
+  evidência e a decisão pelo tipo do erro), e o `publicar` de 310 linhas vira uma
+  sequência de etapas nomeadas (base, soma das despesas, parlamentares, partidos,
+  grafos, casas, CSV). Conferido contra o banco real: as versões antiga e nova geram
+  os mesmos arquivos, byte a byte.
 - **Testes organizados por tipo**, em `coleta/testes/`: `unidade/` (leitura de
   amostras gravadas, regras da conferência, importar e determinismo, sem rede nem
   navegador), `portal_falso/` (o robô inteiro contra API falsa, portal gravado ou

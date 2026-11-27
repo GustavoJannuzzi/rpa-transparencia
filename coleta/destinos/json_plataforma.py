@@ -12,6 +12,7 @@ import math
 import shutil
 import sqlite3
 from collections import Counter, defaultdict
+from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
 
@@ -92,153 +93,223 @@ def _ultima_coleta(con) -> dict[str, str]:
 
 
 def publicar(con: sqlite3.Connection) -> list[str]:
-    destino = config.destino_plataforma()
-    if destino.exists():
-        shutil.rmtree(destino)
-    destino.mkdir(parents=True)
-    coleta = _ultima_coleta(con)
-    log: list[str] = []
-    tamanho = 0
+    """Gera os JSON da plataforma e os CSV de exportação a partir do que a conferência
+    decidiu. Cada etapa abaixo grava um grupo de arquivos; a ordem é a de sempre, e
+    nenhuma etapa escreve no banco."""
+    saida = _Saida(config.destino_plataforma())
+    base = _Base.ler(con)
+    somas = _somar_despesas(con, base)
+    gabinetes = _gabinetes(con)
+    subsidio = _subsidios(con)
+    ativ_parl, ativ_casa, ativ_cob = atividade.resumos(con)
 
-    cats_rotulo = {}
-    from .. import de_para
-    for cat_linha in de_para._tabela("categorias.csv").values():
-        cats_rotulo[cat_linha["categoria"]] = cat_linha["rotulo"]
+    indice = _publicar_parlamentares(saida, base, somas, gabinetes, subsidio, ativ_parl)
+    partidos = _publicar_partidos(saida, base, somas, indice)
+    saida.escrever("categorias.json", base.cats_rotulo)
+    _publicar_grafos(saida, base, somas, indice)
+    _publicar_casas(saida, con, base, somas, indice, subsidio, ativ_casa, ativ_cob)
+    pasta_csv = _exportar_csv(somas.exportar)
+    return [f"publicadas {somas.n_pub} despesas de {len(indice)} parlamentares; {len(partidos)} partidos; "
+            f"{saida.tamanho / 1e6:.1f} MB de JSON em {saida.destino}",
+            f"CSV em {pasta_csv}"]
 
-    parl = {r["id"]: dict(r) for r in con.execute("SELECT * FROM parlamentares")}
-    filiacoes = defaultdict(list)
-    for r in con.execute("SELECT * FROM filiacoes ORDER BY parlamentar_id, desde"):
-        filiacoes[r["parlamentar_id"]].append({"partido": r["partido"], "desde": r["desde"], "ate": r["ate"], "base": r["base"], "fonte": r["fonte"]})
 
+class _Saida:
+    """A pasta de destino, apagada e criada de novo, e o total de bytes gravados."""
+
+    def __init__(self, destino: Path) -> None:
+        if destino.exists():
+            shutil.rmtree(destino)
+        destino.mkdir(parents=True)
+        self.destino = destino
+        self.tamanho = 0
+
+    def escrever(self, rel: str | Path, obj) -> None:
+        self.tamanho += _escrever(self.destino / rel, obj)
+
+
+@dataclass
+class _Base:
+    """O que a publicação lê do banco e do registro de fontes antes de somar qualquer despesa."""
+
+    coleta: dict[str, str]
+    cats_rotulo: dict[str, str]
+    parl: dict[str, dict]
+    filiacoes: dict[str, list[dict]]
     # o que ficou fora dos totais de cada um: a página mostra, em vez de calar
-    rev_parl = _revisao_por_parlamentar(con, cats_rotulo)
-    anos_rev_fonte = _anos_em_revisao(con)
-    ultimo_ano_cmc = max(f.sistema.cobre_ate for f in FONTES if f.id.startswith("cmc_"))
+    rev_parl: dict[str, list[dict]]
+    anos_rev_fonte: dict[str, list[int]]
+    ultimo_ano_cmc: int
     # período que as fontes de cada casa cobrem, e os anos em que a fonte diz não ter diária nenhuma
-    cobertura_casa: dict[str, tuple[int, int]] = {}
-    for fo in FONTES:
-        if fo.id == "tse" or fo.dado != "despesa":
-            continue
-        de_c, ate_c = cobertura_casa.get(fo.sistema.casa, (fo.sistema.cobre_de, fo.sistema.cobre_ate))
-        cobertura_casa[fo.sistema.casa] = (min(de_c, fo.sistema.cobre_de), max(ate_c, fo.sistema.cobre_ate))
-    sem_publicacao: dict[str, set[int]] = defaultdict(set)
-    for r in con.execute("""SELECT fonte, escopo, metrica, valor FROM totais_oficiais
-                            WHERE escopo LIKE 'diarias-%' AND (metrica='exercicio_indisponivel' OR (metrica='registros' AND valor='0'))"""):
-        sufixo = r["escopo"].split("-", 1)[1]
-        # só escopo de um ano ("diarias-2025"); a consulta do Betha cobre todos os anos de uma vez
-        if r["fonte"] != "cmc_elotech" and r["fonte"] in CASA_DA_FONTE and sufixo.isdigit() and len(sufixo) == 4:
-            sem_publicacao[CASA_DA_FONTE[r["fonte"]]].add(int(sufixo))
+    cobertura_casa: dict[str, tuple[int, int]]
+    sem_publicacao: dict[str, set[int]]
 
-    # ---------- despesas publicáveis, por parlamentar ----------
-    por_parl: dict[str, list] = defaultdict(list)
-    tot_parl_cat: dict[str, Counter] = defaultdict(Counter)
-    tot_parl_ano: dict[str, Counter] = defaultdict(Counter)
-    tot_partido_cat: dict[str, Counter] = defaultdict(Counter)
-    tot_partido_mes: dict[str, Counter] = defaultdict(Counter)
-    fontes_partido: dict[str, set] = defaultdict(set)
-    # procedência por recorte: quais fontes e quantas linhas entraram em cada soma
-    rec_ano: dict[tuple, list] = defaultdict(lambda: [set(), 0])
-    rec_cat: dict[tuple, list] = defaultdict(lambda: [set(), 0])
-    rec_pmes: dict[tuple, list] = defaultdict(lambda: [set(), 0])
-    rec_pcat: dict[tuple, list] = defaultdict(lambda: [set(), 0])
-    fontes_parl: dict[str, set] = defaultdict(set)
-    fornecedores_dep: dict[str, Counter] = defaultdict(Counter)  # pid -> cnpj -> n linhas
-    nomes_forn: dict[str, str] = {}
-    # diárias de cada câmara municipal por ano: vereadores (com nome) e servidores (só a soma)
-    municipal_ano: dict[str, dict[int, dict]] = defaultdict(lambda: defaultdict(lambda: {"vereadores": Decimal(0), "servidores": Decimal(0),
-                                                                                         "linhas": 0, "linhas_vereadores": 0}))
-    casa_ano: dict[str, Counter] = defaultdict(Counter)       # casa -> ano -> soma conferida
-    casa_cat: dict[str, Counter] = defaultdict(Counter)       # casa -> categoria -> soma conferida
-    casa_linhas: Counter[str] = Counter()
-    casa_forn: dict[str, Counter] = defaultdict(Counter)      # casa -> CNPJ -> parlamentares que pagaram
-    forn_vistos: set[tuple[str, str, str]] = set()
-    granularidade_parl: dict[str, set] = defaultdict(set)
-    exportar = defaultdict(list)
+    @classmethod
+    def ler(cls, con: sqlite3.Connection) -> _Base:
+        coleta = _ultima_coleta(con)
+        from .. import de_para
+        cats_rotulo = {}
+        for cat_linha in de_para._tabela("categorias.csv").values():
+            cats_rotulo[cat_linha["categoria"]] = cat_linha["rotulo"]
 
-    def partido_em(pid: str, competencia: str) -> str | None:
-        fs = filiacoes.get(pid, [])
-        for f in fs:
+        parl = {r["id"]: dict(r) for r in con.execute("SELECT * FROM parlamentares")}
+        filiacoes = defaultdict(list)
+        for r in con.execute("SELECT * FROM filiacoes ORDER BY parlamentar_id, desde"):
+            filiacoes[r["parlamentar_id"]].append({"partido": r["partido"], "desde": r["desde"], "ate": r["ate"], "base": r["base"], "fonte": r["fonte"]})
+
+        rev_parl = _revisao_por_parlamentar(con, cats_rotulo)
+        anos_rev_fonte = _anos_em_revisao(con)
+        ultimo_ano_cmc = max(f.sistema.cobre_ate for f in FONTES if f.id.startswith("cmc_"))
+        cobertura_casa: dict[str, tuple[int, int]] = {}
+        for fo in FONTES:
+            if fo.id == "tse" or fo.dado != "despesa":
+                continue
+            de_c, ate_c = cobertura_casa.get(fo.sistema.casa, (fo.sistema.cobre_de, fo.sistema.cobre_ate))
+            cobertura_casa[fo.sistema.casa] = (min(de_c, fo.sistema.cobre_de), max(ate_c, fo.sistema.cobre_ate))
+        sem_publicacao: dict[str, set[int]] = defaultdict(set)
+        for r in con.execute("""SELECT fonte, escopo, metrica, valor FROM totais_oficiais
+                                WHERE escopo LIKE 'diarias-%' AND (metrica='exercicio_indisponivel' OR (metrica='registros' AND valor='0'))"""):
+            sufixo = r["escopo"].split("-", 1)[1]
+            # só escopo de um ano ("diarias-2025"); a consulta do Betha cobre todos os anos de uma vez
+            if r["fonte"] != "cmc_elotech" and r["fonte"] in CASA_DA_FONTE and sufixo.isdigit() and len(sufixo) == 4:
+                sem_publicacao[CASA_DA_FONTE[r["fonte"]]].add(int(sufixo))
+        return cls(coleta, cats_rotulo, parl, filiacoes, rev_parl, anos_rev_fonte, ultimo_ano_cmc, cobertura_casa, sem_publicacao)
+
+    def partido_em(self, pid: str, competencia: str) -> str | None:
+        """O partido do parlamentar no mês: o da filiação que cobre o mês, senão o atual."""
+        for f in self.filiacoes.get(pid, []):
             if (f["desde"] or "0000") <= competencia <= (f["ate"] or "9999"):
                 return f["partido"]
-        return parl.get(pid, {}).get("partido_atual")
+        return self.parl.get(pid, {}).get("partido_atual")
 
-    cur = con.execute("""SELECT d.*, s.situacao, s.motivo, s.parlamentar_id, s.categoria AS cat_unica FROM despesas d JOIN despesa_situacao s USING(chave)
-                         WHERE s.situacao IN ('ok','fora_da_soma') ORDER BY d.fonte, d.data, d.chave""")
-    n_pub = 0
-    while True:
-        linhas = cur.fetchmany(20000)
-        if not linhas:
-            break
-        for d in linhas:
-            n_pub += 1
-            valor = Decimal(d["valor"])
-            soma = d["situacao"] == "ok"
-            pid = d["parlamentar_id"]
-            casa = d["casa"] or CASA_DA_FONTE.get(d["fonte"], "")
-            if d["tipo"] == "diaria_municipal":
-                k = "vereadores" if d["beneficiario_tipo"] == "parlamentar" else "servidores"
-                if soma:
-                    municipal_ano[casa][int(d["ano"])][k] += valor
-                municipal_ano[casa][int(d["ano"])]["linhas"] += 1
-                if k == "vereadores":
-                    municipal_ano[casa][int(d["ano"])]["linhas_vereadores"] += 1
-            if not pid:
-                continue
+
+def _recorte() -> list:
+    """Procedência de uma soma: [fontes que entraram, quantas linhas]."""
+    return [set(), 0]
+
+
+def _ano_municipal() -> dict:
+    return {"vereadores": Decimal(0), "servidores": Decimal(0), "linhas": 0, "linhas_vereadores": 0}
+
+
+@dataclass
+class _Somas:
+    """Tudo que a publicação soma das despesas publicáveis, numa passada só pelo banco.
+
+    Os `Counter` somam Decimal (o typeshed só prevê contagem inteira, daí os ignores)."""
+
+    n_pub: int = 0
+    por_parl: dict[str, list] = field(default_factory=lambda: defaultdict(list))
+    tot_parl_cat: dict[str, Counter] = field(default_factory=lambda: defaultdict(Counter))
+    tot_parl_ano: dict[str, Counter] = field(default_factory=lambda: defaultdict(Counter))
+    tot_partido_cat: dict[str, Counter] = field(default_factory=lambda: defaultdict(Counter))
+    tot_partido_mes: dict[str, Counter] = field(default_factory=lambda: defaultdict(Counter))
+    fontes_partido: dict[str, set] = field(default_factory=lambda: defaultdict(set))
+    # procedência por recorte: quais fontes e quantas linhas entraram em cada soma
+    rec_ano: dict[tuple, list] = field(default_factory=lambda: defaultdict(_recorte))
+    rec_cat: dict[tuple, list] = field(default_factory=lambda: defaultdict(_recorte))
+    rec_pmes: dict[tuple, list] = field(default_factory=lambda: defaultdict(_recorte))
+    rec_pcat: dict[tuple, list] = field(default_factory=lambda: defaultdict(_recorte))
+    fontes_parl: dict[str, set] = field(default_factory=lambda: defaultdict(set))
+    fornecedores_dep: dict[str, Counter] = field(default_factory=lambda: defaultdict(Counter))  # pid -> cnpj -> n linhas
+    nomes_forn: dict[str, str] = field(default_factory=dict)
+    # diárias de cada câmara municipal por ano: vereadores (com nome) e servidores (só a soma)
+    municipal_ano: dict[str, dict[int, dict]] = field(default_factory=lambda: defaultdict(lambda: defaultdict(_ano_municipal)))
+    casa_ano: dict[str, Counter] = field(default_factory=lambda: defaultdict(Counter))  # casa -> ano -> soma conferida
+    casa_cat: dict[str, Counter] = field(default_factory=lambda: defaultdict(Counter))  # casa -> categoria -> soma conferida
+    casa_linhas: Counter[str] = field(default_factory=Counter)
+    casa_forn: dict[str, Counter] = field(default_factory=lambda: defaultdict(Counter))  # casa -> CNPJ -> parlamentares que pagaram
+    forn_vistos: set[tuple[str, str, str]] = field(default_factory=set)
+    granularidade_parl: dict[str, set] = field(default_factory=lambda: defaultdict(set))
+    exportar: dict[str, list] = field(default_factory=lambda: defaultdict(list))
+
+    def somar(self, d: sqlite3.Row, base: _Base) -> None:
+        """Uma despesa publicável ("ok" soma; "fora_da_soma" aparece, mas não soma)."""
+        self.n_pub += 1
+        valor = Decimal(d["valor"])
+        soma = d["situacao"] == "ok"
+        pid = d["parlamentar_id"]
+        casa = d["casa"] or CASA_DA_FONTE.get(d["fonte"], "")
+        if d["tipo"] == "diaria_municipal":
+            k = "vereadores" if d["beneficiario_tipo"] == "parlamentar" else "servidores"
             if soma:
-                casa_ano[casa][int(d["ano"])] += valor  # type: ignore[assignment]
-                casa_cat[casa][d["cat_unica"]] += valor  # type: ignore[assignment]
-                casa_linhas[casa] += 1
-                if d["fornecedor_tipo"] == "cnpj" and d["fornecedor_doc"] and (casa, d["fornecedor_doc"], pid) not in forn_vistos:
-                    forn_vistos.add((casa, d["fornecedor_doc"], pid))
-                    casa_forn[casa][d["fornecedor_doc"]] += 1
-            granularidade_parl[pid].add(d["granularidade"] or "nota")
-            extra = json.loads(d["extra"] or "{}")
-            info: dict = {}
-            if not soma:
-                info["s"] = d["motivo"]
-            elif d["motivo"]:
-                info["o"] = d["motivo"]
-            if d["fonte"] != "camara_deputados":
-                # procedência linha a linha: de onde (página, arquivo) e em que ponto (linha, registro)
-                info["f"] = d["fonte"]
-                info["loc"] = d["localizador"]
-                info["src"] = d["url"]
-                info["k"] = d["coletado_em"][:10]
-                if d["descricao"]:
-                    info["x"] = d["descricao"][:240]
-                if d["granularidade"] == "agregado":
-                    info["g"] = "agregado"
-                for campo in ("hospedagem", "transporte", "devolvido"):
-                    if extra.get(campo) and extra[campo] not in ("None", "0", "0.00"):
-                        info[campo[:4]] = extra[campo]
-            forn = (d["fornecedor_doc"], d["fornecedor_nome"]) if d["fornecedor_nome"] else None
-            linha = (d["data"] or d["competencia"], d["competencia"], d["cat_unica"], forn, _d(valor),
-                     _url_compacta(d["documento_url"]), info or None, d["fonte"], d["coletado_em"][:10], d["url"])
-            por_parl[pid].append(linha)
-            fontes_parl[pid].add(d["fonte"])
-            if soma:
-                # Counter somando Decimal: o typeshed só prevê contagem inteira
-                tot_parl_cat[pid][d["cat_unica"]] += valor  # type: ignore[assignment]
-                tot_parl_ano[pid][int(d["ano"])] += valor  # type: ignore[assignment]
-                for chave_rec, dic in (((pid, int(d["ano"])), rec_ano), ((pid, d["cat_unica"]), rec_cat)):
+                self.municipal_ano[casa][int(d["ano"])][k] += valor
+            self.municipal_ano[casa][int(d["ano"])]["linhas"] += 1
+            if k == "vereadores":
+                self.municipal_ano[casa][int(d["ano"])]["linhas_vereadores"] += 1
+        if not pid:
+            return
+        if soma:
+            self.casa_ano[casa][int(d["ano"])] += valor  # type: ignore[assignment]
+            self.casa_cat[casa][d["cat_unica"]] += valor  # type: ignore[assignment]
+            self.casa_linhas[casa] += 1
+            if d["fornecedor_tipo"] == "cnpj" and d["fornecedor_doc"] and (casa, d["fornecedor_doc"], pid) not in self.forn_vistos:
+                self.forn_vistos.add((casa, d["fornecedor_doc"], pid))
+                self.casa_forn[casa][d["fornecedor_doc"]] += 1
+        self.granularidade_parl[pid].add(d["granularidade"] or "nota")
+        self.por_parl[pid].append(_linha_publicada(d, valor, soma))
+        self.fontes_parl[pid].add(d["fonte"])
+        if soma:
+            self.tot_parl_cat[pid][d["cat_unica"]] += valor  # type: ignore[assignment]
+            self.tot_parl_ano[pid][int(d["ano"])] += valor  # type: ignore[assignment]
+            for chave_rec, dic in (((pid, int(d["ano"])), self.rec_ano), ((pid, d["cat_unica"]), self.rec_cat)):
+                dic[chave_rec][0].add(d["fonte"])
+                dic[chave_rec][1] += 1
+            sigla = base.partido_em(pid, d["competencia"])
+            if sigla:
+                self.tot_partido_cat[sigla][d["cat_unica"]] += valor  # type: ignore[assignment]
+                self.tot_partido_mes[sigla][d["competencia"]] += valor  # type: ignore[assignment]
+                self.fontes_partido[sigla].add(d["fonte"])
+                for chave_rec, dic in (((sigla, d["competencia"]), self.rec_pmes), ((sigla, d["cat_unica"]), self.rec_pcat)):
                     dic[chave_rec][0].add(d["fonte"])
                     dic[chave_rec][1] += 1
-                sigla = partido_em(pid, d["competencia"])
-                if sigla:
-                    tot_partido_cat[sigla][d["cat_unica"]] += valor  # type: ignore[assignment]
-                    tot_partido_mes[sigla][d["competencia"]] += valor  # type: ignore[assignment]
-                    fontes_partido[sigla].add(d["fonte"])
-                    for chave_rec, dic in (((sigla, d["competencia"]), rec_pmes), ((sigla, d["cat_unica"]), rec_pcat)):
-                        dic[chave_rec][0].add(d["fonte"])
-                        dic[chave_rec][1] += 1
-                if d["fornecedor_tipo"] == "cnpj" and d["fornecedor_doc"]:
-                    fornecedores_dep[pid][d["fornecedor_doc"]] += 1
-                    nomes_forn.setdefault(d["fornecedor_doc"], d["fornecedor_nome"])
-            exportar[d["fonte"]].append((pid, parl.get(pid, {}).get("nome"), d["data"], d["competencia"], d["cat_unica"],
-                                         d["fornecedor_nome"], d["fornecedor_doc"], _d(valor), d["situacao"], d["documento_url"],
-                                         d["coletado_em"]))
+            if d["fornecedor_tipo"] == "cnpj" and d["fornecedor_doc"]:
+                self.fornecedores_dep[pid][d["fornecedor_doc"]] += 1
+                self.nomes_forn.setdefault(d["fornecedor_doc"], d["fornecedor_nome"])
+        self.exportar[d["fonte"]].append((pid, base.parl.get(pid, {}).get("nome"), d["data"], d["competencia"], d["cat_unica"],
+                                          d["fornecedor_nome"], d["fornecedor_doc"], _d(valor), d["situacao"], d["documento_url"],
+                                          d["coletado_em"]))
 
-    # ---------- gabinetes (só onde Betha e Elotech contam as mesmas pessoas) ----------
+
+def _linha_publicada(d: sqlite3.Row, valor: Decimal, soma: bool) -> tuple:
+    """A linha como vai para o arquivo do parlamentar no ano, com a procedência dela."""
+    extra = json.loads(d["extra"] or "{}")
+    info: dict = {}
+    if not soma:
+        info["s"] = d["motivo"]
+    elif d["motivo"]:
+        info["o"] = d["motivo"]
+    if d["fonte"] != "camara_deputados":
+        # procedência linha a linha: de onde (página, arquivo) e em que ponto (linha, registro)
+        info["f"] = d["fonte"]
+        info["loc"] = d["localizador"]
+        info["src"] = d["url"]
+        info["k"] = d["coletado_em"][:10]
+        if d["descricao"]:
+            info["x"] = d["descricao"][:240]
+        if d["granularidade"] == "agregado":
+            info["g"] = "agregado"
+        for campo in ("hospedagem", "transporte", "devolvido"):
+            if extra.get(campo) and extra[campo] not in ("None", "0", "0.00"):
+                info[campo[:4]] = extra[campo]
+    forn = (d["fornecedor_doc"], d["fornecedor_nome"]) if d["fornecedor_nome"] else None
+    return (d["data"] or d["competencia"], d["competencia"], d["cat_unica"], forn, _d(valor),
+            _url_compacta(d["documento_url"]), info or None, d["fonte"], d["coletado_em"][:10], d["url"])
+
+
+def _somar_despesas(con: sqlite3.Connection, base: _Base) -> _Somas:
+    """A passada única pelas despesas publicáveis, em blocos (a cota federal tem centenas de milhares de linhas)."""
+    somas = _Somas()
+    cur = con.execute("""SELECT d.*, s.situacao, s.motivo, s.parlamentar_id, s.categoria AS cat_unica FROM despesas d JOIN despesa_situacao s USING(chave)
+                         WHERE s.situacao IN ('ok','fora_da_soma') ORDER BY d.fonte, d.data, d.chave""")
+    while linhas := cur.fetchmany(20000):
+        for d in linhas:
+            somas.somar(d, base)
+    return somas
+
+
+def _gabinetes(con: sqlite3.Connection) -> dict[str, list]:
+    """Custo do gabinete por parlamentar (só onde Betha e Elotech contam as mesmas pessoas)."""
     revisados = {r[0] for r in con.execute("SELECT chave FROM revisao WHERE tipo='gabinete'")}
     gab_pid = {(r[0], r[1]): r[2] for r in con.execute("SELECT fonte, ref, parlamentar_id FROM parlamentar_ids WHERE fonte LIKE 'gabinete:%'")}
     gab_por_pid: dict[str, list] = defaultdict(list)
@@ -255,8 +326,11 @@ def publicar(con: sqlite3.Connection) -> list[str]:
                                  "competencia": r["competencia"], "data_referencia": r["data_referencia"], "pessoas": r["pessoas"],
                                  "custo": _d(r["custo"]), "k": r["coletado_em"][:10], "src": r["url"], "lotacao": r["lotacao_original"],
                                  **({"nota": "uma fonte só: a Câmara não tem um segundo sistema de pessoal para conferir"} if uma_fonte else {})})
+    return gab_por_pid
 
-    # ---------- subsídio (remuneração do parlamentar no cadastro de pessoal) ----------
+
+def _subsidios(con: sqlite3.Connection) -> dict[str, list]:
+    """Remuneração do parlamentar no cadastro de pessoal da casa, por parlamentar."""
     ids_fonte = {(r[0], r[1]): r[2] for r in con.execute("SELECT fonte, ref, parlamentar_id FROM parlamentar_ids")}
     subsidio: dict[str, list] = defaultdict(list)
     for r in con.execute("SELECT * FROM remuneracoes ORDER BY competencia"):
@@ -266,34 +340,35 @@ def publicar(con: sqlite3.Connection) -> list[str]:
         subsidio[pid].append({"fonte": r["fonte"], "rotulo": r["rotulo"], "valor": _d(r["valor"]), "competencia": r["competencia"],
                               "data_referencia": r["data_referencia"], "k": r["coletado_em"][:10], "src": r["url"],
                               "loc": r["localizador"], "cargo": r["cargo_original"]})
+    return subsidio
 
-    # ---------- atividade legislativa (sessão, presença, voto): não é despesa ----------
-    ativ_parl, ativ_casa, ativ_cob = atividade.resumos(con)
 
-    # ---------- arquivos por parlamentar ----------
+def _publicar_parlamentares(saida: _Saida, base: _Base, s: _Somas, gabinetes: dict[str, list], subsidio: dict[str, list],
+                            ativ_parl: dict[str, list[dict]]) -> list[dict]:
+    """Um arquivo por parlamentar (agregados), um por parlamentar e ano (as linhas) e o índice."""
     indice = []
-    for pid, p in parl.items():
-        linhas = sorted(por_parl.get(pid, []), key=lambda l: l[0], reverse=True)
+    for pid, p in base.parl.items():
+        linhas = sorted(s.por_parl.get(pid, []), key=lambda l: l[0], reverse=True)
         anos = sorted({int(l[1][:4]) for l in linhas}, reverse=True)
-        total = sum(tot_parl_cat[pid].values(), Decimal(0))
+        total = sum(s.tot_parl_cat[pid].values(), Decimal(0))
         extra = json.loads(p["extra"] or "{}")
         cab = {
             "id": pid, "nome": p["nome"], "nome_civil": p["nome_civil"], "casa": p["casa"], "uf": p["uf"],
-            "municipio": p["municipio"], "partido": p["partido_atual"], "filiacoes": filiacoes.get(pid, []),
-            "anos": anos, "fontes": sorted(fontes_parl.get(pid, set())),
+            "municipio": p["municipio"], "partido": p["partido_atual"], "filiacoes": base.filiacoes.get(pid, []),
+            "anos": anos, "fontes": sorted(s.fontes_parl.get(pid, set())),
             "total": _d(total), "linhas": sum(1 for l in linhas if not (l[6] and "s" in l[6])),
-            "por_categoria": {c: _d(v) for c, v in tot_parl_cat[pid].most_common()},
-            "por_ano": {str(a): _d(v) for a, v in sorted(tot_parl_ano[pid].items())},
-            "procedencia_ano": {str(a): {"fontes": sorted(rec_ano[(pid, a)][0]), "linhas": rec_ano[(pid, a)][1]} for a in sorted(tot_parl_ano[pid])},
-            "procedencia_categoria": {c: {"fontes": sorted(rec_cat[(pid, c)][0]), "linhas": rec_cat[(pid, c)][1]} for c in tot_parl_cat[pid]},
-            "gabinete": gab_por_pid.get(pid, []),
+            "por_categoria": {c: _d(v) for c, v in s.tot_parl_cat[pid].most_common()},
+            "por_ano": {str(a): _d(v) for a, v in sorted(s.tot_parl_ano[pid].items())},
+            "procedencia_ano": {str(a): {"fontes": sorted(s.rec_ano[(pid, a)][0]), "linhas": s.rec_ano[(pid, a)][1]} for a in sorted(s.tot_parl_ano[pid])},
+            "procedencia_categoria": {c: {"fontes": sorted(s.rec_cat[(pid, c)][0]), "linhas": s.rec_cat[(pid, c)][1]} for c in s.tot_parl_cat[pid]},
+            "gabinete": gabinetes.get(pid, []),
             "mandatos": extra.get("eleicoes", []), "id_camara": extra.get("id_camara"),
-            "top_fornecedores": [{"doc": doc, "nome": nomes_forn.get(doc), "linhas": n}
-                                 for doc, n in fornecedores_dep[pid].most_common(8)],
-            "p": {"coleta": {f: (coleta.get(f) or "")[:10] for f in sorted(fontes_parl.get(pid, set()) | {s_["fonte"] for s_ in subsidio.get(pid, [])},
-                                                                            key=_cronologica)}},
-            "em_revisao": rev_parl.get(pid, []),
-            "granularidade": "agregado" if granularidade_parl.get(pid) == {"agregado"} else ("misto" if len(granularidade_parl.get(pid, ())) > 1 else "nota"),
+            "top_fornecedores": [{"doc": doc, "nome": s.nomes_forn.get(doc), "linhas": n}
+                                 for doc, n in s.fornecedores_dep[pid].most_common(8)],
+            "p": {"coleta": {f: (base.coleta.get(f) or "")[:10] for f in sorted(s.fontes_parl.get(pid, set()) | {s_["fonte"] for s_ in subsidio.get(pid, [])},
+                                                                                 key=_cronologica)}},
+            "em_revisao": base.rev_parl.get(pid, []),
+            "granularidade": "agregado" if s.granularidade_parl.get(pid) == {"agregado"} else ("misto" if len(s.granularidade_parl.get(pid, ())) > 1 else "nota"),
             "subsidio": subsidio.get(pid, []),
             # só quem tem atividade nas sessões ganha a chave (os outros arquivos não mudam)
             **({"atividade": ativ_parl[pid]} if pid in ativ_parl else {}),
@@ -301,75 +376,84 @@ def publicar(con: sqlite3.Connection) -> list[str]:
         casa_p = entidades.casas().get(p["casa"])
         if casa_p is not None and casa_p.tipo == "camara_municipal":
             # anos de mandato que as fontes cobrem: a página separa "sem diária" de "em revisão"
-            eleicoes: list[int] = json.loads(p["extra"] or "{}").get("eleicoes", [])
-            de_c, ate_c = cobertura_casa.get(p["casa"], (0, ultimo_ano_cmc))
+            eleicoes: list[int] = extra.get("eleicoes", [])
+            de_c, ate_c = base.cobertura_casa.get(p["casa"], (0, base.ultimo_ano_cmc))
             mandato = sorted({a for e in eleicoes for a in range(int(e) + 1, int(e) + 5) if de_c <= a <= ate_c})
             cab["anos_mandato"] = mandato
-            cab["anos_sem_publicacao"] = sorted(a for a in mandato if a in sem_publicacao.get(p["casa"], set()))
-            cab["periodos_em_revisao"] = _periodos_em_revisao(p["casa"], mandato, anos_rev_fonte)
-        tamanho += _escrever(destino / "parlamentares" / f"{pid}.json", cab)
+            cab["anos_sem_publicacao"] = sorted(a for a in mandato if a in base.sem_publicacao.get(p["casa"], set()))
+            cab["periodos_em_revisao"] = _periodos_em_revisao(p["casa"], mandato, base.anos_rev_fonte)
+        saida.escrever(Path("parlamentares") / f"{pid}.json", cab)
         for a in anos:
-            tamanho += _escrever(destino / "parlamentares" / pid / f"{a}.json", _arquivo_ano([l for l in linhas if l[1].startswith(str(a))]))
+            saida.escrever(Path("parlamentares") / pid / f"{a}.json", _arquivo_ano([l for l in linhas if l[1].startswith(str(a))]))
         indice.append({"id": pid, "nome": p["nome"], "casa": p["casa"], "uf": p["uf"], "partido": p["partido_atual"],
                        "total": _d(total), "linhas": cab["linhas"], "gabinete": bool(cab["gabinete"]),
                        **({"atividade": True} if pid in ativ_parl else {}),
                        **({"municipio": p["municipio"]} if p["municipio"] else {})})
     indice.sort(key=lambda x: (normalizar_nome(x["nome"]), x["id"]))
-    tamanho += _escrever(destino / "parlamentares.json", indice)
+    saida.escrever("parlamentares.json", indice)
+    return indice
 
-    # ---------- partidos ----------
+
+def _publicar_partidos(saida: _Saida, base: _Base, s: _Somas, indice: list[dict]) -> list[dict]:
+    """Um arquivo por partido (membros, somas por mês e categoria, com a procedência) e a lista dos partidos."""
     membros = defaultdict(list)
     for i in indice:
         if i["partido"]:
             membros[i["partido"]].append({"id": i["id"], "nome": i["nome"], "casa": i["casa"], "uf": i["uf"], "total": i["total"],
                                           **({"municipio": i["municipio"]} if i.get("municipio") else {})})
+    esfera = {c.id: c.esfera for c in entidades.casas().values()}
     partidos = []
-    for sigla in sorted(set(membros) | set(tot_partido_cat)):
-        total = sum(tot_partido_cat[sigla].values(), Decimal(0))
+    for sigla in sorted(set(membros) | set(s.tot_partido_cat)):
+        total = sum(s.tot_partido_cat[sigla].values(), Decimal(0))
         obj = {"sigla": sigla, "membros": sorted(membros.get(sigla, []), key=lambda m: m["nome"]),
-               "por_categoria": {c: _d(v) for c, v in tot_partido_cat[sigla].most_common()},
-               "por_mes": {m: _d(v) for m, v in sorted(tot_partido_mes[sigla].items())},
+               "por_categoria": {c: _d(v) for c, v in s.tot_partido_cat[sigla].most_common()},
+               "por_mes": {m: _d(v) for m, v in sorted(s.tot_partido_mes[sigla].items())},
                "total": _d(total),
-               "fontes": sorted(fontes_partido.get(sigla, set())),
-               "procedencia_mes": {m: {"fontes": sorted(rec_pmes[(sigla, m)][0]), "linhas": rec_pmes[(sigla, m)][1]} for m in sorted(tot_partido_mes[sigla])},
-               "procedencia_categoria": {c: {"fontes": sorted(rec_pcat[(sigla, c)][0]), "linhas": rec_pcat[(sigla, c)][1]} for c in tot_partido_cat[sigla]},
-               "coleta": {f: (coleta.get(f) or "")[:10] for f in sorted(fontes_partido.get(sigla, set()))},
+               "fontes": sorted(s.fontes_partido.get(sigla, set())),
+               "procedencia_mes": {m: {"fontes": sorted(s.rec_pmes[(sigla, m)][0]), "linhas": s.rec_pmes[(sigla, m)][1]} for m in sorted(s.tot_partido_mes[sigla])},
+               "procedencia_categoria": {c: {"fontes": sorted(s.rec_pcat[(sigla, c)][0]), "linhas": s.rec_pcat[(sigla, c)][1]} for c in s.tot_partido_cat[sigla]},
+               "coleta": {f: (base.coleta.get(f) or "")[:10] for f in sorted(s.fontes_partido.get(sigla, set()))},
                "regra": ("soma das despesas conferidas de cada parlamentar no mês em que estava no partido (deputados federais: partido "
                          "informado na linha da cota; deputados estaduais: partido na lista de deputados da assembleia; vereadores: partido "
                          "na eleição do mandato)")}
-        tamanho += _escrever(destino / "partidos" / f"{slug(sigla)}.json", obj)
-        esfera = {c.id: c.esfera for c in entidades.casas().values()}
+        saida.escrever(Path("partidos") / f"{slug(sigla)}.json", obj)
         partidos.append({"sigla": sigla, "slug": slug(sigla),
                          "federal": sum(1 for m in membros.get(sigla, []) if esfera.get(m["casa"]) == "federal"),
                          "estadual": sum(1 for m in membros.get(sigla, []) if esfera.get(m["casa"]) == "estadual"),
                          "municipal": sum(1 for m in membros.get(sigla, []) if esfera.get(m["casa"]) == "municipal"), "total": _d(total)})
-    tamanho += _escrever(destino / "partidos.json", partidos)
-    tamanho += _escrever(destino / "categorias.json", cats_rotulo)
+    saida.escrever("partidos.json", partidos)
+    return partidos
 
-    # ---------- grafos ----------
-    grafo_brasil, fornecedores_grafo = _grafo_brasil(parl, fornecedores_dep, nomes_forn, coleta)
-    tamanho += _escrever(destino / "grafo-brasil.json", grafo_brasil)
+
+def _publicar_grafos(saida: _Saida, base: _Base, s: _Somas, indice: list[dict]) -> None:
+    grafo_brasil, fornecedores_grafo = _grafo_brasil(base.parl, s.fornecedores_dep, s.nomes_forn, base.coleta)
+    saida.escrever("grafo-brasil.json", grafo_brasil)
     # os nomes dos fornecedores vão à parte: o grafo abre sem eles, e a ficha do ponto os busca depois
-    tamanho += _escrever(destino / "grafo-brasil-fornecedores.json", fornecedores_grafo)
-    tamanho += _escrever(destino / "grafo-parana.json", _grafo_parana(parl, filiacoes, indice))
+    saida.escrever("grafo-brasil-fornecedores.json", fornecedores_grafo)
+    saida.escrever("grafo-parana.json", _grafo_parana(base.parl, base.filiacoes, indice))
 
-    # ---------- fontes, cobertura, conferência e revisão ----------
-    tamanho += _escrever(destino / "fontes.json", _fontes(con, coleta, municipal_ano["cmc"]))
-    tamanho += _escrever(destino / "revisao.json", _revisao(con))
-    casas_pub = cob.casas(con, indice, coleta, municipal_ano, casa_ano, casa_cat, casa_linhas, casa_forn, nomes_forn, cobertura_casa,
-                          sem_publicacao, subsidio, _d)
+
+def _publicar_casas(saida: _Saida, con: sqlite3.Connection, base: _Base, s: _Somas, indice: list[dict], subsidio: dict[str, list],
+                    ativ_casa: dict[str, list[dict]], ativ_cob: dict) -> None:
+    """Fontes, fila de revisão, uma página por casa, a cobertura e os mapas."""
+    saida.escrever("fontes.json", _fontes(con, base.coleta, s.municipal_ano["cmc"]))
+    saida.escrever("revisao.json", _revisao(con))
+    casas_pub = cob.casas(con, indice, base.coleta, s.municipal_ano, s.casa_ano, s.casa_cat, s.casa_linhas, s.casa_forn, s.nomes_forn,
+                          base.cobertura_casa, base.sem_publicacao, subsidio, _d)
     for c in casas_pub:
         ativ = ativ_casa.get(c["resumo"]["id"], [])
         c["detalhe"]["atividade"] = ativ
         c["resumo"]["atividade"] = [{k: x[k] for k in ("fonte", "sistema", "de", "ate", "situacao")} for x in ativ]
-    tamanho += _escrever(destino / "casas.json", [c["resumo"] for c in casas_pub])
+    saida.escrever("casas.json", [c["resumo"] for c in casas_pub])
     for c in casas_pub:
-        tamanho += _escrever(destino / "casas" / f"{c['resumo']['id']}.json", c["detalhe"])
-    tamanho += _escrever(destino / "cobertura.json", {**cob.cobertura(casas_pub), "atividade": {**ativ_cob, **cob.levantamento_atividade()}})
+        saida.escrever(Path("casas") / f"{c['resumo']['id']}.json", c["detalhe"])
+    saida.escrever("cobertura.json", {**cob.cobertura(casas_pub), "atividade": {**ativ_cob, **cob.levantamento_atividade()}})
     for nome, mapa in cob.mapas().items():
-        tamanho += _escrever(destino / nome, mapa)
+        saida.escrever(nome, mapa)
 
-    # ---------- CSV ----------
+
+def _exportar_csv(exportar: dict[str, list]) -> Path:
+    """Um CSV por fonte com as despesas publicadas (fica em dados/, fora do repositório)."""
     pasta_csv = config.dados() / "exportacao"
     pasta_csv.mkdir(parents=True, exist_ok=True)
     for fonte, linhas in exportar.items():
@@ -378,9 +462,7 @@ def publicar(con: sqlite3.Connection) -> list[str]:
             w.writerow(["parlamentar_id", "parlamentar", "data", "competencia", "categoria", "fornecedor", "documento_fornecedor",
                         "valor", "situacao", "link_documento", "coletado_em"])
             w.writerows(_sem_cpf(linhas))
-    log.append(f"publicadas {n_pub} despesas de {len(indice)} parlamentares; {len(partidos)} partidos; {tamanho / 1e6:.1f} MB de JSON em {destino}")
-    log.append(f"CSV em {pasta_csv}")
-    return log
+    return pasta_csv
 
 
 # Motivo da revisão reduzido a uma chave que a plataforma traduz para o leitor.
