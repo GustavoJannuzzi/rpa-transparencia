@@ -120,11 +120,12 @@ cada fonte, **origem = coletado + revisão**, e nenhum item com erro em aberto:
 | Elotech, 12 câmaras do PR | 2.671 | 2.374 | 297 |
 | Betha, 13 câmaras do PR | 2.729 | 1.785 | 944 |
 | Equiplano, 10 câmaras do PR | 3.096 | 3.090 | 6 |
+| Govbr Pronim, 6 câmaras do PR (linhas credor × mês) | 1.223 | 1.122 | 101 |
 | Câmara Legislativa do DF | 3.183 | 2.614 | 569 |
 | Assembleia de Minas Gerais (notas) | 94.209 | 94.209 | 0 |
 | Assembleia de São Paulo (linhas agregadas) | 82.182 | 82.182 | 0 |
 
-São 40 casas, com 1.514 parlamentares na plataforma. Nas câmaras do Elotech, a
+São 46 casas, com 1.600 parlamentares na plataforma. Nas câmaras do Elotech, a
 maior parte do que está em revisão é diária sem cargo cujo nome não está no cadastro
 de vereadores do ano: pode ser de servidor, então o nome é descartado e a linha fica
 de fora, contada. No Betha, 877 das 944 linhas em revisão são de Cornélio Procópio,
@@ -139,6 +140,12 @@ e 2025 inteiros (ver o achado abaixo).
 
 Achados reais, todos visíveis no relatório e na fila de revisão:
 
+- **A "consolidada" que é o município inteiro.** No Pronim de Salto do Lontra, a
+  unidade gestora padrão ("CONSOLIDADA") junta Câmara, Prefeitura e Fundo de Saúde, e
+  a tabela da tela para perto de 100 credores. Foi a conferência do ano inteiro contra
+  a soma dos meses que acusou: 99 credores num caminho, 197 no outro. O robô passou a
+  escolher a unidade da Câmara (12 a 13 credores por ano) e para quando a tabela chega
+  perto do corte, em vez de publicar uma lista cortada.
 - **O relatório que fecha consigo mesmo.** No Equiplano não há API nem contador: o
   "CSV" é o relatório impresso. Nas 10 câmaras, em todos os 40 anos coletados, a
   soma dos empenhos lidos (empenhado menos o estorno de empenho) dá, centavo a
