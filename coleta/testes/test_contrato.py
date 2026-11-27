@@ -94,6 +94,34 @@ async def test_betha_diarias_tabela_e_contador():
         await pw.stop()
 
 
+async def test_betha_generico_acha_a_consulta_pelo_texto_do_menu():
+    """O mesmo caminho do `descobrir`: o menu que a página recebe tem um item
+    "Diárias", ele aparece na tela, e a consulta tem as colunas de diária."""
+    import json as _json
+
+    from coleta import entidades
+    from coleta.fontes.betha.fonte import API as BETHA_API, COLUNAS_DIARIAS, JS_TEXTOS_MENU, candidatas_diarias
+    from coleta.nucleo.texto import normalizar_nome
+
+    e = next(x for x in entidades.betha() if x.fonte == "betha_fazenda_rio_grande")
+    pw, nav, p = await _pagina(config.UA_ROBO)
+    try:
+        async with p.expect_response(lambda r: r.url.split("?")[0] == f"{BETHA_API}/menu", timeout=60000) as resp:
+            await p.goto(e.tela, wait_until="networkidle")
+        menu = _json.loads(await (await resp.value).body())
+        achadas = candidatas_diarias(menu)
+        assert achadas, "o menu não tem mais um item 'Diárias'"
+        await p.wait_for_timeout(2000)
+        assert "DIARIAS" in {normalizar_nome(t) for t in await p.evaluate(JS_TEXTOS_MENU)}
+        await p.goto(f"{e.tela}/consulta/{achadas[0][1]['id']}", wait_until="networkidle")
+        await p.locator("table.table-card").first.wait_for(timeout=30000)
+        assert (await p.locator(".bth-powernumber__value").first.inner_text()).strip().isdigit()
+        assert COLUNAS_DIARIAS <= {chave_coluna(t) for t in await p.locator("table.table-card thead th").all_inner_texts()}
+    finally:
+        await nav.close()
+        await pw.stop()
+
+
 # ---------------------------------------------------------------- casas novas (um teste por fornecedor)
 def _cliente(**kw) -> httpx.Client:
     return httpx.Client(headers=H, timeout=httpx.Timeout(60, connect=30), **kw)

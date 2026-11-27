@@ -11,7 +11,8 @@ export const MOTIVO_FORA: Record<string, string> = {
   anti_robo: "O portal tem proteção contra robô.",
   captcha: "A consulta pede captcha, e o robots.txt proíbe a API. Captcha nunca é contornado.",
   sistema_interno: "O sistema achado é interno (pede CPF), não um portal de consulta.",
-  na_fila: "O portal é Elotech: o adaptador já existe, e a câmara ainda não está na lista de coleta.",
+  na_fila: "O fornecedor do portal já tem adaptador, e a câmara ainda não está na lista de coleta.",
+  sem_consulta_diarias: "O portal da câmara não tem a consulta de diárias com o cargo de quem recebeu.",
   sem_adaptador: "O fornecedor do portal ainda não tem adaptador.",
   reserva: "Fonte aberta, na reserva: ainda sem adaptador.",
   sem_fornecedor: "A fonte só publica totais e não diz quem recebeu.",
@@ -40,7 +41,7 @@ export const ROTULO_CLASSE: Record<Classe, string> = {
   coletada: "Coletada",
   em_revisao: "Em revisão",
   barrada: "Fora: o portal barra o robô",
-  sem_adaptador: "Fora: ainda sem adaptador",
+  sem_adaptador: "Fora: na fila ou sem adaptador",
   nao_identificado: "Fora: fornecedor não identificado",
   outra: "Fora: outro motivo",
 };

@@ -124,8 +124,10 @@ def publicar(con: sqlite3.Connection) -> list[str]:
     sem_publicacao: dict[str, set[int]] = defaultdict(set)
     for r in con.execute("""SELECT fonte, escopo, metrica, valor FROM totais_oficiais
                             WHERE escopo LIKE 'diarias-%' AND (metrica='exercicio_indisponivel' OR (metrica='registros' AND valor='0'))"""):
-        if r["fonte"] != "cmc_elotech" and r["fonte"] in CASA_DA_FONTE:
-            sem_publicacao[CASA_DA_FONTE[r["fonte"]]].add(int(r["escopo"].split("-")[1]))
+        sufixo = r["escopo"].split("-", 1)[1]
+        # só escopo de um ano ("diarias-2025"); a consulta do Betha cobre todos os anos de uma vez
+        if r["fonte"] != "cmc_elotech" and r["fonte"] in CASA_DA_FONTE and sufixo.isdigit() and len(sufixo) == 4:
+            sem_publicacao[CASA_DA_FONTE[r["fonte"]]].add(int(sufixo))
 
     # ---------- despesas publicáveis, por parlamentar ----------
     por_parl: dict[str, list] = defaultdict(list)
@@ -696,7 +698,7 @@ def _linhas_por_grupo(con) -> dict[tuple, int]:
                               SELECT 1 FROM revisao r WHERE r.fonte = d.fonte AND r.tipo = 'despesa' AND r.chave = d.chave)
                             GROUP BY 1, 2, 3, 4"""):
         fonte, ano, comp, original, n = r
-        for chave in (f"{original}/{ano}", f"diarias-{ano}", comp):
+        for chave in (f"{original}/{ano}", f"diarias-{ano}", comp, "consulta-inteira"):
             if (fonte, chave) in recortes:
                 tipo, motivo = recortes[(fonte, chave)]
                 por_linha[(fonte, tipo, motivo)] += n

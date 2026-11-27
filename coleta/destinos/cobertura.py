@@ -34,6 +34,9 @@ LEVANTAMENTO_CAMARAS = {
     "sem_fornecedor_identificado": 135,
     "robots_proibe_tudo": 39,
 }
+# Fornecedores com adaptador na coleta: a câmara que usa um deles e ainda não está em
+# `entidades.toml` está "na fila", não "sem adaptador".
+COM_ADAPTADOR = frozenset({"elotech", "betha"})
 NOME_FORNECEDOR = {
     "elotech": "Elotech", "betha": "Betha Cloud", "equiplano": "Equiplano", "pronim": "Govbr Pronim", "ipm": "IPM Atende.net",
     "inga": "Inga Digital", "cr2": "CR2", "softcam": "SOFTCAM", "econtab": "eContab", "conexaogov": "Conexão Gov",
@@ -140,18 +143,23 @@ def cobertura(casas_pub: list[dict]) -> dict:
     """Todas as casas: as coletadas (da coleta) e as de fora (do levantamento), com o motivo."""
     coletadas = {c["resumo"]["id"]: c["resumo"] for c in casas_pub}
     por_ibge = {c["ibge"]: c for c in coletadas.values() if c["tipo"] == "camara_municipal" and c["ibge"]}
-    configuradas = {e.ibge for e in entidades.elotech()}
+    configuradas = {e.ibge for e in entidades.municipais()}
+    de_fora = entidades.de_fora()
     camaras = []
     for l in _ler_csv("camaras-pr.csv"):
         ibge = int(l["ibge"])
         forn = l["fornecedor"]
         c = por_ibge.get(ibge)
+        detalhe = None
         if c:
             situacao, motivo = c["situacao"], None
+        elif ibge in de_fora:
+            # configurada, mas a coleta não tem como ler: o motivo é da própria configuração
+            situacao, (motivo, detalhe, _) = "fora", de_fora[ibge]
         elif l["barreira"]:
             situacao, motivo = "fora", {"robots": "robots", "robots+cloudflare": "robots_cloudflare", "anti_robo": "anti_robo",
                                         "cloudflare": "cloudflare", "sistema_interno": "sistema_interno"}.get(l["barreira"], "outro")
-        elif forn == "elotech":
+        elif forn in COM_ADAPTADOR:
             situacao, motivo = "fora", "na_fila" if ibge not in configuradas else "outro"
         elif forn in ("ipm",):
             situacao, motivo = "fora", "robots_cloudflare"
@@ -163,6 +171,7 @@ def cobertura(casas_pub: list[dict]) -> dict:
             situacao, motivo = "fora", "nao_identificado"
         camaras.append({"ibge": ibge, "municipio": l["municipio"], "fornecedor": NOME_FORNECEDOR.get(forn) if forn else None,
                         "portal": l["portal"] or None, "situacao": situacao, "motivo": motivo, "base": l["base"] or None,
+                        **({"detalhe": detalhe} if detalhe else {}),
                         **({"casa": c["id"], "parlamentares": c["parlamentares"], "linhas": c["linhas"]} if c else {})})
     por_uf = {c["uf"]: c for c in coletadas.values() if c["tipo"] == "assembleia"}
     assembleias = []
