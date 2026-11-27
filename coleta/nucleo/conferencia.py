@@ -63,7 +63,9 @@ def _pronim_divergente(con, rv: Revisor) -> frozenset[tuple[str, int]]:
     out = set()
     for r in con.execute("""SELECT fonte, escopo, valor, texto_original FROM totais_oficiais
                             WHERE fonte LIKE 'pronim_%' AND metrica='ano_inteiro_x_mes_a_mes'"""):
-        rv.conferencia(r["fonte"], "ano_inteiro_x_mes_a_mes", r["escopo"], "os mesmos credores e valores", r["texto_original"],
+        # o detalhe vai para a página: valor solto, sem "R$" (todo R$ na plataforma tem ficha de procedência)
+        detalhe = (r["texto_original"] or "").replace("R$ ", "")
+        rv.conferencia(r["fonte"], "ano_inteiro_x_mes_a_mes", r["escopo"], "os mesmos credores e valores", detalhe,
                        "confere" if r["valor"] == "confere" else "diverge",
                        "dois caminhos independentes de consulta na tela, que não publica total")
         if r["valor"] != "confere":
@@ -71,7 +73,7 @@ def _pronim_divergente(con, rv: Revisor) -> frozenset[tuple[str, int]]:
             out.add((r["fonte"], ano))
             rv.revisao(r["fonte"], "consulta", r["escopo"],
                        f"{ano}: a consulta do ano inteiro e a soma das consultas mês a mês não dão os mesmos credores e valores "
-                       f"({r['texto_original']})")
+                       f"({detalhe})")
     return frozenset(out)
 
 
@@ -95,7 +97,7 @@ def _totais_do_relatorio(con, rv: Revisor) -> frozenset[tuple[str, int]]:
         if not fecha:
             divergentes.add((r["fonte"], ano))
             rv.revisao(r["fonte"], "consulta", r["escopo"],
-                       f"{ano}: a soma dos empenhos lidos (R$ {obtido}) não dá o total do relatório (R$ {esperado})",
+                       f"{ano}: a soma dos empenhos lidos não dá o total que o relatório imprime no rodapé",
                        {"total_do_relatorio": str(esperado), "soma_lida": str(obtido)})
     return frozenset(divergentes)
 

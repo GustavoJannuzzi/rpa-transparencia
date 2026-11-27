@@ -350,7 +350,9 @@ class Pronim(FonteComCpfNaTela):
         total_ano = sum((c.valores["empenhado"] for c in anual.credores), Decimal(0))
         total_meses = sum((v["empenhado"] for v in soma_meses.values()), Decimal(0))
         confere = not diferentes
-        detalhe = (f"{len(no_ano)} credores no ano inteiro, {len(soma_meses)} somando os meses; empenhado R$ {total_ano} × R$ {total_meses}"
+        # sem "R$": o texto vai para a página como detalhe da conferência, e todo valor em reais
+        # na plataforma precisa da ficha de procedência
+        detalhe = (f"{len(no_ano)} credores no ano inteiro, {len(soma_meses)} somando os meses; empenhado {total_ano} × {total_meses}"
                    + ("" if confere else f"; {len(diferentes)} credor(es) com valores diferentes nos dois caminhos"))
         # vereador: está na consulta dos agentes políticos, com o mesmo valor do ano inteiro
         parciais = {p for p, c in vereadores.items() if p not in no_ano or no_ano[p].valores["empenhado"] != c.valores["empenhado"]}
