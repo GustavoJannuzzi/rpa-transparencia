@@ -53,6 +53,8 @@ export default async function PaginaCasa({ params }: { params: Promise<{ id: str
   const proc = (nota?: string, linhas?: number): Procedencia => ({ fontes: c.p.fontes, coleta: c.p.coleta, situacao: "soma", nota, linhas });
   const cats: ItemBarra[] = Object.entries(c.por_categoria).map(([k, v]) => ({ chave: k, valor: v, p: proc(`soma da categoria nas despesas conferidas da casa`) }));
   const agregado = c.id === "al-sp";
+  // o Pronim soma as diárias por credor no período: a casa só tem linhas agregadas (credor × mês)
+  const agregadoPorCredor = c.sistemas.some((s) => s.fornecedor === "Govbr");
   const revisaoTotal = c.em_revisao_por_motivo.reduce((s, m) => s + m.linhas, 0);
   // o mesmo motivo de leigo junta anotações diferentes do robô (uma linha pode ter dois motivos)
   const porMotivo = new Map<string, { linhas: number; anotacoes: string[] }>();
@@ -90,7 +92,11 @@ export default async function PaginaCasa({ params }: { params: Promise<{ id: str
             <>
               <p className="text-sm text-tinta-3">{municipal ? "Diárias de vereadores conferidas" : "Total conferido"}, {c.de === c.ate ? c.de : `${c.de}–${c.ate}`}</p>
               <Valor valor={c.total} p={proc(`soma das despesas conferidas dos ${varios} da casa`, c.linhas)} tamanho="grande" />
-              <p className="num mt-1 text-sm text-tinta-3">{contagem(c.linhas, agregado ? "linha agregada" : municipal ? "diária" : "nota", agregado ? "linhas agregadas" : municipal ? "diárias" : "notas")}</p>
+              <p className="num mt-1 text-sm text-tinta-3">{contagem(
+                c.linhas,
+                agregado || agregadoPorCredor ? "linha agregada" : municipal ? "diária" : "nota",
+                agregado || agregadoPorCredor ? "linhas agregadas" : municipal ? "diárias" : "notas",
+              )}</p>
             </>
           ) : (
             <p className="font-titulo text-2xl text-tinta-3">Nenhuma despesa conferida</p>
@@ -105,6 +111,12 @@ export default async function PaginaCasa({ params }: { params: Promise<{ id: str
                 Por quê
               </a>
             </span>
+          </p>
+        )}
+        {agregadoPorCredor && (
+          <p className="max-w-[72ch] text-[0.92rem] text-tinta-2 md:col-span-2">
+            O portal publica as diárias já somadas por pessoa e período. O robô consulta mês a mês: cada linha é a soma de uma pessoa num mês,
+            feita pela própria fonte, não uma diária. A soma dos meses é conferida contra a consulta do ano inteiro.
           </p>
         )}
         {agregado && (

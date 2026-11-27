@@ -41,7 +41,7 @@ export default async function PaginaParlamentar({ params }: { params: Promise<{ 
   const vereador = tipoDaCasa(p.casa) === "municipal";
   const casa = casaDe(p.casa);
   const agregado = p.granularidade === "agregado";
-  const unidade = vereador ? ["diária", "diárias"] : agregado ? ["linha agregada", "linhas agregadas"] : ["despesa", "despesas"];
+  const unidade = agregado ? ["linha agregada", "linhas agregadas"] : vereador ? ["diária", "diárias"] : ["despesa", "despesas"];
   const noGrafo = vistaNoGrafo(p.id);
   const rot = categorias();
   const coleta = Object.values(p.p.coleta).sort().at(-1) ?? "";
@@ -120,7 +120,9 @@ export default async function PaginaParlamentar({ params }: { params: Promise<{ 
           )}
           {agregado && (
             <p className="mt-2 max-w-[44ch] text-sm leading-relaxed text-tinta-3 md:ml-auto">
-              A fonte publica a despesa já somada por fornecedor, tipo e mês. Cada linha é uma soma feita pela fonte, não uma nota.
+              {vereador
+                ? "A fonte publica as diárias já somadas por pessoa e período. Cada linha é a soma de um mês, feita pela fonte, não uma diária."
+                : "A fonte publica a despesa já somada por fornecedor, tipo e mês. Cada linha é uma soma feita pela fonte, não uma nota."}
             </p>
           )}
         </div>

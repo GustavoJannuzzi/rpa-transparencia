@@ -36,7 +36,7 @@ LEVANTAMENTO_CAMARAS = {
 }
 # Fornecedores com adaptador na coleta: a câmara que usa um deles e ainda não está em
 # `entidades.toml` está "na fila", não "sem adaptador".
-COM_ADAPTADOR = frozenset({"elotech", "betha", "equiplano"})
+COM_ADAPTADOR = frozenset({"elotech", "betha", "equiplano", "pronim"})
 # Atividade legislativa (SAPL): o que o levantamento achou. Contagem do levantamento, com data.
 LEVANTAMENTO_SAPL = {
     "camaras_que_linkam": 114,     # câmaras do PR com link para sapl.<cidade>.pr.leg.br na página inicial
