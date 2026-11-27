@@ -186,6 +186,9 @@ class Aleto(FonteAssembleiaTela):
         self.sistema.cobre_de, self.sistema.cobre_ate = self.de, self.ate
         self._ano_na_tela: int | None = None
 
+    def ao_renovar(self) -> None:
+        self._ano_na_tela = None
+
     def recorte(self, html: str, url: str) -> str:
         """Da página do POST, guarda do título ao rodapé: o formulário e a tabela do mês."""
         i, j = html.find('<h1 class="page-title">'), html.find("<footer")

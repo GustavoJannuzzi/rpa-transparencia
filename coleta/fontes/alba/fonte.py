@@ -121,6 +121,10 @@ class Alba(FonteAssembleiaTela):
         # o servidor às vezes leva mais de 45 s para devolver uma página (e dá 500 no meio)
         self.pagina.set_default_navigation_timeout(self.timeout_resposta)
 
+    def ao_renovar(self) -> None:
+        assert self.pagina is not None
+        self.pagina.set_default_navigation_timeout(self.timeout_resposta)
+
     async def _buscar(self, ano: int, deputado: str = "") -> tuple[str, str, str]:
         """Preenche o formulário e clica em BUSCAR. Devolve (url, html, hash)."""
         assert self.pagina is not None

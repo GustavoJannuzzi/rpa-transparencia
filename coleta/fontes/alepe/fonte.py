@@ -46,6 +46,9 @@ class Alepe(FonteAssembleiaTela):
         self._respostas: list = []
         self._ouvindo = False
 
+    def ao_renovar(self) -> None:
+        self._ouvindo = False
+
     # ---- a tela e as respostas que ela recebe ----------------------------
     async def _abrir(self) -> list[tuple[str, str]]:
         assert self.pagina is not None

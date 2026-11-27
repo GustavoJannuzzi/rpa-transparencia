@@ -101,6 +101,9 @@ class Alrn(FonteAssembleiaTela):
         self._meses: dict[int, list] = {}
         self._ouvindo = False
 
+    def ao_renovar(self) -> None:
+        self._ouvindo = False
+
     def _ao_responder(self, r) -> None:
         m = re.search(r"/verbas/meses/(\d{4})", r.url)
         if m and r.status == 200:

@@ -240,6 +240,8 @@ class Conferencias:
 
 # Abaixo disto, a coleta para (o rastro do navegador de um item longo passa de 100 MB).
 DISCO_MINIMO = 400 * 2**20
+# A cada tantos itens o contexto do navegador é trocado (o que ele acumula no Temp vai embora).
+ITENS_POR_CONTEXTO = 20
 
 
 class FonteAssembleiaTela(FonteAssembleia, FonteNavegador):
@@ -261,8 +263,34 @@ class FonteAssembleiaTela(FonteAssembleia, FonteNavegador):
         self._disco_cheio: str | None = None
         if livre < DISCO_MINIMO:
             self._disco_cheio = f"o disco tem {livre // 2**20} MB livres (mínimo {DISCO_MINIMO // 2**20} MB): a coleta para e retoma depois"
-        else:
-            await super().antes_do_item(item)
+            return
+        if self.contexto is None or self._rastreando:
+            return
+        # O rastro com snapshots guarda o corpo de cada resposta no Temp enquanto o contexto
+        # viver: numa coleta de horas, passou de 800 MB por fonte. Aqui o rastro leva só os
+        # prints (a página do erro já vai inteira na evidência), e o contexto é trocado a
+        # cada ITENS_POR_CONTEXTO itens, o que libera o que o navegador acumulou.
+        self._itens_no_contexto = getattr(self, "_itens_no_contexto", 0) + 1
+        if self._itens_no_contexto > ITENS_POR_CONTEXTO:
+            await self._novo_contexto()
+            self._itens_no_contexto = 1
+        await self.contexto.tracing.start(screenshots=True, snapshots=False, sources=False)
+        self._rastreando = True
+
+    async def _novo_contexto(self) -> None:
+        """Fecha o contexto do navegador e abre outro igual (o mesmo navegador)."""
+        assert self.ctx is not None and self.ctx.navegador is not None and self.contexto is not None
+        await self.contexto.close()
+        self.contexto = await self.ctx.navegador.new_context(user_agent=self.ua, viewport=self.viewport, locale="pt-BR",  # type: ignore[arg-type]
+                                                             accept_downloads=True)
+        for padrao, tratador in self.ctx.rotas_navegador:
+            await self.contexto.route(padrao, tratador)
+        self.pagina = await self.contexto.new_page()
+        self.pagina.set_default_timeout(45000)
+        self.ao_renovar()
+
+    def ao_renovar(self) -> None:
+        """Gancho: o que a fonte guarda sobre a página aberta deixa de valer."""
 
     def disco(self) -> None:
         """Chamado no começo de cada item: para a fonte se o disco estiver quase cheio."""
