@@ -13,7 +13,7 @@ th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--linha);verti
 code{font-size:12.5px}details{margin:6px 0}summary{cursor:pointer}
 </style></head><body><main>
 <h1>Relatório de conferência</h1>
-<p class="sub">Gerado em 2026-11-27T10:24:30-03:00 · robô 0.1.0 · cada fonte: <b>origem = coletado + revisão</b>, e nenhum erro em aberto.</p>
+<p class="sub">Gerado em 2026-11-27T10:45:36-03:00 · robô 0.1.0 · cada fonte: <b>origem = coletado + revisão</b>, e nenhum erro em aberto.</p>
 <table><tr><th>Fonte</th><th>Como</th><th>Origem</th><th>Coletado</th><th>Revisão</th><th>Equação</th><th>Erros em aberto</th></tr>
 <tr><td><a href="#camara_deputados">Dados Abertos da Câmara dos Deputados</a></td><td><span class="tag">API</span></td>
 <td>790635</td><td>659576</td><td>131059</td>
@@ -110,8 +110,8 @@ code{font-size:12.5px}details{margin:6px 0}summary{cursor:pointer}
 <td class="confere">confere</td><td class="confere">0</td></tr><tr><td><a href="#cmc_frequencia">Portal da Transparência Betha (Frequência dos Vereadores)</a></td><td><span class="tag">robô + PDF</span></td>
 <td>2337</td><td>0</td><td>2</td>
 <td class="confere">confere</td><td class="confere">0</td></tr><tr><td><a href="#sapl_maringa">SAPL (Interlegis)</a></td><td><span class="tag">API</span></td>
-<td>—</td><td>0</td><td>0</td>
-<td class="None">—</td><td class="confere">0</td></tr><tr><td><a href="#sapl_foz_do_iguacu">SAPL (Interlegis)</a></td><td><span class="tag">API</span></td>
+<td>30616</td><td>0</td><td>0</td>
+<td class="confere">confere</td><td class="confere">0</td></tr><tr><td><a href="#sapl_foz_do_iguacu">SAPL (Interlegis)</a></td><td><span class="tag">API</span></td>
 <td>18915</td><td>0</td><td>0</td>
 <td class="confere">confere</td><td class="confere">0</td></tr><tr><td><a href="#sapl_sarandi">SAPL (Interlegis)</a></td><td><span class="tag">API</span></td>
 <td>1590</td><td>0</td><td>0</td>
@@ -660,13 +660,15 @@ code{font-size:12.5px}details{margin:6px 0}summary{cursor:pointer}
 
 <h2 id="sapl_maringa">SAPL (Interlegis)</h2>
 <p class="sub">Sessões plenárias, presença, ausências justificadas e votos nominais da Câmara de Maringá, desde 01/01/2026. <span class="tag">API</span> · https://sapl.cmm.pr.gov.br/sessao/pesquisar-sessao</p>
-
+<p class="eq">Origem <b>30616</b> = coletado + revisão <b>30616</b> → <span class="confere">confere</span><br><small>origem (sessões da janela + registros de presença, ausência e voto nas páginas da API já coletadas) = 30616; coletado = 29194; revisão = 1422</small></p>
 <h3>Conferências</h3>
 <table><tr><th>Verificação</th><th>Escopo</th><th>Esperado (fonte)</th><th>Obtido (robô)</th><th>Resultado</th></tr>
-
+<tr><td>erros_em_aberto<br><small>0 item(ns) com erro, 0 pendente(s)</small></td><td>inventário</td><td>0</td><td>0</td><td class="confere">confere</td></tr><tr><td>paginas_x_total_da_api<br><small>registros lidos nas páginas × total_entries que a API deu na descoberta</small></td><td>ausencias</td><td>1</td><td>1</td><td class="confere">confere</td></tr><tr><td>paginas_x_total_da_api<br><small>registros lidos nas páginas × total_entries que a API deu na descoberta</small></td><td>votos</td><td>28688</td><td>28688</td><td class="confere">confere</td></tr>
 </table>
 <h3>Fila de revisão</h3>
-<p class="sub">Nada em revisão.</p>
+<table><tr><th>Motivo</th><th>Tipo</th><th>Itens</th></tr>
+<tr><td>o nome não fecha com nenhum vereador das fontes de despesa da casa</td><td>identidade</td><td>1</td></tr></table>
+
 
 <h2 id="sapl_foz_do_iguacu">SAPL (Interlegis)</h2>
 <p class="sub">Sessões plenárias, presença, ausências justificadas e votos nominais da Câmara de Foz do Iguaçu, desde 01/01/2025. <span class="tag">API</span> · https://sapl.fozdoiguacu.pr.leg.br/sessao/pesquisar-sessao</p>
