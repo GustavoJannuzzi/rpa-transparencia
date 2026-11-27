@@ -14,6 +14,7 @@ export const MOTIVO_FORA: Record<string, string> = {
   na_fila: "O fornecedor do portal já tem adaptador, e a câmara ainda não está na lista de coleta.",
   sem_consulta_diarias: "O portal da câmara não tem a consulta de diárias com o cargo de quem recebeu.",
   sem_adaptador: "O fornecedor do portal ainda não tem adaptador.",
+  em_coleta: "O robô desta casa está pronto e a coleta está em andamento. Os dados entram no site quando ela terminar e for conferida.",
   reserva: "Fonte aberta, na reserva: ainda sem adaptador.",
   sem_fornecedor: "A fonte só publica totais e não diz quem recebeu.",
   nao_publica: "A despesa por deputado não é publicada.",
@@ -26,7 +27,7 @@ export const MOTIVO_FORA: Record<string, string> = {
 };
 
 const BARRADA = new Set(["robots", "robots_cloudflare", "cloudflare", "anti_robo", "captcha"]);
-const SEM_ADAPTADOR = new Set(["na_fila", "sem_adaptador", "reserva", "depois"]);
+const SEM_ADAPTADOR = new Set(["na_fila", "em_coleta", "sem_adaptador", "reserva", "depois"]);
 
 export function classe(situacao: string, motivo: string | null | undefined): Classe {
   if (situacao === "coletada") return "coletada";
@@ -41,7 +42,7 @@ export const ROTULO_CLASSE: Record<Classe, string> = {
   coletada: "Coletada",
   em_revisao: "Em revisão",
   barrada: "Fora: o portal barra o robô",
-  sem_adaptador: "Fora: na fila ou sem adaptador",
+  sem_adaptador: "Fora: em coleta, na fila ou sem adaptador",
   nao_identificado: "Fora: fornecedor não identificado",
   outra: "Fora: outro motivo",
 };

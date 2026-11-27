@@ -252,6 +252,11 @@ class FonteAssembleiaTela(FonteAssembleia, FonteNavegador):
         self.inicio = ent.extra.get("inicio") or self.inicio
         self.endereco = self.endereco or self.inicio
         super().__init__(ent)
+        # a janela de uma casa pode ser menor que a da legislatura (`de`/`ate` em
+        # entidades.toml, com o motivo escrito ali e na Cobertura)
+        self.de = int(ent.extra.get("de", self.de))
+        self.ate = int(ent.extra.get("ate", self.ate))
+        self.sistema.cobre_de, self.sistema.cobre_ate = self.de, self.ate
 
     def recorte(self, html: str, url: str) -> str:
         """O pedaço da tela HTML que vale guardar como original (cada casa diz o seu)."""

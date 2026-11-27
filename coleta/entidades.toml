@@ -638,6 +638,10 @@ modo = "robo"
 inicio = "https://www.al.ba.gov.br/transparencia/verbas-idenizatorias"
 de = 2025
 
+# GO: o mês de cada deputado é uma tela, com ~1.100 notas por mês na casa. Pelo peso
+# no site (2023–2024 somariam ~26 mil notas, ~8 MB) e porque o portal recusa conexão
+# em rajadas, a janela é 2025–2026; 2023–2024 ficam para uma rodada à parte (basta
+# mudar `de`).
 [[assembleia]]
 fonte = "alego"
 casa = "al-go"
@@ -647,6 +651,7 @@ cargo = "deputado estadual"
 sistema = "Portal da Transparência da ALEGO (app AngularJS)"
 modo = "robo"
 inicio = "https://transparencia.al.go.leg.br/gestao-parlamentar/verba-indenizatoria"
+de = 2025
 
 [[assembleia]]
 fonte = "alepe"

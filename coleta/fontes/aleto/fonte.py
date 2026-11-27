@@ -17,10 +17,14 @@ O caminho, visto em 26/11/2026 em `transparencia/verbaIndenizatoria`:
   valor mensal, saldo do mês anterior, telefone, saldo atual, total das despesas e
   valor ressarcido.
 
-A conferência é nota a nota: o saldo de cada linha é o saldo anterior menos o valor
-da nota (começando do "Saldo Atual"); as notas somam o "Total das despesas"; o
-saldo atual é o valor mensal mais o saldo anterior menos o telefone; e o ressarcido
-é o total (se for menor, a casa glosou alguma nota e o PDF não diz qual).
+A conferência (`conferir_pdf`) usa só os números do PDF: as notas somam o "Total das
+despesas"; o saldo atual é o valor mensal mais o saldo anterior menos o telefone; o
+ressarcido é o que coube no saldo (o que passa da cota vai para o mês seguinte, numa
+linha "Saldo de Notas mês anterior" que não é nota nova); e o saldo de cada linha é o
+anterior menos o valor da nota. A planilha da casa tem duas formas (a de 2023 diz
+"CODAP", "Saldo acumulado" e "Gasto no mês"), mostra saldo negativo entre parênteses,
+às vezes deixa o item em branco ou escreve uma casa decimal só. Um mês em que o
+ressarcido é menor sem explicação no PDF vai para a revisão.
 
 O `robots.txt` pede `Crawl-delay: 10`, e o robô espera 10 s entre dois pedidos,
 cliques e downloads incluídos. O PDF é lido e não fica guardado (são ~200 KB cada,
@@ -48,13 +52,36 @@ from ..assembleia_tela import Conferencias, FonteAssembleiaTela, decodificar, ta
 CATEGORIA = "Cota Despesa de Atividade Parlamentar"
 MESES = ["JANEIRO", "FEVEREIRO", "MARCO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"]
 RE_ARQUIVO = re.compile(r"transparencia_ano_(\d{4})_(\d+)_(\d+)\.PDF", re.I)
-RE_DINHEIRO = re.compile(r"^-?[\d.]+,\d{2}$")
+# o saldo que passa da cota vem entre parênteses, como a planilha mostra negativo: "(368,42)";
+# e a planilha às vezes escreve uma casa decimal só ("316,2", 04/2023)
+RE_DINHEIRO = re.compile(r"^(?:-?[\d.]+,\d{1,2}|\([\d.]+,\d{1,2}\))$")
+# pedaço de número: o pdfplumber às vezes parte "45.308,14" em "4" e "5.308,14"
+RE_PEDACO = re.compile(r"^[\d.,()]+$")
 RE_DOC = re.compile(r"^(\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}|\d{3}\.\d{3}\.\d{3}-\d{2}|\d{11}|\d{14})$")
 RE_DATA = re.compile(r"^\d{2}/\d{2}/\d{4}$")
 # o que parece data, mesmo escrita errado ("0107/2025"): marca onde a data estaria
 RE_DATA_SOLTA = re.compile(r"^\d{1,2}/?\d{1,2}/\d{2,4}$")
-QUADRO = {"VALOR MENSAL": "valor_mensal", "SALDO DO MES ANTER": "saldo_anterior", "DESP. COM TELEFONE": "telefone",
-          "SALDO ATUAL": "saldo_atual", "TOTAL DAS DESPESAS": "total_despesas", "VALOR RESSARCIDO": "ressarcido"}
+# "(Total deduzido R$ 20,95)" e "(Total do valor deduzido R$ 126,21)", na observação do combustível
+RE_DEDUZIDO = re.compile(r"DEDUZIDO\s+R\$\s*([\d.]+,\d{2})")
+# os rótulos do quadro do mês, nas duas formas da planilha (a de 2023 diz "CODAP",
+# "Saldo acumulado", "Desp. Fone" e "Gasto no mês")
+QUADRO = [("VALOR MENSAL", "valor_mensal"), ("CODAP", "valor_mensal"), ("SALDO DO MES ANTER", "saldo_anterior"),
+          ("SALDO ACUMULADO", "saldo_anterior"), ("DESP. COM TELEFONE", "telefone"), ("DESP. FONE", "telefone"),
+          ("SALDO ATUAL", "saldo_atual"), ("TOTAL DAS DESPESAS", "total_despesas"), ("GASTO NO MES", "total_despesas"),
+          ("VALOR RESSARCIDO", "ressarcido")]
+# a primeira linha de alguns meses não é nota: é o que passou da cota no mês anterior
+# e entra neste ("Saldo de Notas mês anterior"), já contado no PDF de antes
+TRANSPORTE = "SALDO DE NOTAS"
+
+
+def dinheiro_to(t: str) -> Decimal:
+    """'1.234,56'; '(368,42)' é negativo; '-' é zero (o saldo que acabou)."""
+    t = t.strip()
+    if t == "-":
+        return Decimal(0)
+    if t.startswith("(") and t.endswith(")"):
+        return -dinheiro_br(t[1:-1])
+    return dinheiro_br(t)
 
 
 def palavras_do_pdf(caminho: Path) -> list[dict]:
@@ -77,7 +104,19 @@ def _linhas(palavras: list[dict]) -> list[list[dict]]:
             linhas[-1].append(w)
         else:
             linhas.append([w])
-    return [sorted(l, key=lambda w: w["x0"]) for l in linhas]
+    return [_juntar_pedacos(sorted(l, key=lambda w: w["x0"])) for l in linhas]
+
+
+def _juntar_pedacos(linha: list[dict]) -> list[dict]:
+    """Junta os pedaços de um número que o PDF separou ("4" + "5.308,14"): colados, sem espaço."""
+    out: list[dict] = []
+    for w in linha:
+        a = out[-1] if out else None
+        if a is not None and RE_PEDACO.match(a["t"]) and RE_PEDACO.match(w["t"]) and w["x0"] - a["x1"] <= 1.5:
+            out[-1] = {**a, "t": a["t"] + w["t"], "x1": w["x1"]}
+        else:
+            out.append(w)
+    return out
 
 
 def ler_pdf(palavras: list[dict]) -> dict:
@@ -96,9 +135,13 @@ def ler_pdf(palavras: list[dict]) -> dict:
             raise PortalMudou("o PDF da ALETO não tem o cabeçalho 'Item ... Valor Saldo' nem linhas de nota com valor e saldo")
         x_saldo = min(f[1]["x0"] for f in pares) - 8
         x_valor = min(f[0]["x0"] for f in pares) - 30
+    # o quadro do mês fica à direita, abaixo da coluna CNPJ; a observação do combustível
+    # divide a mesma altura com ele, à esquerda ("Obs.: ... Saldo Atual (=) 63.740,56")
+    x_quadro = x_saldo - 260
     deputado = processo = mes = None
     notas: list[dict] = []
     quadro: dict[str, Decimal] = {}
+    deduzido = Decimal(0)
     saldos_soltos: list[Decimal] = []  # saldo numa linha sem nota (a primeira, o saldo de abertura)
     for l in linhas:
         textos = [w["t"] for w in l]
@@ -115,62 +158,121 @@ def ler_pdf(palavras: list[dict]) -> dict:
             if mm and "DESPESAS" in sa:
                 mes = MESES.index(mm) + 1
                 continue
-        rotulo = next((v for k, v in QUADRO.items() if sa.startswith(k)), None)
+        deduzido += sum((dinheiro_br(x) for x in RE_DEDUZIDO.findall(sa)), Decimal(0))
+        rotulo = None
+        for i, w in enumerate(l):
+            if w["x0"] < x_quadro:
+                continue
+            resto_sa = sem_acento(" ".join(textos[i:])).upper()
+            rotulo = next((v for k, v in QUADRO if resto_sa.startswith(k)), None)
+            if rotulo:
+                break
         if rotulo:
-            vals = [w for w in l if w["x0"] >= x_saldo and (RE_DINHEIRO.match(w["t"]) or w["t"] == "-")] or \
-                [w for w in l if RE_DINHEIRO.match(w["t"]) or w["t"] == "-"][-1:]
-            quadro[rotulo] = Decimal(0) if not vals or vals[-1]["t"] == "-" else dinheiro_br(vals[-1]["t"])
+            parte = l[i:]
+            vals = [w for w in parte if w["x0"] >= x_saldo and (RE_DINHEIRO.match(w["t"]) or w["t"] == "-")] or \
+                [w for w in parte if RE_DINHEIRO.match(w["t"]) or w["t"] == "-"][-1:]
+            if vals:
+                quadro[rotulo] = dinheiro_to(vals[-1]["t"])
             continue
-        saldo_w = [w for w in l if w["x0"] >= x_saldo and RE_DINHEIRO.match(w["t"])]
+        saldo_w = [w for w in l if w["x0"] >= x_saldo and (RE_DINHEIRO.match(w["t"]) or w["t"] == "-")]
         valor_w = [w for w in l if x_valor <= w["x0"] < x_saldo and RE_DINHEIRO.match(w["t"])]
-        # a linha de nota começa pelo número do item e tem valor na coluna Valor; a data
-        # pode vir escrita errado na própria planilha ("0107/2025")
-        if not (textos[0].isdigit() and valor_w and len(textos) >= 4):
+        # a linha de nota tem valor na coluna Valor e começa pelo número do item; a planilha
+        # às vezes deixa o item em branco ("NFS-e 59 24/11/2025 ..."), e aí quem marca a nota
+        # é a data logo depois do tipo e do número. A data pode vir escrita errado na própria
+        # planilha ("0107/2025").
+        tem_item = textos[0].isdigit()
+        i0 = 1 if tem_item else 0
+        i_data = next((i for i, t in enumerate(textos) if i >= i0 + 1 and RE_DATA_SOLTA.match(t)), None)
+        sem_item_com_data = not tem_item and i_data is not None and i_data <= 3
+        if not (valor_w and len(textos) >= 4 and (tem_item or sem_item_com_data)):
             if saldo_w and l is not cab:
-                saldos_soltos.extend(dinheiro_br(w["t"]) for w in saldo_w)
+                saldos_soltos.extend(dinheiro_to(w["t"]) for w in saldo_w)
             continue
-        i_data = next((i for i, t in enumerate(textos) if i >= 2 and RE_DATA_SOLTA.match(t)), None)
-        corte = i_data if i_data is not None else 3
+        item = int(textos[0]) if tem_item else None
+        if TRANSPORTE in sa:
+            notas.append({"item": item, "transporte": True, "valor_texto": valor_w[-1]["t"],
+                          "saldo_texto": saldo_w[-1]["t"] if saldo_w else None, "pagina": l[0]["p"]})
+            continue
+        corte = i_data if i_data is not None else i0 + 2
         resto = [w for w in l[corte + (1 if i_data is not None else 0):] if w not in valor_w and w not in saldo_w]
         doc = next((w["t"] for w in resto if RE_DOC.match(w["t"])), None)
         emitente = " ".join(w["t"] for w in resto if w["t"] != doc)
-        notas.append({"item": int(textos[0]), "tipo": textos[1], "numero": " ".join(textos[2:corte]) or None,
+        notas.append({"item": item, "tipo": textos[i0], "numero": " ".join(textos[i0 + 1:corte]) or None,
                       "data": textos[i_data] if i_data is not None else None, "emitente": emitente,
                       "documento": doc, "valor_texto": valor_w[-1]["t"], "saldo_texto": saldo_w[-1]["t"] if saldo_w else None,
-                      "pagina": l[0]["p"]})
-    return {"deputado": deputado, "processo": processo, "mes": mes, "notas": notas, "quadro": quadro, "saldos_soltos": saldos_soltos}
+                      "pagina": l[0]["p"], "linha": len(notas) + 1})
+    return {"deputado": deputado, "processo": processo, "mes": mes, "notas": notas, "quadro": quadro, "deduzido": deduzido,
+            "saldos_soltos": saldos_soltos}
 
 
-def conferir_pdf(pdf: dict) -> tuple[bool, list[str]]:
-    """As contas do próprio PDF. Devolve (fecha, o que não fecha)."""
+def rotulo_nota(n: dict) -> str:
+    return f"nota {n['item']}" if n.get("item") is not None else f"nota sem item na linha {n.get('linha')}"
+
+
+def conferir_pdf(pdf: dict) -> tuple[bool, list[str], list[str]]:
+    """As contas do próprio PDF. Devolve (fecha, o que não fecha, observações).
+
+    - O saldo de cada linha é o anterior menos o valor da linha, a partir do "Saldo
+      Atual" (o que o deputado tinha para gastar no mês). Quando o quadro não traz o
+      saldo atual (a cota proporcional de quem não exerceu o mês inteiro), a abertura é
+      a da primeira linha, e o total das notas confere o valor dela.
+    - As notas somam o "Total das despesas". O transporte do mês anterior entra na
+      corrente do saldo, mas não no total (já foi contado no PDF de antes).
+    - O ressarcido é o que coube no saldo, menos o que a observação diz que foi deduzido
+      do combustível: o que passa da cota vai para o mês seguinte, como transporte.
+
+    Quando as notas somam o total e o ressarcido fecha, um saldo de linha que não bate é
+    da planilha (linhas reordenadas depois do cálculo, uma célula com a fórmula errada):
+    fica como observação. Se o total ou o ressarcido não fecham, ele é um dos motivos.
+    """
     q = pdf["quadro"]
     problemas = []
-    faltam = {"saldo_atual", "total_despesas", "ressarcido"} - set(q)
+    faltam = {"total_despesas", "ressarcido"} - set(q)
     if faltam:
-        return False, [f"o quadro do mês não tem {sorted(faltam)}"]
-    soma = Decimal(0)
-    corrente = q["saldo_atual"]
+        return False, [f"o quadro do mês não tem {sorted(faltam)}"], []
+    notas = pdf["notas"]
+    try:
+        valores = [dinheiro_to(n["valor_texto"]) for n in notas]
+    except ValorIlegivel as e:
+        return False, [f"nota sem valor legível ({e})"], []
+    abertura = q.get("saldo_atual")
+    if abertura is None:
+        if not notas or notas[0]["saldo_texto"] is None:
+            return False, ["o quadro do mês não tem o saldo atual, e a primeira linha não tem saldo"], []
+        abertura = dinheiro_to(notas[0]["saldo_texto"]) + valores[0]
+    soma = transporte = Decimal(0)
+    corrente = abertura
+    saldos: list[str] = []
     # a numeração dos itens às vezes pula (de 12 para 14 em 07/2025, Claudia Lelis): quem
     # prova que nenhuma linha se perdeu é a corrente do saldo, linha a linha, e o total
-    for n in pdf["notas"]:
-        try:
-            v = dinheiro_br(n["valor_texto"])
-        except ValorIlegivel:
-            problemas.append(f"nota {n['item']} sem valor legível")
-            continue
-        soma += v
+    for n, v in zip(notas, valores, strict=True):
         corrente -= v
-        if n["saldo_texto"] is None or dinheiro_br(n["saldo_texto"]) != corrente:
-            problemas.append(f"nota {n['item']}: saldo na linha {n['saldo_texto']} × saldo calculado {corrente}")
-    if soma != q["total_despesas"]:
-        problemas.append(f"notas somam {soma} × total das despesas {q['total_despesas']}")
-    if {"valor_mensal", "saldo_anterior"} <= set(q):
+        if n.get("transporte"):
+            transporte += v
+        else:
+            soma += v
+        if n["saldo_texto"] is None or dinheiro_to(n["saldo_texto"]) != corrente:
+            saldos.append(f"{rotulo_nota(n)}: saldo na linha {n['saldo_texto']} × saldo calculado {corrente}")
+    # o "Total das despesas" traz o transporte em alguns meses (03/2024) e não em outros (06/2023)
+    if q["total_despesas"] not in (soma, soma + transporte):
+        problemas.append(f"notas somam {soma} (com o transporte, {soma + transporte}) × total das despesas {q['total_despesas']}")
+    if "saldo_atual" in q and {"valor_mensal", "saldo_anterior"} <= set(q):
         esperado = q["valor_mensal"] + q["saldo_anterior"] - q.get("telefone", Decimal(0))
         if esperado != q["saldo_atual"]:
             problemas.append(f"valor mensal + saldo anterior − telefone = {esperado} × saldo atual {q['saldo_atual']}")
-    if q["ressarcido"] != q["total_despesas"]:
-        problemas.append(f"valor ressarcido {q['ressarcido']} × total das despesas {q['total_despesas']} (glosa sem nota indicada)")
-    return not problemas, problemas
+    # a observação do combustível ("Total deduzido R$ 254,31") é texto da planilha que se
+    # repete de um mês para outro: a dedução às vezes sai depois do teto (01/2023: teto
+    # 39.503,61 − 20,95), às vezes antes (03/2024: notas − 254,31, ainda acima do teto) e
+    # muitas vezes não sai (o ressarcido é o total). As três contas usam só números da casa.
+    ded = pdf.get("deduzido", Decimal(0))
+    apresentado = soma + transporte
+    if q["ressarcido"] not in (min(abertura, apresentado), min(abertura, apresentado) - ded, min(abertura, apresentado - ded)):
+        problemas.append(f"valor ressarcido {q['ressarcido']} × o que coube no saldo "
+                         f"(saldo {abertura}, notas {soma}, transporte {transporte}, deduzido {ded})")
+    if problemas:
+        return False, problemas + saldos, []
+    return True, [], ([f"a coluna de saldo da planilha não fecha em {len(saldos)} linha(s), e as notas somam o total: "
+                       + "; ".join(saldos[:3])] if saldos else [])
 
 
 class Aleto(FonteAssembleiaTela):
@@ -181,9 +283,6 @@ class Aleto(FonteAssembleiaTela):
 
     def __init__(self, ent) -> None:
         super().__init__(ent)
-        self.de = int(ent.extra.get("de", self.de))
-        self.ate = int(ent.extra.get("ate", self.ate))
-        self.sistema.cobre_de, self.sistema.cobre_ate = self.de, self.ate
         self._ano_na_tela: int | None = None
 
     def ao_renovar(self) -> None:
@@ -300,20 +399,23 @@ class Aleto(FonteAssembleiaTela):
                     nomes_pdf.add(pdf["deputado"])
                 if pdf["mes"] and pdf["mes"] != mes:
                     raise PortalMudou(f"o PDF de {mes:02d}/{ano} diz ser do mês {pdf['mes']}")
-                fecha, problemas = conferir_pdf(pdf)
+                fecha, problemas, observacoes = conferir_pdf(pdf)
                 escopo = f"{ref}-{ano}-{mes:02d}-{arq_id}"
                 q = pdf["quadro"]
                 soma = Decimal(0)
                 lidas = 0
-                for n in pdf["notas"]:
+                notas = [n for n in pdf["notas"] if not n.get("transporte")]
+                transporte = [n["valor_texto"] for n in pdf["notas"] if n.get("transporte")]
+                for n in notas:
                     n_notas += 1
-                    proc = self.procedencia(url_pdf, h_pdf, f"página {n['pagina']}, item {n['item']}")
-                    chave = chave_hash(self.id, ano, mes, arq_id, n["item"], n["numero"], n["documento"], n["valor_texto"])
+                    proc = self.procedencia(url_pdf, h_pdf, f"página {n['pagina']}, " + (f"item {n['item']}" if n["item"] is not None else f"linha {n['linha']} (sem item)"))
+                    chave = chave_hash(self.id, ano, mes, arq_id, n["item"] if n["item"] is not None else f"linha {n['linha']}",
+                                       n["numero"], n["documento"], n["valor_texto"])
                     try:
-                        valor = dinheiro_br(n["valor_texto"])
+                        valor = dinheiro_to(n["valor_texto"])
                     except ValorIlegivel as e:
                         res.pendencias.append(Pendencia(fonte=self.id, chave=chave, motivo="valor ilegível",
-                                                        texto_original=f"{nome_select} {mes:02d}/{ano} item {n['item']}: {e}", procedencia=proc))
+                                                        texto_original=f"{nome_select} {mes:02d}/{ano} {rotulo_nota(n)}: {e}", procedencia=proc))
                         continue
                     quando: date | None = None
                     if n["data"] and RE_DATA.match(n["data"]):
@@ -329,10 +431,20 @@ class Aleto(FonteAssembleiaTela):
                         valor=valor, proc=proc, documento_url=url_pdf,
                         extra={"tipo_documento": n["tipo"], "numero": n["numero"], "data_na_fonte": n["data"] if quando is None else None, "item_no_pdf": n["item"], "saldo_na_linha": n["saldo_texto"], "processo": pdf["processo"],
                                "pdf_sha256": meta["pdf_sha256"], "escopos_conferencia": [escopo]}))
-                conf.conferir(escopo, q.get("total_despesas"), soma, proc_mes, f"{nome_select} {mes:02d}/{ano} ({ref_mes})",
-                              lidas_todas=lidas == len(pdf["notas"]), outra=(fecha, "; ".join(problemas)[:400]))
+                total = q.get("total_despesas")
+                vindo = sum((dinheiro_to(x) for x in transporte), Decimal(0))
+                if total is not None and vindo and total == soma + vindo:
+                    total -= vindo  # o total deste mês trouxe o transporte junto: as notas daqui são o resto
+                conf.conferir(escopo, total, soma, proc_mes, f"{nome_select} {mes:02d}/{ano} ({ref_mes})",
+                              lidas_todas=lidas == len(notas), outra=(fecha, "; ".join(problemas)[:400]))
+                quadro: dict[str, object] = {k: str(v) for k, v in q.items()}
+                quadro["deduzido_na_observacao"] = str(pdf["deduzido"])
+                if transporte:
+                    quadro["transporte_do_mes_anterior"] = transporte
+                if observacoes:
+                    quadro["observacao"] = observacoes
                 res.totais.append(TotalOficial(fonte=self.id, escopo=escopo, metrica="quadro_do_mes",
-                                               valor=str(q.get("ressarcido")), texto_original=json.dumps({k: str(v) for k, v in q.items()}),
+                                               valor=str(q.get("ressarcido")), texto_original=json.dumps(quadro, ensure_ascii=False),
                                                procedencia=self.procedencia(url_pdf, h_pdf, "quadro do mês")))
         proc_item = primeira or self.procedencia(self.inicio, "")
         conf.fechar(res, n_notas, proc_item, f"{len(p['meses'])} meses")
