@@ -82,6 +82,27 @@ class EntidadeEquiplano:
 
 
 @dataclass(frozen=True)
+class EntidadePronim:
+    """Uma câmara no Govbr Pronim (`webapp1-<cidade>.cidade360.cloud/pronimtb_cm`).
+    `base` é a pasta da aplicação; a consulta de diárias é `index.asp?acao=3&item=15`."""
+
+    fonte: str
+    casa: str
+    municipio: str
+    ibge: int
+    regiao: str
+    base: str
+    de: int
+    ate: int
+    fora: str | None = None
+    detalhe: str | None = None
+
+    @property
+    def tela(self) -> str:
+        return f"{self.base}/index.asp?acao=3&item=15"
+
+
+@dataclass(frozen=True)
 class EntidadeAssembleia:
     fonte: str
     casa: str
@@ -163,15 +184,29 @@ def equiplano(todas: bool = False) -> tuple[EntidadeEquiplano, ...]:
     return tuple(out)
 
 
+@cache
+def pronim(todas: bool = False) -> tuple[EntidadePronim, ...]:
+    """As câmaras do Govbr Pronim que a coleta cobre; com `todas`, também as que ficaram de fora."""
+    de, ate = periodo()
+    out = []
+    for e in _bruto().get("pronim", []):
+        ent = EntidadePronim(
+            fonte=e["fonte"], casa=e["casa"], municipio=e["municipio"], ibge=int(e["ibge"]), regiao=e["regiao"],
+            base=e["base"].rstrip("/"), de=int(e.get("de", de)), ate=int(e.get("ate", ate)), fora=e.get("fora"), detalhe=e.get("detalhe"))
+        if todas or not ent.fora:
+            out.append(ent)
+    return tuple(out)
+
+
 def municipais() -> tuple:
     """Toda câmara municipal coletada, de qualquer fornecedor (o TSE dá o partido de todas)."""
-    return (*elotech(), *betha(), *equiplano())
+    return (*elotech(), *betha(), *equiplano(), *pronim())
 
 
 def de_fora() -> dict[int, tuple[str, str | None, str]]:
     """Câmaras configuradas que ficaram de fora, pelo IBGE: (motivo, detalhe, fornecedor)."""
     out: dict[int, tuple[str, str | None, str]] = {}
-    for forn, lista in (("betha", betha(todas=True)), ("equiplano", equiplano(todas=True))):
+    for forn, lista in (("betha", betha(todas=True)), ("equiplano", equiplano(todas=True)), ("pronim", pronim(todas=True))):
         out |= {e.ibge: (e.fora, e.detalhe, forn) for e in lista if e.fora}
     return out
 

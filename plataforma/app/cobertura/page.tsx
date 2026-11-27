@@ -22,7 +22,7 @@ const ADAPTADOR: Record<string, string> = {
   elotech: "adaptador pronto (API)",
   betha: "adaptador pronto (navegador)",
   equiplano: "adaptador pronto (navegador)",
-  pronim: "próximo adaptador (navegador)",
+  pronim: "adaptador pronto (navegador)",
   ipm: "fora: robots.txt e Cloudflare",
   inga: "fora: robots.txt",
 };
@@ -31,6 +31,7 @@ const FORNECEDOR_DO_SISTEMA: Record<string, string> = {
   elotech: "Elotech",
   betha: "Betha Sistemas",
   equiplano: "Equiplano",
+  pronim: "Govbr",
 };
 const NOME_FORN: Record<string, string> = {
   elotech: "Elotech",

@@ -71,10 +71,14 @@ def _tokens(nome: str) -> set[str]:
 
 
 def eh_a_camara(texto_opcao: str, municipio: str) -> bool:
-    """A opção do select é a Câmara deste município ("Câmara Municipal de Piên",
-    "Santo Antônio Sudoeste Camara Municipal", "Camara Municipal de Rio Bonito do Iguacu")."""
+    """A opção é a Câmara deste município: "Câmara Municipal de Piên", "Santo Antônio
+    Sudoeste Camara Municipal", "Camara Municipal de Rio Bonito do Iguacu", "CM CIDADE
+    GAUCHA", "Câmara Municipal de Itapejara DOeste" (o apóstrofo sumiu e colou as palavras)."""
     t = _tokens(texto_opcao)
-    return ("CAMARA" in t or "LEGISLATIVO" in t) and _tokens(municipio) <= t
+    if not ({"CAMARA", "LEGISLATIVO", "CM"} & t):
+        return False
+    junto = normalizar_nome(municipio).replace(" ", "")
+    return _tokens(municipio) <= t or junto in normalizar_nome(texto_opcao).replace(" ", "")
 
 
 def _data(texto: str | None) -> date | None:

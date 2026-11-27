@@ -67,3 +67,6 @@ fonte,origem,papel,observacao
 equiplano,AGENTES POLÍTICOS,vereador,natureza 3.3.90.14.14.03 do empenho
 equiplano,SERVIDORES EFETIVOS,servidor,natureza 3.3.90.14.14.01 do empenho
 equiplano,SERVIDORES COMISSIONADOS,servidor,natureza 3.3.90.14.14.02 do empenho
+*,# Govbr Pronim: a tabela por credor não traz cargo; o robô consulta de novo filtrando o desdobramento agentes políticos (3.3.90.14.14.03). Quem está nela é vereador; o resto é servidor ou colaborador.,,
+pronim,AGENTES POLÍTICOS,vereador,desdobramento 3.3.90.14.14.03 da consulta
+pronim,OUTROS DESDOBRAMENTOS DE DIÁRIAS,servidor,fora do desdobramento agentes políticos

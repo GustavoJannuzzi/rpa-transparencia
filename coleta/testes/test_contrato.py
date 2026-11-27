@@ -144,6 +144,34 @@ async def test_equiplano_formulario_entidade_e_exercicios():
         await pw.stop()
 
 
+async def test_pronim_consulta_de_diarias_sem_captcha():
+    """A consulta de diárias abre sem reCAPTCHA, o ano tem a chave interna, a entidade é a
+    Câmara e a unidade gestora da Câmara está na lista. Só lê o formulário: não clica em Gerar."""
+    from coleta import entidades
+    from coleta.fontes.equiplano.fonte import eh_a_camara
+    from coleta.nucleo.texto import normalizar_nome
+
+    e = next(x for x in entidades.pronim() if x.fonte == "pronim_pato_branco")
+    pw, nav, p = await _pagina(config.UA_ROBO)
+    try:
+        await p.goto(e.tela, wait_until="networkidle")
+        assert await p.evaluate("typeof grecaptcha === 'undefined'")
+        anos = dict(await p.eval_on_selector("select[name=cmbAno]", "s => Array.from(s.options).map(o => [o.text.trim(), o.value])"))
+        assert "2025" in anos and "|" in anos["2025"]
+        await p.select_option("select[name=cmbAno]", anos["2025"])
+        await p.wait_for_load_state("networkidle")
+        await p.wait_for_timeout(1500)
+        entidade = await p.eval_on_selector("select[name=cmbUnidadeCP]", "s => s.options[s.selectedIndex].text")
+        assert eh_a_camara(entidade, e.municipio)
+        unidades = await p.eval_on_selector("select[name=cmbUnidadeGestora]", "s => Array.from(s.options).map(o => o.text)")
+        assert any("CAMARA" in normalizar_nome(u) for u in unidades)
+        for sel in ("input[name=txtDataInicial]", "select[name=cmbDiariasPassagens]", "input[type=button][value=Gerar]"):
+            assert await p.locator(sel).count() == 1, sel
+    finally:
+        await nav.close()
+        await pw.stop()
+
+
 # ---------------------------------------------------------------- casas novas (um teste por fornecedor)
 def _cliente(**kw) -> httpx.Client:
     return httpx.Client(headers=H, timeout=httpx.Timeout(60, connect=30), **kw)

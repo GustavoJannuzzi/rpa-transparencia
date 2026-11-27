@@ -2,7 +2,7 @@
 
 Fonte com sistema próprio (Câmara dos Deputados, cada assembleia) é uma pasta aqui
 e uma linha nesta lista. Casa nova num fornecedor que já tem adaptador (outra
-câmara no Elotech, no Betha ou no Equiplano) não muda código: é um bloco novo em `entidades.toml`.
+câmara no Elotech, no Betha, no Equiplano ou no Pronim) não muda código: é um bloco novo em `entidades.toml`.
 """
 
 from __future__ import annotations
@@ -21,6 +21,7 @@ from .cmc_legado.fonte import CmcLegado
 from .cmc_prefeitura.fonte import CmcPrefeitura
 from .elotech.fonte import ElotechAPI
 from .equiplano.fonte import Equiplano
+from .pronim.fonte import Pronim
 from .sapl.fonte import Sapl
 from .tse.fonte import Tse
 
@@ -35,6 +36,7 @@ def _construir() -> list[Fonte]:
     for b in entidades.betha():
         out.append(CmcBetha() if b.fonte == "cmc_betha" else BethaCloud(b))
     out += [Equiplano(e) for e in entidades.equiplano()]
+    out += [Pronim(e) for e in entidades.pronim()]
     # atividade legislativa (sessão, presença, voto): não é despesa
     out += [CmcFrequencia(), *(Sapl(e) for e in entidades.sapl())]
     for fid, a in entidades.assembleias().items():

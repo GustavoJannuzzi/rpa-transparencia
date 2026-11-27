@@ -53,6 +53,30 @@ def eh_equiplano(fonte: str) -> bool:
     return fonte.startswith("equiplano_")
 
 
+def eh_pronim(fonte: str) -> bool:
+    return fonte.startswith("pronim_")
+
+
+def _pronim_divergente(con, rv: Revisor) -> frozenset[tuple[str, int]]:
+    """Pronim: a tela não publica total. A conferência é por dois caminhos dela mesma:
+    a consulta do ano inteiro e a soma das consultas mês a mês, credor a credor."""
+    out = set()
+    for r in con.execute("""SELECT fonte, escopo, valor, texto_original FROM totais_oficiais
+                            WHERE fonte LIKE 'pronim_%' AND metrica='ano_inteiro_x_mes_a_mes'"""):
+        # o detalhe vai para a página: valor solto, sem "R$" (todo R$ na plataforma tem ficha de procedência)
+        detalhe = (r["texto_original"] or "").replace("R$ ", "")
+        rv.conferencia(r["fonte"], "ano_inteiro_x_mes_a_mes", r["escopo"], "os mesmos credores e valores", detalhe,
+                       "confere" if r["valor"] == "confere" else "diverge",
+                       "dois caminhos independentes de consulta na tela, que não publica total")
+        if r["valor"] != "confere":
+            ano = int(r["escopo"].split("-")[1])
+            out.add((r["fonte"], ano))
+            rv.revisao(r["fonte"], "consulta", r["escopo"],
+                       f"{ano}: a consulta do ano inteiro e a soma das consultas mês a mês não dão os mesmos credores e valores "
+                       f"({detalhe})")
+    return frozenset(out)
+
+
 def _totais_do_relatorio(con, rv: Revisor) -> frozenset[tuple[str, int]]:
     """Equiplano: a soma dos empenhos líquidos de cada ano tem de dar o total que o
     próprio relatório imprime no rodapé. Devolve (fonte, ano) que não deram."""
@@ -73,7 +97,7 @@ def _totais_do_relatorio(con, rv: Revisor) -> frozenset[tuple[str, int]]:
         if not fecha:
             divergentes.add((r["fonte"], ano))
             rv.revisao(r["fonte"], "consulta", r["escopo"],
-                       f"{ano}: a soma dos empenhos lidos (R$ {obtido}) não dá o total do relatório (R$ {esperado})",
+                       f"{ano}: a soma dos empenhos lidos não dá o total que o relatório imprime no rodapé",
                        {"total_do_relatorio": str(esperado), "soma_lida": str(obtido)})
     return frozenset(divergentes)
 
@@ -469,7 +493,7 @@ def situacoes(con: sqlite3.Connection, rv: Revisor) -> None:
     prefeitura_fixo = frozenset(prefeitura_divergente)
     estaduais = _divergencias_estaduais(con, rv)
     mistas = _consultas_com_executivo(con, rv)
-    relatorio_divergente = _totais_do_relatorio(con, rv)
+    relatorio_divergente = _totais_do_relatorio(con, rv) | _pronim_divergente(con, rv)
     lote = []
     cur = con.execute("""SELECT chave, fonte, tipo, ref_parlamentar, beneficiario_tipo, cargo_original, categoria_original,
                                 valor, ano, competencia, fornecedor_nome, fornecedor_doc, granularidade, extra FROM despesas""")
@@ -588,6 +612,16 @@ def _situacao(d, ids, divergentes, legado, rv: Revisor, prefeitura_divergente: f
                 motivos.append(f"devolvido R$ {extra['devolvido']}")
         elif eh_betha(fonte):
             motivos.append("valor previsto da diária (como a fonte rotula)")
+        elif eh_pronim(fonte):
+            if (fonte, int(d["ano"])) in relatorio_divergente:
+                rev("a consulta do ano inteiro e a soma das consultas mês a mês não batem; sem total publicado, não dá para "
+                    "saber qual está completa", escopo=True)
+            for nota in extra.get("notas_identidade") or []:
+                rev(nota + "; o nome foi descartado na leitura")
+            if extra.get("anulado_inteiro") and valor == 0 and situacao == OK:
+                situacao = FORA_DA_SOMA
+                motivos.append("anulado inteiro na fonte (anulado = empenhado)")
+            motivos.append("soma das diárias do credor no mês, como a tela mostra")
         elif eh_equiplano(fonte):
             if (fonte, int(d["ano"])) in relatorio_divergente:
                 rev("a soma dos empenhos do ano não dá o total que o relatório imprime", escopo=True)
@@ -796,6 +830,8 @@ def equacoes(con, rv: Revisor) -> None:
             return int(n("SELECT SUM(CAST(valor AS INTEGER)) FROM totais_oficiais WHERE fonte=? AND metrica='registros' AND escopo LIKE 'diarias-%'", fonte)), "contador 'Registros encontrados' da tela"
         if eh_equiplano(fonte):
             return int(n("SELECT SUM(CAST(valor AS INTEGER)) FROM totais_oficiais WHERE fonte=? AND metrica='registros' AND escopo LIKE 'diarias-%'", fonte)), "blocos 'Empenho' no relatório de cada ano"
+        if eh_pronim(fonte):
+            return int(n("SELECT SUM(CAST(valor AS INTEGER)) FROM totais_oficiais WHERE fonte=? AND metrica='registros' AND escopo LIKE 'diarias-%'", fonte)), "linhas credor × mês nas consultas mês a mês da tela"
         if fonte == "cmc_legado":
             return int(n("SELECT SUM(CAST(valor AS INTEGER)) FROM totais_oficiais WHERE fonte=? AND metrica='linhas_lidas'", fonte)), "linhas de diária nas tabelas dos PDFs"
         if fonte == "cmc_prefeitura":

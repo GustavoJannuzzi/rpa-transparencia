@@ -7,6 +7,14 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ### Adicionado
 
+- **Govbr Pronim em 6 câmaras do PR**: robô de navegador no ASP clássico (formulário
+  único, ano com chave interna, entidade e desdobramentos por AJAX, "Gerar"). A tela
+  mostra o CPF sem máscara: o robô lê o documento só na memória (para ligar a mesma
+  pessoa entre as consultas) e mascara a página antes de gravar qualquer coisa,
+  inclusive o original; um teste prova isso contra um portal falso. A tela soma por
+  credor no período: cada linha publicada é um agregado (credor × mês), conferido
+  contra a consulta do ano inteiro. Quem é vereador sai do desdobramento "agentes
+  políticos"; a unidade gestora é a da Câmara, não a consolidada.
 - **Equiplano em 10 câmaras do PR**: robô de tela no formulário "Empenhos de Diárias
   Concedidas" (cascata por AJAX, recarga no exercício, período digitado com máscara,
   download por botão) e leitor do relatório impresso que vem como CSV. A soma dos

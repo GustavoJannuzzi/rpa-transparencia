@@ -436,6 +436,62 @@ host = "https://teixeirasoarespr.equiplano.com.br:7004"
 entidade = 405
 
 # ---------------------------------------------------------------------------
+# Govbr Pronim (webapp1-<cidade>.cidade360.cloud): robô de navegador, ASP clássico.
+# `base` é a pasta da aplicação da Câmara (pronimtb_cm; em Itapejara d'Oeste a
+# Câmara está em pronimtb). A tela mostra o CPF sem máscara: o robô mascara na
+# memória antes de gravar qualquer coisa. Levantamento de 26/11/2026: 14 câmaras
+# do PR no Pronim; estas são a lista inicial (Sudoeste e Noroeste).
+# ---------------------------------------------------------------------------
+
+[[pronim]]
+fonte = "pronim_pato_branco"
+casa = "cm-pato-branco"
+municipio = "Pato Branco"
+ibge = 4118501
+regiao = "Sudoeste"
+base = "https://webapp1-patobranco.cidade360.cloud/pronimtb_cm"
+
+[[pronim]]
+fonte = "pronim_chopinzinho"
+casa = "cm-chopinzinho"
+municipio = "Chopinzinho"
+ibge = 4105409
+regiao = "Sudoeste"
+base = "https://webapp1-chopinzinho.cidade360.cloud/pronimtb_cm"
+
+[[pronim]]
+fonte = "pronim_salto_do_lontra"
+casa = "cm-salto-do-lontra"
+municipio = "Salto do Lontra"
+ibge = 4123006
+regiao = "Sudoeste"
+base = "https://webapp1-saltodolontra.cidade360.cloud/pronimtb_cm"
+
+[[pronim]]
+fonte = "pronim_itapejara_d_oeste"
+casa = "cm-itapejara-d-oeste"
+municipio = "Itapejara d'Oeste"
+ibge = 4111209
+regiao = "Sudoeste"
+base = "https://webapp1-itapejaradoeste.cidade360.cloud/pronimtb"
+
+[[pronim]]
+fonte = "pronim_perola"
+casa = "cm-perola"
+municipio = "Pérola"
+ibge = 4118907
+regiao = "Noroeste"
+base = "https://webapp1-perola.cidade360.cloud/pronimtb_cm"
+
+[[pronim]]
+fonte = "pronim_cidade_gaucha"
+casa = "cm-cidade-gaucha"
+municipio = "Cidade Gaúcha"
+ibge = 4105607
+regiao = "Noroeste"
+base = "https://webapp1-cidadegaucha.cidade360.cloud/pronimtb_cm"
+
+# ---------------------------------------------------------------------------
 # Assembleias: cada uma é o seu próprio sistema, então cada uma tem o seu
 # adaptador. O bloco diz onde está o dado e como a casa se chama.
 # ---------------------------------------------------------------------------
