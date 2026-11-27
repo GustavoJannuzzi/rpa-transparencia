@@ -115,18 +115,21 @@ OpcSessao = typer.Option(..., "--sessao", help="O nome de quem importa, para a t
 
 @app.command()
 def importar(de: Path = OpcDe, fontes: list[str] = OpcFontes, sessao: str = OpcSessao,
-             aceitar_pendentes: bool = typer.Option(False, help="Importa mesmo com itens pendentes ou com erro na origem.")):
+             aceitar_pendentes: bool = typer.Option(False, help="Importa mesmo com itens pendentes ou com erro na origem."),
+             aceitar_perda_tse: bool = typer.Option(False, help="Importa o tse mesmo que a origem não tenha algum município e "
+                                                                "eleição que o destino tem (as candidaturas deles somem).")):
     """Leva as linhas de algumas fontes de outro banco para este (o de RPA_DADOS), numa transação só."""
     from .nucleo.importar import ImportacaoRecusada, importar as _importar
 
     ids = [x.strip() for f in fontes for x in f.split(",") if x.strip()]
     try:
-        r = _importar(de, ids, sessao, aceitar_pendentes=aceitar_pendentes)
+        r = _importar(de, ids, sessao, aceitar_pendentes=aceitar_pendentes, aceitar_perda_tse=aceitar_perda_tse)
     except ImportacaoRecusada as e:
         eco(f"importar parou sem mexer nas linhas do destino: {e}")
         raise typer.Exit(1) from e
     for linha in r.linhas():
         eco(linha)
+    eco(f"a trava {r.destino / 'EM-USO.txt'} continua até o merge do PR: apague-a depois (conferir, publicar, PR e merge)")
 
 
 @app.command()

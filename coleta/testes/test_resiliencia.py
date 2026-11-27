@@ -159,3 +159,29 @@ async def test_api_com_503_e_timeout_da_o_mesmo_resultado(dados_tmp, tmp_path, m
     assert placar.ok == 4 and placar.erro == 0 and placar.tentativas_extras == 3
     assert foto(con, "cmc_elotech") == limpo
     con.close()
+
+
+async def test_contexto_novo_a_cada_item_da_o_mesmo_resultado(limpa, tmp_path, monkeypatch):
+    """Trocar o contexto do navegador entre os itens (o que libera o Temp) não muda nada no resultado."""
+    from coleta import config
+    from coleta.fontes.base import FonteNavegador
+
+    monkeypatch.setenv("RPA_DADOS", str(tmp_path / "dados-contexto"))
+    monkeypatch.setattr(config, "ITENS_POR_CONTEXTO", 1)
+    trocas = []
+    monkeypatch.setattr(FonteNavegador, "ao_renovar", lambda self: trocas.append(1))
+    con, placar = await rodar_legado(Replay())
+    assert placar.ok == 4 and placar.erro == 0 and len(trocas) == 3
+    assert foto(con, "cmc_legado") == limpa
+    con.close()
+
+
+async def test_disco_quase_cheio_para_antes_do_item_e_deixa_pendente(dados_tmp, monkeypatch):
+    from coleta import config
+
+    monkeypatch.setattr(config, "DISCO_MINIMO_MB", 10**9)  # mais do que qualquer disco tem
+    con, placar = await rodar_legado(Replay())
+    assert placar.ok == 0 and placar.erro == 0 and placar.parou and "disco quase cheio" in placar.parou
+    situacoes = dict(con.execute("SELECT situacao, COUNT(*) FROM inventario GROUP BY 1").fetchall())
+    assert situacoes == {"pendente": 4}
+    con.close()

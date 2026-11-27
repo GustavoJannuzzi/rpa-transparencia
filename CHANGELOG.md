@@ -11,6 +11,17 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   canônico, numa transação só, com os originais e as evidências delas. A coleta
   longa pelo navegador roda à parte, e a trava do canônico dura minutos. Rodar de
   novo dá o mesmo banco, e importar uma fonte não toca as outras.
+- **Coleta longa sem encher o disco**: a coleta para antes do próximo item com menos de
+  400 MB livres e deixa o item pendente para a retomada; nas fontes com navegador, o
+  contexto é trocado a cada 20 itens e o rastro leva só os prints (com os snapshots, o
+  Temp passou de 800 MB por fonte numa coleta de horas e encheu o disco).
+
+### Corrigido
+
+- `importar` com o `tse`: recusa quando a origem não tem as candidaturas de algum
+  município e eleição que o destino tem (o partido dos vereadores sumiria); migra
+  origem e destino com o código atual e para se as colunas de alguma tabela forem
+  diferentes.
 
 - **Muitas casas** ([#9](https://github.com/GustavoJannuzzi/rpa-transparencia/pull/9) e o PR seguinte): um
   adaptador por fornecedor, configurado por entidade em `coleta/entidades.toml`. O
