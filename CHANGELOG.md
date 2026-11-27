@@ -54,6 +54,10 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+- **"Em revisão" de Curitiba em vereador de outra cidade**: os anos que o portal da
+  Prefeitura de Curitiba manda para revisão (2024 e 2025) apareciam fora da soma na
+  página de 580 vereadores de 38 outras câmaras. Agora só uma fonte da própria casa
+  põe um ano em revisão. Valores e totais não mudam.
 - `importar` com o `tse`: recusa quando a origem não tem as candidaturas de algum
   município e eleição que o destino tem (o partido dos vereadores sumiria); migra
   origem e destino com o código atual e para se as colunas de alguma tabela forem
