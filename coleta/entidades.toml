@@ -337,6 +337,105 @@ fora = "sem_consulta_diarias"
 detalhe = "A única consulta de diárias do portal é a de empenhos de viagem, sem o cargo de quem viajou."
 
 # ---------------------------------------------------------------------------
+# Equiplano (geração <cidade>pr.equiplano.com.br:<porta>): robô de navegador. A
+# instalação é do município, numa porta própria, com Prefeitura, Câmara e
+# autarquias; `entidade` é o código da Câmara no formulário, conferido pelo nome
+# no `descobrir`. A porta veio do link no site da câmara ou da prefeitura
+# (levantamento de 26/11/2026). O servidor não manda o certificado intermediário
+# da cadeia TLS: o navegador completa sozinho, e o robots.txt vem por ele.
+# ---------------------------------------------------------------------------
+
+[[equiplano]]
+fonte = "equiplano_francisco_beltrao"
+casa = "cm-francisco-beltrao"
+municipio = "Francisco Beltrão"
+ibge = 4108403
+regiao = "Sudoeste"
+host = "https://franciscobeltraopr.equiplano.com.br:7035"
+entidade = 99
+
+[[equiplano]]
+fonte = "equiplano_santo_antonio_do_sudoeste"
+casa = "cm-santo-antonio-do-sudoeste"
+municipio = "Santo Antônio do Sudoeste"
+ibge = 4124400
+regiao = "Sudoeste"
+host = "https://santoantoniodosudoestepr.equiplano.com.br:7058"
+entidade = 111
+
+[[equiplano]]
+fonte = "equiplano_candido_de_abreu"
+casa = "cm-candido-de-abreu"
+municipio = "Cândido de Abreu"
+ibge = 4104402
+regiao = "Norte Central"
+host = "https://candidodeabreupr.equiplano.com.br:7108"
+entidade = 262
+
+[[equiplano]]
+fonte = "equiplano_manoel_ribas"
+casa = "cm-manoel-ribas"
+municipio = "Manoel Ribas"
+ibge = 4114500
+regiao = "Norte Central"
+host = "https://manoelribaspr.equiplano.com.br:7097"
+entidade = 181
+
+[[equiplano]]
+fonte = "equiplano_terra_rica"
+casa = "cm-terra-rica"
+municipio = "Terra Rica"
+ibge = 4127304
+regiao = "Noroeste"
+host = "https://terraricapr.equiplano.com.br:7496"
+entidade = 499
+
+[[equiplano]]
+fonte = "equiplano_pien"
+casa = "cm-pien"
+municipio = "Piên"
+ibge = 4119103
+regiao = "Metropolitana de Curitiba"
+host = "https://pienpr.equiplano.com.br:7355"
+entidade = 206
+
+[[equiplano]]
+fonte = "equiplano_rio_bonito_do_iguacu"
+casa = "cm-rio-bonito-do-iguacu"
+municipio = "Rio Bonito do Iguaçu"
+ibge = 4122156
+regiao = "Centro-Sul"
+host = "https://riobonitodoiguacupr.equiplano.com.br:7085"
+entidade = 115
+
+[[equiplano]]
+fonte = "equiplano_inacio_martins"
+casa = "cm-inacio-martins"
+municipio = "Inácio Martins"
+ibge = 4110201
+regiao = "Centro-Sul"
+host = "https://camarainaciomartinspr.equiplano.com.br:7088"
+entidade = 275
+
+[[equiplano]]
+fonte = "equiplano_jataizinho"
+casa = "cm-jataizinho"
+municipio = "Jataizinho"
+ibge = 4112702
+regiao = "Norte Pioneiro"
+host = "https://jataizinhopr.equiplano.com.br:7384"
+entidade = 392
+
+[[equiplano]]
+fonte = "equiplano_teixeira_soares"
+casa = "cm-teixeira-soares"
+municipio = "Teixeira Soares"
+ibge = 4127007
+regiao = "Sudeste"
+host = "https://teixeirasoarespr.equiplano.com.br:7004"
+entidade = 405
+
+# ---------------------------------------------------------------------------
 # Assembleias: cada uma é o seu próprio sistema, então cada uma tem o seu
 # adaptador. O bloco diz onde está o dado e como a casa se chama.
 # ---------------------------------------------------------------------------

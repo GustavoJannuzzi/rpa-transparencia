@@ -42,6 +42,35 @@ def eh_betha(fonte: str) -> bool:
     return fonte == "cmc_betha" or fonte.startswith("betha_")
 
 
+def eh_equiplano(fonte: str) -> bool:
+    return fonte.startswith("equiplano_")
+
+
+def _totais_do_relatorio(con, rv: Revisor) -> frozenset[tuple[str, int]]:
+    """Equiplano: a soma dos empenhos líquidos de cada ano tem de dar o total que o
+    próprio relatório imprime no rodapé. Devolve (fonte, ano) que não deram."""
+    # a soma em Decimal, linha a linha, para comparar centavo a centavo
+    exata: dict[tuple[str, int], Decimal] = defaultdict(Decimal)
+    for r in con.execute("SELECT fonte, ano, valor FROM despesas WHERE fonte LIKE 'equiplano_%'"):
+        exata[(r[0], int(r[1]))] += Decimal(r[2])
+    pend = {(r[0], r[1]) for r in con.execute("SELECT fonte, item FROM pendencias WHERE fonte LIKE 'equiplano_%'")}
+    divergentes = set()
+    for r in con.execute("""SELECT fonte, escopo, valor, texto_original FROM totais_oficiais
+                            WHERE fonte LIKE 'equiplano_%' AND metrica='total_liquido'"""):
+        ano = int(r["escopo"].split("-")[1])
+        obtido = exata.get((r["fonte"], ano), Decimal(0))
+        esperado = Decimal(r["valor"])
+        fecha = obtido == esperado and (r["fonte"], r["escopo"]) not in pend
+        rv.conferencia(r["fonte"], "total_do_relatorio", r["escopo"], esperado, obtido, "confere" if fecha else "diverge",
+                       "soma dos empenhos líquidos (empenhado − estornado) × o total que o relatório imprime no rodapé")
+        if not fecha:
+            divergentes.add((r["fonte"], ano))
+            rv.revisao(r["fonte"], "consulta", r["escopo"],
+                       f"{ano}: a soma dos empenhos lidos (R$ {obtido}) não dá o total do relatório (R$ {esperado})",
+                       {"total_do_relatorio": str(esperado), "soma_lida": str(obtido)})
+    return frozenset(divergentes)
+
+
 # Fontes de câmara lidas pela tela, sem a tabela de cargos revisada à mão: nelas a
 # conferência procura cargo do Executivo misturado na consulta da Câmara.
 GRUPOS_TELA_MUNICIPAL = ("betha_",)
@@ -429,6 +458,7 @@ def situacoes(con: sqlite3.Connection, rv: Revisor) -> None:
     prefeitura_fixo = frozenset(prefeitura_divergente)
     estaduais = _divergencias_estaduais(con, rv)
     mistas = _consultas_com_executivo(con, rv)
+    relatorio_divergente = _totais_do_relatorio(con, rv)
     lote = []
     cur = con.execute("""SELECT chave, fonte, tipo, ref_parlamentar, beneficiario_tipo, cargo_original, categoria_original,
                                 valor, ano, competencia, fornecedor_nome, fornecedor_doc, granularidade, extra FROM despesas""")
@@ -437,13 +467,14 @@ def situacoes(con: sqlite3.Connection, rv: Revisor) -> None:
         if not linhas:
             break
         for d in linhas:
-            lote.append(_situacao(d, ids, divergentes, legado, rv, prefeitura_fixo, estaduais, mistas))
+            lote.append(_situacao(d, ids, divergentes, legado, rv, prefeitura_fixo, estaduais, mistas, relatorio_divergente))
         con.executemany("INSERT OR REPLACE INTO despesa_situacao(chave, situacao, motivo, parlamentar_id, categoria) VALUES(?,?,?,?,?)", lote)
         lote.clear()
 
 
 def _situacao(d, ids, divergentes, legado, rv: Revisor, prefeitura_divergente: frozenset = frozenset(),
-              divergentes_estaduais: frozenset = frozenset(), consultas_mistas: frozenset = frozenset()):
+              divergentes_estaduais: frozenset = frozenset(), consultas_mistas: frozenset = frozenset(),
+              relatorio_divergente: frozenset = frozenset()):
     fonte = d["fonte"]
     extra = json.loads(d["extra"] or "{}")
     valor = Decimal(d["valor"])
@@ -509,7 +540,7 @@ def _situacao(d, ids, divergentes, legado, rv: Revisor, prefeitura_divergente: f
                 if eh_elotech(fonte) else "a fonte não informa o cargo; o nome foi descartado na leitura")
         elif papel is None:
             rev("cargo sem de-para", cargo_original=d["cargo_original"])
-        elif papel == "vereador" and d["beneficiario_tipo"] != "parlamentar":
+        elif papel == "vereador" and d["beneficiario_tipo"] != "parlamentar" and not extra.get("nota_cargo"):
             rev("cargo de vereador escrito de um jeito que a guarda de privacidade não reconhece; o nome foi descartado na leitura", cargo_original=d["cargo_original"])
         elif papel == "servidor" and d["beneficiario_tipo"] == "parlamentar":
             rev("cargo de servidor com nome gravado")
@@ -546,6 +577,19 @@ def _situacao(d, ids, divergentes, legado, rv: Revisor, prefeitura_divergente: f
                 motivos.append(f"devolvido R$ {extra['devolvido']}")
         elif eh_betha(fonte):
             motivos.append("valor previsto da diária (como a fonte rotula)")
+        elif eh_equiplano(fonte):
+            if (fonte, int(d["ano"])) in relatorio_divergente:
+                rev("a soma dos empenhos do ano não dá o total que o relatório imprime", escopo=True)
+            if extra.get("nota_cargo"):
+                rev("a natureza da despesa e o cargo escrito na descrição do empenho não batem; o nome foi descartado na leitura",
+                    nota=extra["nota_cargo"])
+            if not str(extra.get("consistencia", "ok")).startswith("ok"):
+                rev("o empenho não fecha (itens ou valor total das diárias ≠ empenhado)", consistencia=extra.get("consistencia"))
+            elif "cancelada" in marcas and valor == 0 and situacao == OK:
+                situacao = FORA_DA_SOMA
+                motivos.append("empenho estornado inteiro na fonte (estorno = empenhado)")
+            elif "cancelada_parcialmente" in marcas:
+                motivos.append(f"estorno parcial na fonte: empenhado R$ {extra.get('valor_empenho')}, estornado R$ {extra.get('valor_anulado')}")
         if fonte in consultas_mistas and d["beneficiario_tipo"] == "servidor":
             rev(MOTIVO_EXECUTIVO, escopo=True)
     if situacao == REVISAO and por_linha:
@@ -739,6 +783,8 @@ def equacoes(con, rv: Revisor) -> None:
             return int(n("SELECT SUM(CAST(valor AS INTEGER)) FROM totais_oficiais WHERE fonte=? AND metrica='linhas_na_origem'", fonte)), "registros do período no arquivo"
         if eh_betha(fonte):
             return int(n("SELECT SUM(CAST(valor AS INTEGER)) FROM totais_oficiais WHERE fonte=? AND metrica='registros' AND escopo LIKE 'diarias-%'", fonte)), "contador 'Registros encontrados' da tela"
+        if eh_equiplano(fonte):
+            return int(n("SELECT SUM(CAST(valor AS INTEGER)) FROM totais_oficiais WHERE fonte=? AND metrica='registros' AND escopo LIKE 'diarias-%'", fonte)), "blocos 'Empenho' no relatório de cada ano"
         if fonte == "cmc_legado":
             return int(n("SELECT SUM(CAST(valor AS INTEGER)) FROM totais_oficiais WHERE fonte=? AND metrica='linhas_lidas'", fonte)), "linhas de diária nas tabelas dos PDFs"
         if fonte == "cmc_prefeitura":

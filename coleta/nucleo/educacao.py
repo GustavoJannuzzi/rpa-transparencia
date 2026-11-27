@@ -10,12 +10,16 @@ from __future__ import annotations
 import asyncio
 import time
 import urllib.robotparser
+from collections.abc import Awaitable, Callable
 from urllib.parse import urlsplit
 
 import httpx
 
 from .. import config
 from .erros import BloqueadoPorRobots
+
+# (url) -> (status HTTP, content-type, texto)
+Buscar = Callable[[str], Awaitable[tuple[int, str, str]]]
 
 
 class Educacao:
@@ -42,34 +46,47 @@ class Educacao:
         trava = self._travas.setdefault(host, asyncio.Lock())
         return _Vez(self, host, trava)
 
-    async def verificar_robots(self, url: str, cliente: httpx.AsyncClient | None = None) -> None:
+    async def verificar_robots(self, url: str, cliente: httpx.AsyncClient | None = None, buscar: Buscar | None = None) -> None:
+        """`buscar`: outro jeito de pedir o robots.txt (o do navegador), usado só quando o
+        servidor não manda a cadeia de certificados inteira e o httpx não consegue conferir."""
         host = self._host(url)
         if host not in self._robots:
-            self._robots[host] = await self._carregar_robots(host, cliente)
+            self._robots[host] = await self._carregar_robots(host, cliente, buscar)
         rp = self._robots[host]
         if rp is not None and not rp.can_fetch(self.ua, url):
             raise BloqueadoPorRobots(f"robots.txt de {host} não permite {urlsplit(url).path}")
 
-    async def _carregar_robots(self, host: str, cliente: httpx.AsyncClient | None):
+    async def _carregar_robots(self, host: str, cliente: httpx.AsyncClient | None, buscar: Buscar | None = None):
         url = host + "/robots.txt"
         fechar = cliente is None
         cliente = cliente or httpx.AsyncClient(timeout=20, headers={"User-Agent": self.ua}, follow_redirects=True)
         try:
             r = await cliente.get(url)
-        except httpx.HTTPError:
-            self.politicas[host] = "robots.txt não respondeu"
-            return None
+            status, tipo, texto = r.status_code, r.headers.get("content-type", ""), r.text
+        except httpx.HTTPError as e:
+            if buscar is None or "CERTIFICATE_VERIFY_FAILED" not in str(e):
+                self.politicas[host] = "robots.txt não respondeu"
+                return None
+            # O servidor não manda o certificado intermediário: o navegador completa a cadeia
+            # sozinho (como faz para qualquer pessoa), o httpx não. O robots.txt vem por ele.
+            try:
+                status, tipo, texto = await buscar(url)
+            except Exception:
+                self.politicas[host] = "robots.txt não respondeu"
+                return None
         finally:
             if fechar:
                 await cliente.aclose()
-        tipo = r.headers.get("content-type", "")
+        return self._interpretar(host, status, tipo, texto)
+
+    def _interpretar(self, host: str, status: int, tipo: str, texto: str):
         # Vários portais devolvem a própria página (ou uma página de erro com 200)
         # no lugar do robots.txt. Isso não é política nenhuma.
-        if r.status_code != 200 or "text/plain" not in tipo:
-            self.politicas[host] = f"sem robots.txt (HTTP {r.status_code}, {tipo.split(';')[0] or 'sem tipo'})"
+        if status != 200 or "text/plain" not in tipo:
+            self.politicas[host] = f"sem robots.txt (HTTP {status}, {tipo.split(';')[0] or 'sem tipo'})"
             return None
         rp = urllib.robotparser.RobotFileParser()
-        rp.parse(r.text.splitlines())
+        rp.parse(texto.splitlines())
         atraso = rp.crawl_delay(self.ua)
         if atraso is not None and float(atraso) > self.pausa:
             self._pausa_host[host] = float(atraso)

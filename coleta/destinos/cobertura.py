@@ -36,7 +36,7 @@ LEVANTAMENTO_CAMARAS = {
 }
 # Fornecedores com adaptador na coleta: a câmara que usa um deles e ainda não está em
 # `entidades.toml` está "na fila", não "sem adaptador".
-COM_ADAPTADOR = frozenset({"elotech", "betha"})
+COM_ADAPTADOR = frozenset({"elotech", "betha", "equiplano"})
 NOME_FORNECEDOR = {
     "elotech": "Elotech", "betha": "Betha Cloud", "equiplano": "Equiplano", "pronim": "Govbr Pronim", "ipm": "IPM Atende.net",
     "inga": "Inga Digital", "cr2": "CR2", "softcam": "SOFTCAM", "econtab": "eContab", "conexaogov": "Conexão Gov",

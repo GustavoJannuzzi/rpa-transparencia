@@ -122,6 +122,28 @@ async def test_betha_generico_acha_a_consulta_pelo_texto_do_menu():
         await pw.stop()
 
 
+async def test_equiplano_formulario_entidade_e_exercicios():
+    """O formulário de diárias tem a Câmara configurada no select, e o AJAX devolve os exercícios."""
+    from coleta import entidades
+    from coleta.fontes.equiplano.fonte import SEL_CSV, SEL_ENTIDADE, SEL_INICIO, SEL_VISUALIZAR, eh_a_camara
+
+    e = next(x for x in entidades.equiplano() if x.fonte == "equiplano_francisco_beltrao")
+    pw, nav, p = await _pagina(config.UA_ROBO)
+    try:
+        await p.goto(e.tela, wait_until="networkidle")
+        opcoes = dict(await p.eval_on_selector(SEL_ENTIDADE, "s => Array.from(s.options).map(o => [o.value, o.text.trim()])"))
+        assert eh_a_camara(opcoes[str(e.entidade)], e.municipio)
+        for sel in (SEL_INICIO, SEL_CSV, SEL_VISUALIZAR):
+            assert await p.locator(sel).count() == 1, sel
+        async with p.expect_response(lambda r: "loadAjaxExercicios" in r.url) as resp:
+            await p.select_option(SEL_ENTIDADE, str(e.entidade))
+        anos = [o["valor"] for o in (await (await resp.value).json())["opcoesParaSelect"]]
+        assert "2025" in anos
+    finally:
+        await nav.close()
+        await pw.stop()
+
+
 # ---------------------------------------------------------------- casas novas (um teste por fornecedor)
 def _cliente(**kw) -> httpx.Client:
     return httpx.Client(headers=H, timeout=httpx.Timeout(60, connect=30), **kw)

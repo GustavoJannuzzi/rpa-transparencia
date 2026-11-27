@@ -59,6 +59,29 @@ class EntidadeBetha:
 
 
 @dataclass(frozen=True)
+class EntidadeEquiplano:
+    """Uma câmara no Equiplano (geração `<cidade>pr.equiplano.com.br:<porta>`). A
+    instalação é do município: Prefeitura, Câmara e autarquias na mesma porta, cada
+    uma com um código; `entidade` é o da Câmara, conferido pelo nome no `descobrir`."""
+
+    fonte: str
+    casa: str
+    municipio: str
+    ibge: int
+    regiao: str
+    host: str
+    entidade: int
+    de: int
+    ate: int
+    fora: str | None = None
+    detalhe: str | None = None
+
+    @property
+    def tela(self) -> str:
+        return f"{self.host}/transparencia/empenhosDiariasConcedidas"
+
+
+@dataclass(frozen=True)
 class EntidadeAssembleia:
     fonte: str
     casa: str
@@ -108,14 +131,32 @@ def betha(todas: bool = False) -> tuple[EntidadeBetha, ...]:
     return tuple(out)
 
 
+@cache
+def equiplano(todas: bool = False) -> tuple[EntidadeEquiplano, ...]:
+    """As câmaras do Equiplano que a coleta cobre; com `todas`, também as que ficaram de fora."""
+    de, ate = periodo()
+    out = []
+    for e in _bruto().get("equiplano", []):
+        ent = EntidadeEquiplano(
+            fonte=e["fonte"], casa=e["casa"], municipio=e["municipio"], ibge=int(e["ibge"]), regiao=e["regiao"],
+            host=e["host"].rstrip("/"), entidade=int(e["entidade"]), de=int(e.get("de", de)), ate=int(e.get("ate", ate)),
+            fora=e.get("fora"), detalhe=e.get("detalhe"))
+        if todas or not ent.fora:
+            out.append(ent)
+    return tuple(out)
+
+
 def municipais() -> tuple:
     """Toda câmara municipal coletada, de qualquer fornecedor (o TSE dá o partido de todas)."""
-    return (*elotech(), *betha())
+    return (*elotech(), *betha(), *equiplano())
 
 
 def de_fora() -> dict[int, tuple[str, str | None, str]]:
     """Câmaras configuradas que ficaram de fora, pelo IBGE: (motivo, detalhe, fornecedor)."""
-    return {e.ibge: (e.fora, e.detalhe, "betha") for e in betha(todas=True) if e.fora}
+    out: dict[int, tuple[str, str | None, str]] = {}
+    for forn, lista in (("betha", betha(todas=True)), ("equiplano", equiplano(todas=True))):
+        out |= {e.ibge: (e.fora, e.detalhe, forn) for e in lista if e.fora}
+    return out
 
 
 @cache
