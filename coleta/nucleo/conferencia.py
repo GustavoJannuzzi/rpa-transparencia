@@ -577,7 +577,7 @@ def _situacao(d, ids, divergentes, legado, rv: Revisor, prefeitura_divergente: f
             motivos[:] = [m for m in motivos if m != "categoria sem de-para"]
             rev("a fonte não classifica a despesa (classificação vazia)")
         if valor < 0 and extra.get("anulacao_explicada"):
-            motivos.append("anulação de empenho: a descrição da própria casa diz que anula outro empenho (entra na soma, como no total da casa)")
+            motivos.append("anulação de empenho, como diz a descrição da casa")
         elif valor < 0:
             rev("valor negativo: a fonte não explica o sinal", valor=str(valor))
         elif valor == 0 and situacao == OK:

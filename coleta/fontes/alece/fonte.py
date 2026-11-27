@@ -119,6 +119,14 @@ def assinatura(nome: str, empenho: str, documento: str, valor: str) -> tuple[str
     return (nome.strip().upper(), empenho.strip().upper(), so_digitos(documento), valor.strip())
 
 
+def resumo_do_empenho(descricao: str) -> str | None:
+    """A descrição do empenho até o primeiro "CONFORME"/"TERMO"/"EDITAL" (o resto é a
+    referência ao contrato, repetida em todas as notas). A inteira fica no original."""
+    d = re.sub(r"\s+", " ", descricao or "").strip()
+    corte = re.split(r"[,.;]?\s+(?:CONFORME|TERMO DE|EDITAL DE|ATO NORMATIVO)\b", d, maxsplit=1, flags=re.I)[0].strip(" ,.;-")
+    return corte[:160] or None
+
+
 RE_ANULACAO = re.compile(r"\bANULA(?:CAO|ÇÃO|R)\b", re.I)
 
 
@@ -244,8 +252,8 @@ class Alece(FonteAssembleiaTela):
                     res.despesas.append(self.nota(
                         chave=chave, item=item.chave, ref=ref, nome=titulo_nome(nome), data=None, competencia=f"{ano}-{mes}",
                         categoria=CATEGORIA, documento=n["documento"], fornecedor=n["credor"], valor=valor, proc=proc,
-                        descricao=n["descricao"] or None,
-                        extra={"empenho": n["empenho"], "nome_na_fonte": rotulo, "escopos_conferencia": [escopo],
+                        descricao=resumo_do_empenho(n["descricao"]),
+                        extra={"empenho": n["empenho"], "nome_na_fonte": rotulo, "descricao_inteira": n["descricao"], "escopos_conferencia": [escopo],
                                **({"anulacao_explicada": True} if valor < 0 and RE_ANULACAO.search(n["descricao"]) else {})}))
                 csv_dep = no_csv.get(rotulo.strip().upper(), Counter())
                 iguais = csv_dep == na_tela
