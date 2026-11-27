@@ -19,11 +19,16 @@ export const metadata: Metadata = metadadosDaPagina({
 /** O fornecedor de cada câmara no levantamento -> se a coleta já tem adaptador para ele. */
 const ADAPTADOR: Record<string, string> = {
   elotech: "adaptador pronto (API)",
-  betha: "adaptador de Curitiba, a generalizar (navegador)",
+  betha: "adaptador pronto (navegador)",
   equiplano: "próximo adaptador (navegador)",
   pronim: "próximo adaptador (navegador)",
   ipm: "fora: robots.txt e Cloudflare",
   inga: "fora: robots.txt",
+};
+/** O fornecedor do levantamento -> como o adaptador dele assina o sistema de cada casa. */
+const FORNECEDOR_DO_SISTEMA: Record<string, string> = {
+  elotech: "Elotech",
+  betha: "Betha Sistemas",
 };
 const NOME_FORN: Record<string, string> = {
   elotech: "Elotech",
@@ -62,6 +67,7 @@ export default function PaginaCobertura() {
   const assembleias = lista.filter((c) => c.tipo === "assembleia");
   const coleta = lista.map((c) => c.p.coleta).sort().at(-1) ?? "";
   const lev = cob.levantamento;
+  const camarasDo = (k: string) => camaras.filter((c) => c.sistemas.some((s) => s.fornecedor === FORNECEDOR_DO_SISTEMA[k])).length;
 
   const classesPr = new Map<string, Classe>(cob.camaras_pr.map((c) => [String(c.ibge), classe(c.situacao, c.motivo)]));
   const classesBr = new Map<string, Classe>(cob.assembleias.map((a) => [a.uf, classe(a.situacao, a.motivo)]));
@@ -104,7 +110,7 @@ export default function PaginaCobertura() {
       classe: classe(c.situacao, c.motivo),
       situacao: c.situacao,
       motivo: c.motivo,
-      detalhe: null,
+      detalhe: c.detalhe ?? null,
       href: c.casa ? `/casas/${c.casa}/` : null,
       parlamentares: c.parlamentares,
       linhas: c.linhas,
@@ -234,7 +240,7 @@ export default function PaginaCobertura() {
                 <td className="py-2 pr-4 text-tinta">{NOME_FORN[k] ?? k}</td>
                 <td className="num py-2 pr-4 text-right text-tinta">{inteiro(n)}</td>
                 <td className="py-2 text-tinta-2">
-                  {k === "elotech" ? `${ADAPTADOR[k]}: ${camaras.length} câmaras coletadas` : ADAPTADOR[k]}
+                  {FORNECEDOR_DO_SISTEMA[k] ? `${ADAPTADOR[k]}: ${camarasDo(k)} câmaras coletadas` : ADAPTADOR[k]}
                 </td>
               </tr>
             ))}

@@ -6,15 +6,15 @@
 
 Cada casa legislativa publica os gastos num sistema diferente, e muitas casas usam o
 mesmo fornecedor. Este projeto tem **um adaptador por sistema, configurado por
-entidade**: o mesmo robô do Elotech serve 13 câmaras do Paraná, e casa nova num
-fornecedor que já tem adaptador é um bloco em
+entidade**: o mesmo robô do Elotech serve 13 câmaras do Paraná, o do Betha serve
+14, e casa nova num fornecedor que já tem adaptador é um bloco em
 [`coleta/entidades.toml`](coleta/entidades.toml), sem código.
 
 Começou pela Câmara Municipal de Curitiba, que trocou de sistema três vezes: o
 histórico das diárias está em quatro lugares, de quatro fornecedores (um portal
 antigo que só gera PDF, o Elotech, o portal da Prefeitura e o Betha). Hoje junta,
 num modelo único, a cota dos deputados federais, as verbas dos deputados do DF, de
-MG e de SP e as diárias de 13 câmaras municipais do PR. Robô de navegador (Python +
+MG e de SP e as diárias de 26 câmaras municipais do PR. Robô de navegador (Python +
 Playwright) onde não há API; API e arquivo onde há. Cada número passa por
 conferência contra o que a própria fonte diz de si, tem a procedência anotada, e o
 que não fecha vai para uma fila de revisão em vez de ser chutado.
@@ -46,7 +46,8 @@ recortada acima da grade: nome de servidor não é publicado, nem em imagem.*
 | Câmara Legislativa do DF | 2023–2026 | arquivo (CKAN) | 2024 e 2025 completos só em planilha XLSX, lida sem biblioteca. Cabeçalho, data e valor mudam a cada ano; a planilha de 2025 mistura dia/mês e mês/dia (a data só é lida quando é inequívoca) e tem linhas com as colunas deslocadas; o CNPJ gravado como número perde os zeros à esquerda (recompostos só quando os dígitos verificadores fecham). O CPF do deputado liga as grafias do nome na memória e não é gravado. |
 | Assembleia de Minas Gerais | 2023–2026 | API | Uma chamada por deputado e mês, só nos meses que a API diz ter prestação fechada. A soma das notas de cada tipo é conferida contra o total que a própria API dá para o tipo no mês. |
 | Assembleia de São Paulo | 2023–2026 | arquivo (JSON de 160 MB) | O arquivo traz 2002–2026 de uma vez: baixa só quando a data dele muda, guarda comprimido (20 MB) e lê em fluxo. A fonte publica a despesa já somada por fornecedor × tipo × mês: cada linha é um agregado, e a plataforma diz isso. |
-| TSE | eleições 2012–2024 | arquivo | Partido de cada vereador na eleição do mandato, nos 13 municípios (nenhum sistema das câmaras traz partido). |
+| Betha em mais 13 câmaras do PR | 2014–2026 (o que cada câmara publica) | robô, o mesmo adaptador de Curitiba | Cada câmara monta o próprio menu, e a mesma consulta aparece com outro número, em outro grupo e com outro texto ("Diárias", "Diárias.", "DIÁRIAS"). O robô acha a consulta pelo texto do item na tela e tira o número do menu que a página recebe; quando dois itens têm o mesmo texto (Bandeirantes), fica o que tem as colunas de diária. "0 registros" é resultado: a câmara tem a consulta e não a alimenta (Almirante Tamandaré). A consulta de Cornélio Procópio traz cargos da Prefeitura: as diárias de servidor dela vão para revisão. |
+| TSE | eleições 2012–2024 | arquivo | Partido de cada vereador na eleição do mandato, nos 26 municípios (nenhum sistema das câmaras traz partido). |
 
 O levantamento que decidiu cada uma dessas escolhas, feito antes de escrever o
 código, está em [`docs/etapa-0.md`](docs/etapa-0.md).
@@ -62,7 +63,9 @@ e as despesas das 27 assembleias. O que ficou de fora:
 | IPM Atende.net (28 câmaras, entre elas Cascavel, Colombo e Guarapuava) | O robots.txt proíbe a consulta, e ela passa por um desafio da Cloudflare. |
 | Inga Digital (32 câmaras) | O robots.txt proíbe o portal inteiro. |
 | 39 câmaras, entre elas Londrina | O robots.txt do site proíbe qualquer robô. |
-| Betha (59 câmaras), Equiplano (36) e Govbr Pronim (14) | Próximos adaptadores, todos pelo navegador. O de Curitiba no Betha ainda não está generalizado. |
+| Equiplano (36 câmaras) e Govbr Pronim (14) | Próximos adaptadores, pelo navegador. |
+| União da Vitória, Goioerê, Jaguariaíva e Mandirituba (Betha) | O portal não tem a consulta de diárias com o cargo de quem recebeu: só a de empenhos de viagem, que mistura passagem e diária e não diz o cargo. |
+| As outras câmaras Betha (o levantamento contou 59) | O adaptador já serve: falta pôr a câmara na configuração. |
 | As outras câmaras Elotech (o levantamento contou 108) | O adaptador já serve: falta pôr a câmara na configuração. |
 | Assembleias do AP, CE, TO, BA, GO, PE e RN | Fonte com fornecedor e CNPJ, mas só pela tela: próxima leva, pelo navegador. |
 | Assembleias de MS, AM, RO, PB, AL, RS e SC | Na reserva: fonte aberta, ainda sem adaptador (em PB o CNPJ vem mascarado; em AL é PDF escaneado). |
@@ -258,7 +261,8 @@ coleta/
                coleta educada (Crawl-delay do robots.txt), conferência, leitura
                de planilha (não sabe de fonte nenhuma)
   fontes/      um adaptador por sistema: elotech (qualquer câmara), cldf, almg,
-               alesp, camara_deputados, cmc_legado, cmc_prefeitura, cmc_betha, tse
+               betha (qualquer câmara), alesp, camara_deputados, cmc_legado,
+               cmc_prefeitura, cmc_betha, tse
   cobertura/   o levantamento das casas de fora e a malha do IBGE (mapas)
   modelo.py    o modelo único (pydantic, dinheiro em Decimal exato): N casas,
                despesa nota a nota ou agregada
