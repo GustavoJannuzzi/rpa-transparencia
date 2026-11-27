@@ -183,9 +183,9 @@ passa por cima).
 
 Numa coleta longa, a coleta para antes do próximo item quando o disco fica com menos
 de 400 MB livres (`RPA_DISCO_MINIMO_MB`), e o item fica pendente para a retomada. Nas
-fontes com navegador, o contexto é trocado a cada 20 itens (`RPA_ITENS_POR_CONTEXTO`),
-o que libera o que o navegador acumula no Temp, e o rastro de cada item leva os
-prints, sem os snapshots.
+fontes com navegador, o contexto é trocado a cada 20 itens (`RPA_ITENS_POR_CONTEXTO`,
+ou `itens_por_contexto` na fonte de item longo), o que libera o que o navegador
+acumula no Temp, e o rastro de cada item leva os prints, sem os snapshots.
 
 A primeira rodada completa baixa ~430 MB de arquivos do TSE e da Câmara dos Deputados
 e o arquivo da ALESP (160 MB, guardado comprimido) para `dados/cache/`. A coleta é

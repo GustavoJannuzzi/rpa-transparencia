@@ -103,15 +103,19 @@ class Fonte(ABC):
 class FonteNavegador(Fonte):
     """Fonte que precisa de navegador. Um contexto por vez, rastro por item.
 
-    O contexto é trocado por um novo a cada `config.ITENS_POR_CONTEXTO` itens: o que o
-    navegador acumula no Temp (respostas, downloads) só vai embora quando o contexto
-    fecha, e numa coleta de horas isso passou de 800 MB por fonte. O rastro de cada
+    O contexto é trocado por um novo a cada `itens_por_contexto` itens (ou
+    `config.ITENS_POR_CONTEXTO`): o que o navegador acumula no Temp (o rastro, os
+    downloads) só vai embora quando o contexto fecha, e numa coleta de horas isso
+    passou de 800 MB por fonte. O rastro de cada
     item leva os prints, não os snapshots (que guardam o corpo de cada resposta); a
     evidência do erro continua com o print da página inteira, o HTML e o rastro.
     """
 
     usa_navegador = True
     viewport = {"width": 1400, "height": 1000}
+    # Fonte de item longo (um mês inteiro, um deputado num ano) põe 1: os prints do
+    # rastro também só saem do Temp quando o contexto fecha. None = config.ITENS_POR_CONTEXTO.
+    itens_por_contexto: int | None = None
 
     def __init__(self) -> None:
         super().__init__()
@@ -153,7 +157,7 @@ class FonteNavegador(Fonte):
     async def antes_do_item(self, item: ItemInventario) -> None:
         if self.contexto is None or self._rastreando:
             return
-        if self._itens_no_contexto >= config.ITENS_POR_CONTEXTO:
+        if self._itens_no_contexto >= (self.itens_por_contexto or config.ITENS_POR_CONTEXTO):
             await self.contexto.close()
             await self._criar_contexto()
             self.ao_renovar()
