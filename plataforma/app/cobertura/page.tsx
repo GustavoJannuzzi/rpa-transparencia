@@ -292,7 +292,7 @@ function AtividadeNaCobertura({ a, casas: lista }: { a: CoberturaAtividade; casa
         Atividade nas sessões
       </h2>
       <p className="mt-1 max-w-[62ch] text-sm text-tinta-3">
-        Outro tipo de dado: sessões, presença, ausência justificada e voto nominal, que a câmara registra no seu sistema legislativo. Não é
+        Outro tipo de dado: sessões, presença, ausência com o motivo que a fonte der e voto nominal, que a câmara registra no seu sistema legislativo. Não é
         despesa e não entra em soma nenhuma em reais. Vem de dois sistemas: o SAPL, do Interlegis, por uma API pública, e o relatório de
         frequência que a Câmara de Curitiba publica em PDF.
       </p>

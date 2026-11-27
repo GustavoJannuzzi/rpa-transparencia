@@ -62,7 +62,7 @@ function Parcial({ presenca, votos, ausencias }: { presenca: string | null; voto
   const lido = [
     presenca ? `a presença até ${data(presenca)}` : null,
     votos ? `os votos até ${data(votos)}` : null,
-    ausencias ? "as ausências justificadas" : null,
+    ausencias ? "as ausências registradas" : null,
   ].filter((x): x is string => Boolean(x));
   return (
     <p className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-tinta-2">
@@ -155,12 +155,12 @@ function SaplDoParlamentar({ a, nome }: { a: AtividadeSapl; nome: string }) {
           </>
         )}
       </Bloco>
-      <Bloco titulo="Ausências justificadas" total={a.ausencias_lidas ? ausencias : null}>
+      <Bloco titulo="Ausências registradas, com o motivo da fonte" total={a.ausencias_lidas ? ausencias : null}>
         {a.ausencias_lidas ? (
           <ListaRotulos
             itens={a.ausencias}
-            vazio="Nenhuma justificativa de ausência registrada."
-            p={(r) => proc(contagem(r.n, "justificativa de ausência", "justificativas de ausência"), `motivo, como o SAPL escreve: "${r.rotulo}"`, a.ate)}
+            vazio="Nenhuma ausência registrada."
+            p={(r) => proc(contagem(r.n, "registro de ausência", "registros de ausência"), `motivo, como o SAPL escreve: "${r.rotulo}"`, a.ate)}
           />
         ) : (
           <NaoLido className="mt-0.5 block" />
@@ -448,12 +448,12 @@ function SaplDaCasa({ a }: { a: CasaAtividadeSapl }) {
               <NaoLido />
             )}
           </dd>
-          <dt className="text-tinta-2">Ausências justificadas</dt>
+          <dt className="text-tinta-2">Ausências registradas</dt>
           <dd className="text-right">
             {a.ausencias_lidas ? (
               <Contagem
                 n={ausencias}
-                p={proc("justificativas de ausência dos vereadores identificados", a.ausencias.map((x) => `${x.rotulo}: ${x.n}`).join("; ") || "nenhuma", a.ate)}
+                p={proc("registros de ausência dos vereadores identificados, com o motivo da fonte", a.ausencias.map((x) => `${x.rotulo}: ${x.n}`).join("; ") || "nenhuma", a.ate)}
               />
             ) : (
               <NaoLido />
@@ -495,7 +495,7 @@ function SaplDaCasa({ a }: { a: CasaAtividadeSapl }) {
                   Presença registrada
                 </th>
                 <th scope="col" className="py-2 pl-4 text-right font-normal">
-                  Ausências justificadas
+                  Ausências registradas
                 </th>
                 <th scope="col" className="py-2 pl-4 text-right font-normal">
                   Votos nominais
@@ -525,7 +525,7 @@ function SaplDaCasa({ a }: { a: CasaAtividadeSapl }) {
                   {v.nome}
                 </Link>
                 <span className="num block text-sm text-tinta-3">
-                  presença: {presencaLida ? inteiro(v.presencas) : "ainda não lida"} · ausências justificadas:{" "}
+                  presença: {presencaLida ? inteiro(v.presencas) : "ainda não lida"} · ausências:{" "}
                   {a.ausencias_lidas ? inteiro(v.ausencias) : "ainda não lidas"} · votos: {votosLidos ? inteiro(v.votos) : "ainda não lidos"}
                 </span>
               </li>

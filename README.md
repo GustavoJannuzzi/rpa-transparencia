@@ -84,7 +84,7 @@ tabela casa por casa, com o mapa do PR por município e o do Brasil por UF.
 ## Atividade nas sessões
 
 Além da despesa, a plataforma mostra o que a câmara registra das sessões plenárias:
-sessão com presença registrada, ausência justificada com o motivo que a fonte der e
+sessão com presença registrada, ausência com o motivo que a fonte der e
 voto nominal por tipo ("Sim", "Não", "Abstenção", como a fonte escreve). É outro tipo
 de dado (`Atividade` no modelo, tabela `atividades`), e não entra em soma nenhuma em
 reais. Só contagem bruta, com a ficha de procedência de cada número; nada de taxa,
