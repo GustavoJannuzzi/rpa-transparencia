@@ -126,8 +126,10 @@ cada fonte, **origem = coletado + revisão**, e nenhum item com erro em aberto:
 | Câmara Legislativa do DF | 3.183 | 2.614 | 569 |
 | Assembleia de Minas Gerais (notas) | 94.209 | 94.209 | 0 |
 | Assembleia de São Paulo (linhas agregadas) | 82.182 | 82.182 | 0 |
+| Assembleia do Amapá (notas, pela tela) | 7.094 | 7.094 | 0 |
+| Assembleia do Ceará (empenhos, pela tela) | 17.316 | 17.246 | 70 |
 
-São 46 casas, com 1.600 parlamentares na plataforma. Nas câmaras do Elotech, a
+São 48 casas, com 1.725 parlamentares na plataforma. Nas câmaras do Elotech, a
 maior parte do que está em revisão é diária sem cargo cujo nome não está no cadastro
 de vereadores do ano: pode ser de servidor, então o nome é descartado e a linha fica
 de fora, contada. No Betha, 877 das 944 linhas em revisão são de Cornélio Procópio,
@@ -203,6 +205,18 @@ Achados reais, todos visíveis no relatório e na fila de revisão:
   "21/03/2025" (dia primeiro). A data que pode ser lida dos dois jeitos não é chutada.
 - **A soma das notas da ALMG fecha** com o total que a própria API dá para cada tipo de
   despesa, em todos os meses coletados.
+- **No Amapá, a tela fecha em três degraus**: as notas de cada elemento de despesa
+  somam o elemento, os elementos somam o TOTAL do mês, e o TOTAL é o do histórico do
+  ano, com o mês complementar ("Setembro/2025 (compl.)") somado. Fecha em todos os
+  meses de 2023 a 2026.
+- **No Ceará, o nome do deputado é digitado à mão a cada mês**, e a chave do detalhe é
+  esse nome em base64: há erro de digitação ("GUILHREME SAMPAIO"), categoria colada
+  ao nome ("ALMIR BIE - COMBUSTIVEIS E LUBRIFICANTES AUTOMOTIVOS"), espaço duplo e um
+  "deputado" chamado "PLANO DE SAUDE". O sufixo sai na conferência; a grafia errada só
+  é ligada ao deputado com prova na própria fonte (12 casos, quase todos com a
+  anulação "para correção do nome do deputado"); o resto vai para a revisão. O
+  contador "de N resultados" da tela conta um a mais do que a lista mostra, em todos
+  os meses. O CSV do mês confere a tela empenho a empenho: só dois meses não fecham.
 
 ## Como rodar
 
