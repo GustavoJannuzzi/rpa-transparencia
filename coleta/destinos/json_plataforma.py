@@ -295,7 +295,8 @@ def publicar(con: sqlite3.Connection) -> list[str]:
             "em_revisao": rev_parl.get(pid, []),
             "granularidade": "agregado" if granularidade_parl.get(pid) == {"agregado"} else ("misto" if len(granularidade_parl.get(pid, ())) > 1 else "nota"),
             "subsidio": subsidio.get(pid, []),
-            "atividade": ativ_parl.get(pid, []),
+            # só quem tem atividade nas sessões ganha a chave (os outros arquivos não mudam)
+            **({"atividade": ativ_parl[pid]} if pid in ativ_parl else {}),
         }
         casa_p = entidades.casas().get(p["casa"])
         if casa_p is not None and casa_p.tipo == "camara_municipal":
@@ -312,7 +313,7 @@ def publicar(con: sqlite3.Connection) -> list[str]:
             tamanho += _escrever(destino / "parlamentares" / pid / f"{a}.json", _arquivo_ano([l for l in linhas if l[1].startswith(str(a))]))
         indice.append({"id": pid, "nome": p["nome"], "casa": p["casa"], "uf": p["uf"], "partido": p["partido_atual"],
                        "total": _d(total), "linhas": cab["linhas"], "gabinete": bool(cab["gabinete"]),
-                       **({"atividade": True} if cab["atividade"] else {}),
+                       **({"atividade": True} if pid in ativ_parl else {}),
                        **({"municipio": p["municipio"]} if p["municipio"] else {})})
     indice.sort(key=lambda x: (normalizar_nome(x["nome"]), x["id"]))
     tamanho += _escrever(destino / "parlamentares.json", indice)

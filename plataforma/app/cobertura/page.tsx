@@ -356,9 +356,9 @@ function AtividadeNaCobertura({ a, casas: lista }: { a: CoberturaAtividade; casa
       <p className="mt-3 max-w-[62ch] text-sm text-tinta-3">
         O levantamento de {data(lev.data)} contou <span className="num">{inteiro(lev.camaras_que_linkam)}</span> câmaras do Paraná com link para
         o SAPL na página inicial, e <span className="num">{inteiro(lev.enderecos_no_dns)}</span> endereços sapl.&lt;cidade&gt;.pr.leg.br existem.
-        O robots.txt do SAPL pede {lev.crawl_delay} segundos entre pedidos, e a coleta respeita: um pedido por minuto em cada câmara. Esta rodada
-        coletou as {inteiro(sapl.length)} câmaras do site que têm sessões no SAPL, para o vereador ter a atividade ao lado da despesa; as outras
-        ficam para as próximas rodadas.
+        O robots.txt do SAPL pede {lev.crawl_delay} segundos entre pedidos, e a coleta respeita: um pedido por minuto em cada câmara. Por isso a
+        coleta começou pelas câmaras que já estão no site, para o vereador ter a atividade ao lado da despesa: {inteiro(sapl.length)} até agora.
+        As outras ficam para as próximas rodadas.
       </p>
     </section>
   );
