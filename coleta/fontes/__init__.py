@@ -2,7 +2,7 @@
 
 Fonte com sistema próprio (Câmara dos Deputados, cada assembleia) é uma pasta aqui
 e uma linha nesta lista. Casa nova num fornecedor que já tem adaptador (outra
-câmara no Elotech ou no Betha) não muda código: é um bloco novo em `entidades.toml`.
+câmara no Elotech, no Betha ou no Equiplano) não muda código: é um bloco novo em `entidades.toml`.
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ from .cmc_elotech.fonte import CmcElotechAPI
 from .cmc_legado.fonte import CmcLegado
 from .cmc_prefeitura.fonte import CmcPrefeitura
 from .elotech.fonte import ElotechAPI
+from .equiplano.fonte import Equiplano
 from .tse.fonte import Tse
 
 ASSEMBLEIAS: dict[str, type[Fonte]] = {"cldf": Cldf, "almg": Almg, "alesp": Alesp}
@@ -31,6 +32,7 @@ def _construir() -> list[Fonte]:
     out.append(CmcPrefeitura())
     for b in entidades.betha():
         out.append(CmcBetha() if b.fonte == "cmc_betha" else BethaCloud(b))
+    out += [Equiplano(e) for e in entidades.equiplano()]
     for fid, a in entidades.assembleias().items():
         out.append(ASSEMBLEIAS[fid](a))  # type: ignore[call-arg]
     # o TSE vem por último: o recorte dele depende das câmaras acima

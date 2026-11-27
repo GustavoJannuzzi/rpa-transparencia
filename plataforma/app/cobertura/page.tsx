@@ -20,7 +20,7 @@ export const metadata: Metadata = metadadosDaPagina({
 const ADAPTADOR: Record<string, string> = {
   elotech: "adaptador pronto (API)",
   betha: "adaptador pronto (navegador)",
-  equiplano: "próximo adaptador (navegador)",
+  equiplano: "adaptador pronto (navegador)",
   pronim: "próximo adaptador (navegador)",
   ipm: "fora: robots.txt e Cloudflare",
   inga: "fora: robots.txt",
@@ -29,6 +29,7 @@ const ADAPTADOR: Record<string, string> = {
 const FORNECEDOR_DO_SISTEMA: Record<string, string> = {
   elotech: "Elotech",
   betha: "Betha Sistemas",
+  equiplano: "Equiplano",
 };
 const NOME_FORN: Record<string, string> = {
   elotech: "Elotech",

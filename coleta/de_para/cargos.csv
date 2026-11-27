@@ -63,3 +63,7 @@ fonte,origem,papel,observacao
 *,VEREADOR,vereador,
 *,VEREADORA,vereador,
 *,CHEFE DE GABINETE DA PRESIDENCIA,servidor,"visto no portal da Prefeitura em 26/11/2026"
+*,# Equiplano: o relatório não traz cargo; a natureza da despesa do empenho (subelemento de 3.3.90.14.14 do TCE-PR) diz quem é quem. A linha vale para todas as câmaras do fornecedor (fonte = grupo).,,
+equiplano,AGENTES POLÍTICOS,vereador,natureza 3.3.90.14.14.03 do empenho
+equiplano,SERVIDORES EFETIVOS,servidor,natureza 3.3.90.14.14.01 do empenho
+equiplano,SERVIDORES COMISSIONADOS,servidor,natureza 3.3.90.14.14.02 do empenho

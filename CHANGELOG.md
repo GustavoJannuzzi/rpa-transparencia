@@ -7,6 +7,13 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ### Adicionado
 
+- **Equiplano em 10 câmaras do PR**: robô de tela no formulário "Empenhos de Diárias
+  Concedidas" (cascata por AJAX, recarga no exercício, período digitado com máscara,
+  download por botão) e leitor do relatório impresso que vem como CSV. A soma dos
+  empenhos líquidos de cada ano é conferida contra o total do rodapé do relatório.
+  O CPF e o RG que alguns relatórios trazem inteiros saem na memória, antes de
+  gravar o original; o robots.txt é lido pelo navegador quando o servidor não manda
+  a cadeia TLS inteira.
 - **Betha em 14 câmaras do PR**: o coletor de Curitiba generalizado. A câmara vem de
   `entidades.toml` pelo código do portal, conferido no IBGE que o portal informa; a
   consulta de diárias é achada pelo texto do item no menu da tela (cada câmara monta

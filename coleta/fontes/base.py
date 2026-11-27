@@ -16,6 +16,7 @@ from ..nucleo.banco import agora
 from ..nucleo.educacao import Educacao
 from ..nucleo.erros import FalhaTransitoria
 from ..nucleo.evidencia import guardar_original
+from ..nucleo.texto import cpfs_expostos, mascarar_cpf
 
 if TYPE_CHECKING:  # pragma: no cover
     from playwright.async_api import Browser, BrowserContext, Page
@@ -116,6 +117,9 @@ class FonteNavegador(Fonte):
     # Fonte de item longo (um mês inteiro, um deputado num ano) põe 1: os prints do
     # rastro também só saem do Temp quando o contexto fecha. None = config.ITENS_POR_CONTEXTO.
     itens_por_contexto: int | None = None
+    pode_gravar_video = True
+    # o rastro do Playwright guarda os prints de cada passo; fonte com CPF na tela não o grava
+    rastrear = True
 
     def __init__(self) -> None:
         super().__init__()
@@ -133,7 +137,7 @@ class FonteNavegador(Fonte):
         ctx = self.ctx
         assert ctx is not None and ctx.navegador is not None
         opcoes: dict[str, Any] = dict(user_agent=self.ua, viewport=self.viewport, locale="pt-BR", accept_downloads=True)
-        if ctx.gravar_video:
+        if ctx.gravar_video and self.pode_gravar_video:
             pasta = config.evidencias() / "videos" / self.id
             pasta.mkdir(parents=True, exist_ok=True)
             opcoes["record_video_dir"] = str(pasta)
@@ -162,6 +166,8 @@ class FonteNavegador(Fonte):
             await self._criar_contexto()
             self.ao_renovar()
         self._itens_no_contexto += 1
+        if not self.rastrear:
+            return
         await self.contexto.tracing.start(screenshots=True, snapshots=False, sources=False)
         self._rastreando = True
 
@@ -188,9 +194,14 @@ class FonteNavegador(Fonte):
                 self._rastreando = False
         return arquivos
 
+    async def _robots_pelo_navegador(self, url: str) -> tuple[int, str, str]:
+        assert self.contexto is not None
+        r = await self.contexto.request.get(url, timeout=20000)
+        return r.status, r.headers.get("content-type", ""), await r.text()
+
     async def ir(self, url: str, **kw) -> None:
         assert self.pagina is not None
-        await self.educacao.verificar_robots(url, self.http)
+        await self.educacao.verificar_robots(url, self.http, buscar=self._robots_pelo_navegador)
         async with self.educacao.vez(url):
             try:
                 resp = await self.pagina.goto(url, **kw)
@@ -198,3 +209,48 @@ class FonteNavegador(Fonte):
                 raise FalhaTransitoria(f"{type(e).__name__} ao abrir {url}: {str(e)[:200]}") from e
         if resp is not None and (resp.status >= 500 or resp.status == 429):
             raise FalhaTransitoria(f"HTTP {resp.status} ao abrir {url}")
+
+
+# Troca, na página aberta, todo número com cara de CPF (formatado ou 11 dígitos
+# soltos) por asteriscos: nos textos e nos campos. Roda antes do print de erro.
+JS_MASCARAR_CPF = r"""() => {
+  const re = /\d{3}\.?\d{3}\.?\d{3}-?\d{2}/g;
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  let n;
+  while ((n = w.nextNode())) {
+    const novo = n.textContent.replace(re, "***.***.***-**");
+    if (novo !== n.textContent) n.textContent = novo;
+  }
+  for (const e of document.querySelectorAll("input, textarea")) {
+    const novo = e.value.replace(re, "***.***.***-**");
+    if (novo !== e.value) e.value = novo;
+  }
+}"""
+
+
+class FonteComCpfNaTela(FonteNavegador):
+    """Fonte cuja tela ou arquivo mostra CPF sem máscara (Govbr Pronim, alguns
+    relatórios do Equiplano). Nada da página vai para o disco sem passar pela
+    máscara: sem o rastro do Playwright (que guarda a rede e o DOM inteiros), sem
+    vídeo, e o print e o HTML do ponto do erro só depois de mascarar a página."""
+
+    pode_gravar_video = False
+    rastrear = False
+
+    async def evidencia(self, pasta: Path, sucesso: bool) -> list[str]:
+        arquivos: list[str] = []
+        if sucesso or self.pagina is None:
+            return arquivos
+        try:
+            await self.pagina.evaluate(JS_MASCARAR_CPF)
+            html = mascarar_cpf(await self.pagina.content())
+            if cpfs_expostos(html):
+                return arquivos  # a máscara não pegou tudo: melhor sem evidência que com CPF
+            p = pasta / "tela.png"
+            await self.pagina.screenshot(path=str(p), full_page=True)
+            arquivos.append(p.name)
+            (pasta / "pagina.html").write_text(html, encoding="utf-8")
+            arquivos.append("pagina.html")
+        except Exception:
+            pass
+        return arquivos

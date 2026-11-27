@@ -39,6 +39,11 @@ def eh_cargo_parlamentar(cargo: str | None) -> bool:
     return bool(RE_CARGO_PARLAMENTAR.fullmatch(normalizar_nome(cargo)))
 
 
+def grupo_da_fonte(fonte: str) -> str:
+    """'equiplano_pien' -> 'equiplano': a linha da tabela vale para todas as câmaras do fornecedor."""
+    return fonte.split("_", 1)[0] if fonte.startswith(("elotech_", "betha_", "equiplano_", "pronim_")) else fonte
+
+
 def eh_cargo_do_executivo(cargo: str | None) -> bool:
     return bool(RE_CARGO_EXECUTIVO.search(normalizar_nome(cargo)))
 
@@ -68,7 +73,7 @@ def cargo(fonte: str, original: str | None) -> str | None:
     """'VEREADORA', 'Vereador', 'PRESIDENTE DA CÂMARA MUNICIPAL' -> 'vereador' | 'servidor' | None (sem de-para)."""
     t = _tabela("cargos.csv")
     n = normalizar_nome(original)
-    linha = t.get((fonte, n)) or t.get(("*", n))
+    linha = t.get((fonte, n)) or t.get((grupo_da_fonte(fonte), n)) or t.get(("*", n))
     if linha:
         return linha["papel"]
     return None if fonte in FONTES_COM_TABELA else papel_por_regra(original)
