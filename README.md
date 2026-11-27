@@ -89,14 +89,16 @@ cada fonte, **origem = coletado + revisão**, e nenhum item com erro em aberto:
 | Portal da Prefeitura | 121 | 40 | 81 |
 | Betha | 54 | 54 | 0 |
 | Elotech, 12 câmaras do PR | 2.671 | 2.374 | 297 |
+| Betha, 13 câmaras do PR | 2.729 | 1.785 | 944 |
 | Câmara Legislativa do DF | 3.183 | 2.614 | 569 |
 | Assembleia de Minas Gerais (notas) | 94.209 | 94.209 | 0 |
 | Assembleia de São Paulo (linhas agregadas) | 82.182 | 82.182 | 0 |
 
-São 17 casas, com 1.236 parlamentares na plataforma. Nas câmaras do Elotech, a
+São 30 casas, com 1.371 parlamentares na plataforma. Nas câmaras do Elotech, a
 maior parte do que está em revisão é diária sem cargo cujo nome não está no cadastro
 de vereadores do ano: pode ser de servidor, então o nome é descartado e a linha fica
-de fora, contada.
+de fora, contada. No Betha, 877 das 944 linhas em revisão são de Cornélio Procópio,
+cuja consulta da Câmara traz diárias de cargos da Prefeitura (achado abaixo).
 
 "Coletadas" inclui as linhas que a própria fonte marca como canceladas ou devolvidas
 (publicadas, mas fora da soma) e as de 2026 da Prefeitura, que servem para conferir
@@ -107,6 +109,16 @@ e 2025 inteiros (ver o achado abaixo).
 
 Achados reais, todos visíveis no relatório e na fila de revisão:
 
+- **A consulta da Câmara com diárias da Prefeitura.** No Betha de Cornélio Procópio,
+  a consulta "Diárias." da Câmara traz cargos como "Chefe de Gabinete do Prefeito",
+  "Secretário Mun. Agric., Pec. e Meio Ambiente" e "Chefe de Divisão de Galerias de
+  Águas Pluviais", de 2014 a 2026, e o filtro de entidade da própria consulta diz
+  que tudo é da Câmara. Sem como separar as duas entidades, as diárias de servidor
+  dessa consulta ficam em revisão; as de vereador seguem publicadas.
+- **Dois itens de menu com o mesmo texto.** O Betha de Bandeirantes tem "Diárias" e
+  "DIÁRIAS" no mesmo grupo do menu, com consultas diferentes. O robô abre as duas e
+  fica com a que tem as colunas de diária por pessoa; a outra é registrada como
+  descartada, com as colunas que tinha.
 - **Um portal sem total e com paginação que muda.** No portal da Prefeitura, duas
   leituras da mesma consulta trouxeram conjuntos diferentes de linhas. O robô passou
   a ler cada ano por dois caminhos independentes (mês a mês e ano inteiro). Em 2026

@@ -41,7 +41,7 @@ export const ROTULO_CLASSE: Record<Classe, string> = {
   coletada: "Coletada",
   em_revisao: "Em revisão",
   barrada: "Fora: o portal barra o robô",
-  sem_adaptador: "Fora: ainda sem adaptador",
+  sem_adaptador: "Fora: na fila ou sem adaptador",
   nao_identificado: "Fora: fornecedor não identificado",
   outra: "Fora: outro motivo",
 };

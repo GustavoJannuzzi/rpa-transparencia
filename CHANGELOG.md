@@ -7,6 +7,12 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ### Adicionado
 
+- **Betha em 14 câmaras do PR**: o coletor de Curitiba generalizado. A câmara vem de
+  `entidades.toml` pelo código do portal, conferido no IBGE que o portal informa; a
+  consulta de diárias é achada pelo texto do item no menu da tela (cada câmara monta
+  o seu). 13 câmaras novas, uma por região; União da Vitória, Goioerê, Jaguariaíva e
+  Mandirituba ficam de fora, com o motivo na Cobertura. A conferência manda para
+  revisão as diárias de servidor de consulta de câmara que traz cargo do Executivo.
 - **Muitas casas** ([#9](https://github.com/GustavoJannuzzi/rpa-transparencia/pull/9) e o PR seguinte): um
   adaptador por fornecedor, configurado por entidade em `coleta/entidades.toml`. O
   Elotech passa a servir qualquer câmara (mais 12 do PR, 2023–2026, com o subsídio do
