@@ -380,3 +380,19 @@ def test_conferencia_de_assembleia_e_de_camara_nova(con):
     assert s["m3"][0] == "ok" and s["m3"][2] == "ver-maringa-beltrano"
     partido = con.execute("SELECT partido_atual FROM parlamentares WHERE id='est-mg-1'").fetchone()[0]
     assert partido == "PV"
+
+
+def test_ano_em_revisao_de_um_portal_so_vale_para_a_casa_dele():
+    """A divergência do portal da Prefeitura de Curitiba em 2024 e 2025 aparecia como
+    "em revisão" na página de vereadores de outras 38 câmaras."""
+    from coleta.destinos.json_plataforma import _periodos_em_revisao
+
+    anos_rev = {"cmc_prefeitura": [2024, 2025], "pronim_salto_do_lontra": [2023]}
+    mandato = [2021, 2022, 2023, 2024, 2025, 2026]
+    assert _periodos_em_revisao("cmc", mandato, anos_rev) == [
+        {"fonte": "cmc_prefeitura", "anos": [2024, 2025], "motivo": "consulta_prefeitura"}]
+    assert _periodos_em_revisao("cm-salto-do-lontra", mandato, anos_rev) == [
+        {"fonte": "pronim_salto_do_lontra", "anos": [2023], "motivo": "consulta_prefeitura"}]
+    assert _periodos_em_revisao("cm-maringa", mandato, anos_rev) == []
+    # só os anos do mandato contam
+    assert _periodos_em_revisao("cmc", [2026], anos_rev) == []

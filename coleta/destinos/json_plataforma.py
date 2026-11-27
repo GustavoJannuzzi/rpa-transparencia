@@ -306,8 +306,7 @@ def publicar(con: sqlite3.Connection) -> list[str]:
             mandato = sorted({a for e in eleicoes for a in range(int(e) + 1, int(e) + 5) if de_c <= a <= ate_c})
             cab["anos_mandato"] = mandato
             cab["anos_sem_publicacao"] = sorted(a for a in mandato if a in sem_publicacao.get(p["casa"], set()))
-            cab["periodos_em_revisao"] = [{"fonte": f, "anos": [a for a in anos_f if a in mandato], "motivo": "consulta_prefeitura"}
-                                          for f, anos_f in sorted(anos_rev_fonte.items()) if any(a in mandato for a in anos_f)]
+            cab["periodos_em_revisao"] = _periodos_em_revisao(p["casa"], mandato, anos_rev_fonte)
         tamanho += _escrever(destino / "parlamentares" / f"{pid}.json", cab)
         for a in anos:
             tamanho += _escrever(destino / "parlamentares" / pid / f"{a}.json", _arquivo_ano([l for l in linhas if l[1].startswith(str(a))]))
@@ -446,6 +445,16 @@ def _anos_em_revisao(con) -> dict[str, list[int]]:
                             WHERE metrica='ano_inteiro_x_mes_a_mes' AND valor='diverge' ORDER BY escopo"""):
         anos[r[0]].append(int(r[1].split("-")[1]))
     return dict(anos)
+
+
+def _periodos_em_revisao(casa: str, mandato: list[int], anos_rev_fonte: dict[str, list[int]]) -> list[dict]:
+    """Os anos do mandato que uma fonte *desta casa* mandou inteiros para revisão.
+
+    A divergência é de um portal só: os anos do portal da Prefeitura de Curitiba não
+    dizem nada sobre um vereador de Maringá."""
+    return [{"fonte": f, "anos": [a for a in anos_f if a in mandato], "motivo": "consulta_prefeitura"}
+            for f, anos_f in sorted(anos_rev_fonte.items())
+            if CASA_DA_FONTE.get(f) == casa and any(a in mandato for a in anos_f)]
 
 
 def _arquivo_ano(linhas: list[tuple]) -> dict:
