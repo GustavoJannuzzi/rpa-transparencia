@@ -6,6 +6,7 @@ Valores em dinheiro são gravados como TEXT com o Decimal exato, nunca REAL.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -150,6 +151,16 @@ def _migrar(con: sqlite3.Connection) -> None:
 
 def agora() -> str:
     return datetime.now(UTC).astimezone().isoformat(timespec="seconds")
+
+
+def carimbo_publicacao() -> str:
+    """A data de geração gravada no que vai para o ar. Com SOURCE_DATE_EPOCH (a
+    convenção de build reproduzível), a data é fixa, e duas gerações dos mesmos dados
+    saem iguais byte a byte; sem ela, é a hora de agora."""
+    epoca = os.environ.get("SOURCE_DATE_EPOCH", "").strip()
+    if epoca.isdigit():
+        return datetime.fromtimestamp(int(epoca), UTC).astimezone().isoformat(timespec="seconds")
+    return agora()
 
 
 def conectar(caminho: Path | None = None) -> sqlite3.Connection:
