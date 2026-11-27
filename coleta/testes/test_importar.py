@@ -166,7 +166,8 @@ def test_tabela_nova_de_outra_sessao_entra_se_tiver_a_coluna_fonte(pastas):
         con.execute("CREATE TABLE IF NOT EXISTS atividades(chave TEXT PRIMARY KEY, fonte TEXT, item TEXT, rotulo TEXT)")
         con.close()
     con = conectar(trabalho / "estado.db")
-    con.execute("INSERT INTO atividades VALUES('a1', 'alap', 'item-0', 'presença')")
+    # com a frente D3 a tabela já nasce do esquema (16 colunas): as colunas vão nomeadas
+    con.execute("INSERT INTO atividades(chave, fonte, item, casa, tipo, rotulo) VALUES('a1', 'alap', 'item-0', 'al-ap', 'presenca', 'presença')")
     con.close()
     r = importar(trabalho / "estado.db", ["alap"], "D2", pasta_destino=canonico)
     assert r.por_tabela["atividades"] == (0, 1)

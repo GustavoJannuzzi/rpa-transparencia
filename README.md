@@ -216,14 +216,18 @@ inteiro (`--fonte elotech`, `--fonte assembleia`, `--fonte sapl`). `coletar --gr
 navegador em `dados/evidencias/videos/`. `--paralelo N` roda N fontes ao mesmo tempo,
 cada uma no seu portal (dentro de um portal continua um pedido por vez).
 
-A coleta do SAPL é longa (um pedido por minuto em cada câmara) e pode rodar num banco
-de trabalho; depois, o banco principal recebe o que fechou sem pedir de novo:
+A coleta do SAPL é longa (um pedido por minuto em cada câmara) e roda num banco de
+trabalho, com as câmaras em paralelo; o `importar` (abaixo) leva ao canônico as que
+fecharam:
 
 ```bash
 RPA_DADOS=dados-trabalho .venv/Scripts/python -m coleta descobrir --fonte sapl --paralelo 6
 RPA_DADOS=dados-trabalho .venv/Scripts/python -m coleta coletar --fonte sapl --paralelo 6
-RPA_SAPL_REPRODUZIR=dados-trabalho/cache/sapl .venv/Scripts/python -m coleta tudo --fonte sapl
 ```
+
+O SAPL guarda cada resposta comprimida em `cache/sapl/`. Com
+`RPA_SAPL_REPRODUZIR=<pasta>/cache/sapl`, a coleta de uma câmara é refeita a partir
+dessas respostas, sem pedido nenhum, com o mesmo hash e a mesma data de coleta.
 
 Coleta longa (horas no navegador) roda num banco de trabalho, sem segurar o
 canônico: `RPA_DADOS=<pasta de trabalho>` no `descobrir` e no `coletar`. Quando ela
