@@ -245,7 +245,7 @@ class FonteAssembleiaTela(FonteAssembleia, FonteNavegador):
     # sem rastro, que fica no Temp até o navegador fechar (ver FonteNavegador); a evidência
     # do erro fica com o print da página inteira e o HTML
     itens_por_contexto = 1
-    rastro_por_item = False
+    rastrear = False
 
     def __init__(self, ent: EntidadeAssembleia) -> None:
         # o endereço da consulta vem de entidades.toml (`inicio`)
