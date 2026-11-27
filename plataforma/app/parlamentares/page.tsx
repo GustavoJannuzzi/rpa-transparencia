@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import ListaRecolhida, { ABRIR_LISTA_DO_ENDERECO } from "@/componentes/ListaRecolhida";
 import { casas, indice } from "@/lib/dados";
 import { inteiro } from "@/lib/formato";
 import { metadadosDaPagina } from "@/lib/site";
@@ -32,7 +33,8 @@ export default function Parlamentares() {
     <div className="mx-auto max-w-[1180px] px-4 py-8 sm:px-8 sm:py-10">
       <h1 className="font-titulo text-[2.4rem] font-medium leading-tight tracking-[-0.02em]">Parlamentares</h1>
       <p className="mt-2 max-w-[65ch] text-tinta-2">
-        Em ordem alfabética, casa por casa. Esta lista é o mesmo índice do grafo e da busca, para quem prefere navegar sem eles. Que casas
+        Em ordem alfabética, casa por casa: abra a casa para ver os nomes. Esta lista é o mesmo índice do grafo e da busca, para quem prefere
+        navegar sem eles. Que casas
         entram, e por que outras ficam de fora, está em{" "}
         <Link href="/cobertura/" className="underline hover:text-tinta">
           Cobertura
@@ -53,17 +55,18 @@ export default function Parlamentares() {
             <h2 id={`titulo-${c.id}`} className="font-titulo text-xl font-medium">
               {titulo(c)} <span className="num text-tinta-3">({inteiro(itens.length)})</span>
             </h2>
-            {c.tipo !== "camara_federal" && (
-              <p className="mt-1 text-sm">
-                <Link href={`/casas/${c.id}/`} className="text-tinta-3 underline hover:text-tinta">
-                  A casa: sistema, totais e o que ficou em revisão
-                </Link>
-              </p>
-            )}
-            <ul className="mt-4 columns-1 gap-8 sm:columns-2 lg:columns-3">
+            <p className="mt-1 text-sm">
+              <Link href={`/casas/${c.id}/`} className="text-tinta-3 underline hover:text-tinta">
+                A casa: sistema, totais e o que ficou em revisão
+              </Link>
+            </p>
+            <ListaRecolhida
+              rotulo={itens.length === 1 ? "Mostrar o nome" : `Mostrar os ${inteiro(itens.length)} nomes`}
+              className="mt-4 columns-1 gap-8 sm:columns-2 lg:columns-3"
+            >
               {itens.map((i) => (
                 <li key={i.id} className="break-inside-avoid border-t border-aco py-1.5">
-                  <Link href={`/parlamentares/${i.id}/`} className="hover:text-carimbo-claro hover:underline">
+                  <Link href={`/parlamentares/${i.id}/`} prefetch={false} className="hover:text-carimbo-claro hover:underline">
                     {i.nome}
                   </Link>
                   <span className="text-sm text-tinta-3">
@@ -73,10 +76,12 @@ export default function Parlamentares() {
                   </span>
                 </li>
               ))}
-            </ul>
+            </ListaRecolhida>
           </section>
         );
       })}
+      {/* abre a lista da casa do endereço (#casa-…): script em linha, sem componente de cliente */}
+      <script dangerouslySetInnerHTML={{ __html: ABRIR_LISTA_DO_ENDERECO }} />
     </div>
   );
 }

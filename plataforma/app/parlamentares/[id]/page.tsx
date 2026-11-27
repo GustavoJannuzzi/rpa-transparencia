@@ -67,7 +67,7 @@ export default async function PaginaParlamentar({ params }: { params: Promise<{ 
           Parlamentares
         </Link>{" "}
         /{" "}
-        {casa && p.casa !== "camara-deputados" ? (
+        {casa ? (
           <Link href={`/casas/${p.casa}/`} className="underline hover:text-tinta">
             {casa.nome}
           </Link>

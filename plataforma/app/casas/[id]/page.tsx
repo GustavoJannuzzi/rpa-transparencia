@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AtividadeDaCasa } from "@/componentes/Atividade";
 import Barras, { type ItemBarra } from "@/componentes/Barras";
 import { CarimboRevisao } from "@/componentes/EmRevisao";
+import ListaRecolhida from "@/componentes/ListaRecolhida";
 import Valor from "@/componentes/Valor";
 import { casa as lerCasa, casas, categorias } from "@/lib/dados";
 import { MODO } from "@/lib/fontes";
@@ -14,21 +15,32 @@ import type { Casa, Procedencia } from "@/lib/tipos";
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return casas()
-    .filter((c) => c.id !== "camara-deputados")
-    .map((c) => ({ id: c.id }));
+  return casas().map((c) => ({ id: c.id }));
 }
 
 function quem(c: Casa) {
   if (c.tipo === "camara_municipal") return ["vereador", "vereadores"];
+  if (c.tipo === "camara_federal") return ["deputado federal", "deputados federais"];
   if (c.id === "al-df") return ["deputado distrital", "deputados distritais"];
   return ["deputado estadual", "deputados estaduais"];
+}
+
+/** O trecho "Cobertura / …" do topo: o grupo da casa na página Cobertura. */
+function grupoNaCobertura(c: Casa) {
+  if (c.tipo === "camara_municipal") return `Câmaras do ${c.uf}`;
+  if (c.tipo === "camara_federal") return "Federal";
+  return "Assembleias";
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const c = lerCasa(id);
-  const oque = c.tipo === "camara_municipal" ? "Diárias de vereadores" : "Verba indenizatória dos deputados";
+  const oque =
+    c.tipo === "camara_municipal"
+      ? "Diárias de vereadores"
+      : c.tipo === "camara_federal"
+        ? "Cota parlamentar dos deputados federais"
+        : "Verba indenizatória dos deputados";
   return metadadosDaPagina({
     title: c.nome,
     description: `${oque} da ${c.nome}, de ${c.de} a ${c.ate}, coletadas de ${c.sistemas.map((s) => s.sistema).join(" e ")}, com a conferência e o que ficou em revisão.`,
@@ -41,6 +53,9 @@ function partes(detalhe?: string | null): [string, string] | null {
   const m = /coletado = (\d+); revisão = (\d+)/.exec(detalhe ?? "");
   return m ? [m[1], m[2]] : null;
 }
+
+// a lista de membros maior que isto começa recolhida (na coleta de 25/11/2026, só a da Câmara dos Deputados)
+const LISTA_LONGA = 200;
 
 const RESULTADO: Record<string, string> = { confere: "confere", diverge: "não fecha", parcial: "fecha em parte", observacao: "observação" };
 
@@ -66,6 +81,8 @@ export default async function PaginaCasa({ params }: { params: Promise<{ id: str
     porMotivo.set(leigo, atual);
   }
   const motivos = [...porMotivo.entries()].sort((a, b) => b[1].linhas - a[1].linhas);
+  // lista longa: recolhida, e sem pedir de antemão a página de cada nome que passa na tela
+  const listaLonga = c.membros.length > LISTA_LONGA;
 
   return (
     <article className="mx-auto max-w-[1180px] px-4 py-8 sm:px-8 sm:py-10">
@@ -73,13 +90,13 @@ export default async function PaginaCasa({ params }: { params: Promise<{ id: str
         <Link href="/cobertura/" className="underline hover:text-tinta">
           Cobertura
         </Link>{" "}
-        / {municipal ? `Câmaras do ${c.uf}` : "Assembleias"}
+        / {grupoNaCobertura(c)}
       </p>
       <header className="mt-3 grid gap-6 border-b border-aco pb-8 md:grid-cols-[1fr_auto] md:items-end">
         <div>
           <h1 className="max-w-[22ch] font-titulo text-[2.2rem] font-medium leading-[1.04] tracking-[-0.02em] sm:text-[3rem]">{c.nome}</h1>
           <p className="mt-2 text-tinta-2">
-            {municipal ? `${c.municipio}, ${c.uf}` : c.uf} · {c.de === c.ate ? c.de : `${c.de} a ${c.ate}`} ·{" "}
+            {municipal ? `${c.municipio}, ${c.uf}` : c.tipo === "camara_federal" ? "Brasil" : c.uf} · {c.de === c.ate ? c.de : `${c.de} a ${c.ate}`} ·{" "}
             <Link href={`/parlamentares/#casa-${c.id}`} className="underline hover:text-tinta">
               {contagem(c.parlamentares, um, varios)}
               {municipal ? "" : " no período"}
@@ -270,11 +287,15 @@ export default async function PaginaCasa({ params }: { params: Promise<{ id: str
               {varios.charAt(0).toUpperCase() + varios.slice(1)}
             </h2>
             <p className="mt-1 text-sm text-tinta-3">Em ordem alfabética.</p>
-            <ul className="mt-4 columns-1 gap-8 sm:columns-2">
+            <ListaRecolhida
+              recolhida={listaLonga}
+              rotulo={`Mostrar os ${contagem(c.membros.length, um, varios)}`}
+              className="mt-4 columns-1 gap-8 sm:columns-2"
+            >
               {c.membros.map((m) => (
                 <li key={m.id} className="flex break-inside-avoid items-baseline justify-between gap-3 border-t border-aco py-1.5">
                   <span className="min-w-0">
-                    <Link href={`/parlamentares/${m.id}/`} className="hover:text-carimbo-claro hover:underline">
+                    <Link href={`/parlamentares/${m.id}/`} prefetch={listaLonga ? false : undefined} className="hover:text-carimbo-claro hover:underline">
                       {m.nome}
                     </Link>
                     <span className="text-sm text-tinta-3"> · {m.partido ?? (municipal ? "partido em revisão" : "partido não informado")}</span>
@@ -286,7 +307,7 @@ export default async function PaginaCasa({ params }: { params: Promise<{ id: str
                   )}
                 </li>
               ))}
-            </ul>
+            </ListaRecolhida>
           </section>
         </div>
 

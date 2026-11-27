@@ -92,6 +92,8 @@ export const ESTADOS: Estado[] = [
   { nome: "cobertura", rota: "/cobertura/" },
   { nome: "casa-camara", rota: "/casas/cm-maringa/" },
   { nome: "casa-assembleia", rota: "/casas/al-sp/", soAxe: true },
+  // a casa federal: a lista de 648 nomes começa recolhida
+  { nome: "casa-federal", rota: "/casas/camara-deputados/", soAxe: true },
   { nome: "deputado-estadual", rota: "/parlamentares/est-mg-12193/", soAxe: true },
   { nome: "sobre", rota: "/sobre/" },
   { nome: "pagina-nao-encontrada", rota: "/nao-existe/" },

@@ -11,9 +11,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     ...fixas.map((c) => ({ url: `${SITE}${c}`, lastModified: quando })),
     ...partidos().map((p) => ({ url: `${SITE}/partidos/${p.slug}/`, lastModified: quando })),
-    ...casas()
-      .filter((c) => c.id !== "camara-deputados")
-      .map((c) => ({ url: `${SITE}/casas/${c.id}/`, lastModified: quando })),
+    ...casas().map((c) => ({ url: `${SITE}/casas/${c.id}/`, lastModified: quando })),
     ...indice().map((i) => ({ url: `${SITE}/parlamentares/${i.id}/`, lastModified: quando })),
   ];
 }

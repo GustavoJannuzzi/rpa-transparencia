@@ -26,7 +26,9 @@ class FonteAssembleia(Fonte):
         self.de, self.ate = entidades.periodo()
         self.sistema = SistemaOrigem(
             fonte=ent.fonte, casa=ent.casa, sistema=ent.sistema, fornecedor=ent.nome, modo=ent.modo,
-            cobre_de=self.de, cobre_ate=self.ate, endereco=self.endereco or ent.extra.get("conjunto") or ent.extra.get("api", ""),
+            cobre_de=self.de, cobre_ate=self.ate,
+            # o endereço que a plataforma mostra a quem lê: uma página que abre, nunca só a raiz de uma API
+            endereco=self.endereco or ent.extra.get("documentacao") or ent.extra.get("conjunto") or ent.extra.get("api", ""),
             o_que_tem=self.o_que_tem,
         )
         super().__init__()
