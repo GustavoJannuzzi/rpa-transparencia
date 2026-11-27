@@ -239,6 +239,7 @@ class Aleto(FonteAssembleiaTela):
         return palavras, url, h, meta
 
     async def coletar_item(self, item: ItemInventario) -> Resultado:
+        self.disco()
         assert self.pagina is not None
         p = item.parametros
         ano, nome_select = int(p["ano"]), str(p["nome"])

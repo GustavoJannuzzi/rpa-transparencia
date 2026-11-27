@@ -185,6 +185,7 @@ class Alap(FonteAssembleiaTela):
 
     # ---- um gabinete num ano ----------------------------------------------
     async def coletar_item(self, item: ItemInventario) -> Resultado:
+        self.disco()
         assert self.pagina is not None
         p = item.parametros
         gid, ano = str(p["gabinete"]), int(p["ano"])

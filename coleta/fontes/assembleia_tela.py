@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -27,9 +28,10 @@ from html.parser import HTMLParser
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin
 
+from .. import config
 from ..entidades import EntidadeAssembleia
 from ..modelo import Procedencia, Resultado, TotalOficial
-from ..nucleo.erros import FalhaTransitoria
+from ..nucleo.erros import FalhaTransitoria, PortalMudou
 from ..nucleo.evidencia import guardar_original
 from .assembleia import FonteAssembleia
 from .base import FonteNavegador
@@ -236,6 +238,10 @@ class Conferencias:
 # A fonte
 # ---------------------------------------------------------------------------
 
+# Abaixo disto, a coleta para (o rastro do navegador de um item longo passa de 100 MB).
+DISCO_MINIMO = 400 * 2**20
+
+
 class FonteAssembleiaTela(FonteAssembleia, FonteNavegador):
     """Assembleia lida no navegador. `inicio` é a página onde a consulta começa."""
 
@@ -247,6 +253,21 @@ class FonteAssembleiaTela(FonteAssembleia, FonteNavegador):
         self.inicio = ent.extra.get("inicio") or self.inicio
         self.endereco = self.endereco or self.inicio
         super().__init__(ent)
+
+    async def antes_do_item(self, item) -> None:
+        # Disco quase cheio: a fonte para limpa (o item fica para a retomada) em vez de
+        # cair no meio, quando o rastro do navegador não conseguir ser gravado.
+        livre = shutil.disk_usage(config.dados().anchor or config.dados()).free
+        self._disco_cheio: str | None = None
+        if livre < DISCO_MINIMO:
+            self._disco_cheio = f"o disco tem {livre // 2**20} MB livres (mínimo {DISCO_MINIMO // 2**20} MB): a coleta para e retoma depois"
+        else:
+            await super().antes_do_item(item)
+
+    def disco(self) -> None:
+        """Chamado no começo de cada item: para a fonte se o disco estiver quase cheio."""
+        if getattr(self, "_disco_cheio", None):
+            raise PortalMudou(self._disco_cheio)
 
     def recorte(self, html: str, url: str) -> str:
         """O pedaço da tela HTML que vale guardar como original (cada casa diz o seu)."""
