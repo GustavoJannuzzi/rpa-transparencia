@@ -7,6 +7,12 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ### Adicionado
 
+- **Betha em 14 câmaras do PR**: o coletor de Curitiba generalizado. A câmara vem de
+  `entidades.toml` pelo código do portal, conferido no IBGE que o portal informa; a
+  consulta de diárias é achada pelo texto do item no menu da tela (cada câmara monta
+  o seu). 13 câmaras novas, uma por região; União da Vitória, Goioerê, Jaguariaíva e
+  Mandirituba ficam de fora, com o motivo na Cobertura. A conferência manda para
+  revisão as diárias de servidor de consulta de câmara que traz cargo do Executivo.
 - **`importar`**: leva as linhas de algumas fontes de um banco de trabalho para o
   canônico, numa transação só, com os originais e as evidências delas. A coleta
   longa pelo navegador roda à parte, e a trava do canônico dura minutos. Rodar de
