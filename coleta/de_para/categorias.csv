@@ -204,3 +204,6 @@ alap,Locação de Bens Móveis e Intangíveis,bens_moveis,Locação de móveis e
 alrn,Apoio Cultural e a Entidades Sociais,apoio_entidades,Apoio cultural e a entidades sociais
 alrn,Locomoção/ hospedagem/ alimentação/ passagens,viagens,"Viagem: passagens, hospedagem e alimentação"
 alrn,Outras despesas,outras,Outras despesas (como a casa classifica)
+alap,Aquisição de Softwares de Aplicação,assinaturas,"Assinaturas, internet e software"
+alap,"Exposições, Congressos e Conferências",cursos,"Cursos, palestras e eventos"
+alap,Passagens para o País,passagem_aerea,Passagem aérea
