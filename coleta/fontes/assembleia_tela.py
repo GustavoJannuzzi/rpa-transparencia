@@ -241,9 +241,11 @@ class FonteAssembleiaTela(FonteAssembleia, FonteNavegador):
 
     inicio = ""
     timeout_resposta = 60000
-    # cada item é longo (um mês inteiro, um deputado num ano): contexto novo a cada item,
-    # porque os prints do rastro só saem do Temp quando o contexto fecha (ver FonteNavegador)
+    # cada item é longo (um mês inteiro, um deputado num ano): contexto novo a cada item e
+    # sem rastro, que fica no Temp até o navegador fechar (ver FonteNavegador); a evidência
+    # do erro fica com o print da página inteira e o HTML
     itens_por_contexto = 1
+    rastro_por_item = False
 
     def __init__(self, ent: EntidadeAssembleia) -> None:
         # o endereço da consulta vem de entidades.toml (`inicio`)
