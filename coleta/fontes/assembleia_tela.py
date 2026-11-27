@@ -241,7 +241,7 @@ class Conferencias:
 # Abaixo disto, a coleta para (o rastro do navegador de um item longo passa de 100 MB).
 DISCO_MINIMO = 400 * 2**20
 # A cada tantos itens o contexto do navegador é trocado (o que ele acumula no Temp vai embora).
-ITENS_POR_CONTEXTO = 20
+ITENS_POR_CONTEXTO = 1  # cada item é longo (um deputado num ano, um mês inteiro): contexto novo a cada item
 
 
 class FonteAssembleiaTela(FonteAssembleia, FonteNavegador):
