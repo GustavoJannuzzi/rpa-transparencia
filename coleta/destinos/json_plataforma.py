@@ -17,7 +17,7 @@ from pathlib import Path
 
 from .. import config, entidades
 from ..fontes import FONTES
-from ..nucleo.banco import agora
+from ..nucleo.banco import carimbo_publicacao
 from ..nucleo.texto import cpfs_expostos, mascarar_cpf, normalizar_nome, slug
 from . import cobertura as cob
 from .grafo import layout
@@ -30,6 +30,13 @@ PREFIXOS_URL = [
 ]
 NOME_FONTE = {f.id: f.sistema.sistema for f in FONTES}
 CASA_DA_FONTE = {f.id: f.sistema.casa for f in FONTES}
+# ordem fixa das fontes onde ela aparece na saída: a cronológica dos sistemas (o ano em
+# que cada um começa a cobrir; no empate, a ordem do registro de fontes)
+ORDEM_CRONOLOGICA = {f.id: (f.sistema.cobre_de, i) for i, f in enumerate(FONTES)}
+
+
+def _cronologica(fonte: str) -> tuple:
+    return ORDEM_CRONOLOGICA.get(fonte, (10_000, len(ORDEM_CRONOLOGICA), fonte))
 
 
 class CpfNaPublicacao(RuntimeError):
@@ -278,7 +285,8 @@ def publicar(con: sqlite3.Connection) -> list[str]:
             "mandatos": extra.get("eleicoes", []), "id_camara": extra.get("id_camara"),
             "top_fornecedores": [{"doc": doc, "nome": nomes_forn.get(doc), "linhas": n}
                                  for doc, n in fornecedores_dep[pid].most_common(8)],
-            "p": {"coleta": {f: (coleta.get(f) or "")[:10] for f in fontes_parl.get(pid, set()) | {s_["fonte"] for s_ in subsidio.get(pid, [])}}},
+            "p": {"coleta": {f: (coleta.get(f) or "")[:10] for f in sorted(fontes_parl.get(pid, set()) | {s_["fonte"] for s_ in subsidio.get(pid, [])},
+                                                                            key=_cronologica)}},
             "em_revisao": rev_parl.get(pid, []),
             "granularidade": "agregado" if granularidade_parl.get(pid) == {"agregado"} else ("misto" if len(granularidade_parl.get(pid, ())) > 1 else "nota"),
             "subsidio": subsidio.get(pid, []),
@@ -664,7 +672,7 @@ def _fontes(con, coleta, camara_cmc_ano) -> dict:
         v = camara_cmc_ano.get(a)
         diarias_cmc.append({"ano": a, "vereadores": _d(v["vereadores"]) if v else None, "servidores": _d(v["servidores"]) if v else None,
                             "linhas": v["linhas"] if v else 0, "em_revisao": rev_cmc.get(a, 0)})
-    return {"gerado_em": agora(), "versao_robo": config.VERSAO_ROBO, "fontes": fontes, "cobertura_curitiba": cobertura,
+    return {"gerado_em": carimbo_publicacao(), "versao_robo": config.VERSAO_ROBO, "fontes": fontes, "cobertura_curitiba": cobertura,
             "diarias_camara_curitiba": diarias_cmc}
 
 
@@ -714,4 +722,4 @@ def _revisao(con) -> dict:
         grupos.append({"fonte": fonte, "tipo": tipo, "motivo": motivo, "n": 0, "linhas": n, "exemplos": []})
     linhas_fora = {r[0]: r[1] for r in con.execute(
         "SELECT d.fonte, COUNT(*) FROM despesas d JOIN despesa_situacao s USING(chave) WHERE s.situacao='revisao' GROUP BY 1")}
-    return {"grupos": grupos, "linhas_em_revisao_por_fonte": linhas_fora, "gerado_em": agora()}
+    return {"grupos": grupos, "linhas_em_revisao_por_fonte": linhas_fora, "gerado_em": carimbo_publicacao()}

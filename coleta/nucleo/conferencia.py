@@ -179,6 +179,23 @@ def _tokens_nome(n: str) -> set[str]:
     return {t for t in normalizar_nome(n).split() if len(t) > 2}
 
 
+def _nome_parlamentar(registros: list[tuple[str, str]]) -> str | None:
+    """O nome parlamentar que a Câmara usa hoje, entre os (período, nome) que o
+    cadastro de pessoal dela publica para o gabinete da pessoa.
+
+    Regra: vale o do período mais recente ("atual" conta como o mais recente de
+    todos), porque a Câmara pode mudar o nome com o tempo ("PIER" no gabinete de
+    2017 a 2019, "PIER PETRUZZIELLO" de 2019 em diante: fica o de agora). No empate,
+    o mais completo (mais palavras, depois mais letras) e, por fim, a ordem
+    alfabética. A escolha só depende dos dados, nunca da ordem em que eles chegam.
+    """
+    def chave(registro: tuple[str, str]) -> tuple:
+        periodo, nome = registro
+        recencia = 10_000 if periodo == "atual" else (int(periodo) if periodo.isdigit() else 0)
+        return (-recencia, -len(nome.split()), -len(nome), nome)
+    return min(registros, key=chave)[1] if registros else None
+
+
 def _vereadores(con, rv: Revisor, casa: Casa, fontes: list[str]) -> None:
     """Pessoa = componente ligado de matrículas e nomes que aparecem juntos, dentro
     de uma câmara (a mesma matrícula em duas câmaras é de pessoas diferentes).
@@ -187,9 +204,16 @@ def _vereadores(con, rv: Revisor, casa: Casa, fontes: list[str]) -> None:
     então ela não é a identidade: é um elo entre nomes. Os relatórios de 2013–2014
     trazem o nome curto, que é o nome de urna do TSE; a candidatura liga o nome de
     urna ao nome civil.
+
+    O nome exibido, em ordem de preferência: (1) o nome parlamentar que a própria
+    Câmara usa no gabinete, pela regra de `_nome_parlamentar`; (2) o nome de urna do
+    TSE na eleição mais recente em que o partido se resolve; (3) o nome civil.
+    Nenhum passo depende da ordem de um set: a mesma entrada dá o mesmo nome em
+    qualquer rodada.
     """
     u = _Uniao()
-    apelidos: dict[str, str] = {}
+    # nome civil normalizado -> (período, nome parlamentar) de cada gabinete com esse nome
+    apelidos: dict[str, list[tuple[str, str]]] = defaultdict(list)
     so_apelido: set[str] = set()  # nomes que só aparecem como nome parlamentar ou de urna
     def token_ref(ref: str) -> str:
         tipo, _, valor = ref.partition(":")
@@ -197,7 +221,7 @@ def _vereadores(con, rv: Revisor, casa: Casa, fontes: list[str]) -> None:
 
     marcas = ",".join("?" * len(fontes))
     municipio = normalizar_nome(casa.municipio)
-    for r in con.execute("SELECT fonte, ref, nome, nome_parlamentar, matricula FROM pessoas_fonte WHERE casa=?", (casa.id,)):
+    for r in con.execute("SELECT fonte, ref, periodo, nome, nome_parlamentar, matricula FROM pessoas_fonte WHERE casa=?", (casa.id,)):
         toks = [] if r["ref"].startswith("gab:") else [token_ref(r["ref"])]
         if r["nome"]:
             toks.append("n:" + normalizar_nome(r["nome"]))
@@ -206,7 +230,7 @@ def _vereadores(con, rv: Revisor, casa: Casa, fontes: list[str]) -> None:
         if r["ref"].startswith("gab:") and r["nome_parlamentar"]:
             toks.append("n:" + normalizar_nome(r["nome_parlamentar"]))
             so_apelido.add(normalizar_nome(r["nome_parlamentar"]))
-            apelidos[normalizar_nome(r["nome"])] = r["nome_parlamentar"]
+            apelidos[normalizar_nome(r["nome"])].append((r["periodo"], r["nome_parlamentar"]))
         for a, b in pairwise(toks):
             u.unir(a, b)
         for t in toks:
@@ -215,7 +239,8 @@ def _vereadores(con, rv: Revisor, casa: Casa, fontes: list[str]) -> None:
         f"SELECT DISTINCT fonte, ref_parlamentar FROM despesas WHERE fonte IN ({marcas}) AND ref_parlamentar IS NOT NULL", fontes)}
     refs |= {(r[0], r[1]) for r in con.execute("SELECT DISTINCT fonte, ref FROM pessoas_fonte WHERE casa=? AND ref NOT LIKE 'gab:%'", (casa.id,))}
 
-    for _, ref in refs:
+    # em ordem: a ordem de entrada na união decide a ordem dos componentes
+    for _, ref in sorted(refs):
         u.achar(token_ref(ref))
 
     # Liga nome civil e nome de urna da mesma candidatura, só para quem aparece nas fontes da Câmara
@@ -286,7 +311,7 @@ def _vereadores(con, rv: Revisor, casa: Casa, fontes: list[str]) -> None:
     for pid in usados:
         i = info[pid]
         civil = _titulo(i["canon"])
-        apelido = next((apelidos[n] for n in i["nomes"] if n in apelidos), None)
+        apelido = _nome_parlamentar([reg for n in sorted(i["nomes"]) for reg in apelidos.get(n, [])])
         eleicoes = sorted({max([e for e in ELEICOES_MUNICIPAIS if e < a] or [0]) for a in i["anos"]} - {0})
         partido_atual = None
         urna_exib: str | None = None

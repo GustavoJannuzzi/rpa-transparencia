@@ -10,7 +10,7 @@ fixado pelo SHA do commit, com a versão ao lado; o Dependabot atualiza os dois.
 
 | Job | O que confere | Reprova quando |
 |---|---|---|
-| **Python** | `ruff check .`, `mypy` (pacote `coleta`, com `check_untyped_defs`) e `pytest` | um aviso de lint ou de tipo, ou um teste quebrado. O `pytest` padrão deixa de fora os testes de contrato (`-m 'not contrato'` no `pyproject.toml`), que vão à internet. Os de resiliência abrem o Chromium do Playwright, sem rede. |
+| **Python** | `ruff check .`, `mypy` (pacote `coleta`, com `check_untyped_defs`) e `pytest` | um aviso de lint ou de tipo, ou um teste quebrado. O `pytest` padrão deixa de fora os testes de contrato (`-m 'not contrato'` no `pyproject.toml`), que vão à internet. Os de resiliência abrem o Chromium do Playwright, sem rede. O de determinismo roda conferir, publicar e relatorio em dois processos com `PYTHONHASHSEED` diferentes e compara a saída byte a byte. |
 | **Plataforma** | `npm run build` (export estático em `out/`), `tsc --noEmit` e `npm test` | o build ou os tipos quebram, ou um "R$" no HTML gerado sai sem fonte e data de coleta (`testes/procedencia.mjs`). O `out/` vai como artefato para os dois jobs abaixo. |
 | **Navegador** | axe-core e prints de referência, com o Playwright, no `out/` servido como na Vercel (`testes/servidor.mjs`) | uma violação de acessibilidade fora da lista de exceções, uma exceção que já não acha a violação dela, ou um print diferente da referência. |
 | **Lighthouse** | `lhci autorun` em oito páginas, três rodadas cada, no perfil de celular | uma nota ou métrica abaixo do orçamento em `plataforma/lighthouserc.js`. |

@@ -73,6 +73,15 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   lambda que capturava a variável do laço). Nenhuma mudança de comportamento: com
   a mesma base e a mesma semente de hash, o código antigo e o novo geram os mesmos
   JSON, CSV, relatório e tabelas de conferência, tirando os carimbos de hora.
+- A mesma coleta publica o mesmo site em qualquer rodada. Antes, a saída dependia
+  da semente de hash do Python (`PYTHONHASHSEED`, sorteada a cada processo). A
+  ordem das datas de coleta na página do vereador com mais de um sistema mudava
+  sozinha, e o nome exibido de quem tem dois nomes parlamentares no gabinete
+  também. Agora o nome segue uma regra escrita: o nome parlamentar do período mais
+  recente; no empate, o mais completo e depois a ordem alfabética. As datas de
+  coleta seguem a ordem cronológica dos sistemas. Com `SOURCE_DATE_EPOCH`, a data
+  de geração fica fixa, e duas gerações saem iguais byte a byte. O teste
+  `test_determinismo.py` roda a derivação com duas sementes e compara.
 
 ## [0.1.0] - 2026-11-26
 

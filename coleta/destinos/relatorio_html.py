@@ -9,7 +9,7 @@ from jinja2 import Environment
 
 from .. import config
 from ..fontes import FONTES
-from ..nucleo.banco import agora
+from ..nucleo.banco import carimbo_publicacao
 from ..nucleo.texto import cpfs_expostos
 
 MODELO = """<!doctype html>
@@ -73,7 +73,7 @@ def gerar(con: sqlite3.Connection) -> Path:
                 "SELECT motivo, tipo, COUNT(*) n FROM revisao WHERE fonte=? OR (fonte=? AND (? LIKE 'elotech%' OR ?='cmc_elotech')) GROUP BY 1, 2 ORDER BY n DESC",
                 (fid, F.sistema.casa, fid, fid))],
         })
-    html = Environment(autoescape=True).from_string(MODELO).render(fontes=fontes, gerado=agora(), versao=config.VERSAO_ROBO)
+    html = Environment(autoescape=True).from_string(MODELO).render(fontes=fontes, gerado=carimbo_publicacao(), versao=config.VERSAO_ROBO)
     if n := cpfs_expostos(html):  # o relatório também vai para a plataforma
         raise RuntimeError(f"relatório de conferência: {n} CPF(s) sem máscara; nada foi gravado")
     pasta = config.destino_relatorio()
