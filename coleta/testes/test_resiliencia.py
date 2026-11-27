@@ -185,3 +185,15 @@ async def test_disco_quase_cheio_para_antes_do_item_e_deixa_pendente(dados_tmp, 
     situacoes = dict(con.execute("SELECT situacao, COUNT(*) FROM inventario GROUP BY 1").fetchall())
     assert situacoes == {"pendente": 4}
     con.close()
+
+
+async def test_fonte_sem_rastro_ainda_deixa_a_evidencia_do_erro(dados_tmp, monkeypatch):
+    """Fonte de item longo não grava rastro (ele fica no Temp até o navegador fechar); no erro,
+    o print da página inteira e o HTML continuam."""
+    monkeypatch.setattr(CmcLegado, "rastrear", False)
+    con, placar = await rodar_legado(Replay({"Diarias_2016.pdf": ["500"] * 10}))
+    assert placar.erro == 1 and placar.ok == 3
+    linha = con.execute("SELECT evidencia FROM inventario WHERE chave='diarias-2016'").fetchone()
+    pasta = dados_tmp / linha["evidencia"]
+    assert (pasta / "tela.png").exists() and (pasta / "pagina.html").exists() and not (pasta / "rastro.zip").exists()
+    con.close()

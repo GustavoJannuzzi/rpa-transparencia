@@ -27,7 +27,10 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 - **Coleta longa sem encher o disco**: a coleta para antes do próximo item com menos de
   400 MB livres e deixa o item pendente para a retomada; nas fontes com navegador, o
   contexto é trocado a cada 20 itens e o rastro leva só os prints (com os snapshots, o
-  Temp passou de 800 MB por fonte numa coleta de horas e encheu o disco).
+  Temp passou de 800 MB por fonte numa coleta de horas e encheu o disco). O rastro
+  fica no Temp do navegador até ele fechar, mesmo com o contexto trocado: a fonte de
+  item longo põe `rastrear = False` (a evidência do erro fica com o print e o
+  HTML da página).
 
 ### Corrigido
 

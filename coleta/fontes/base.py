@@ -105,20 +105,23 @@ class FonteNavegador(Fonte):
     """Fonte que precisa de navegador. Um contexto por vez, rastro por item.
 
     O contexto é trocado por um novo a cada `itens_por_contexto` itens (ou
-    `config.ITENS_POR_CONTEXTO`): o que o navegador acumula no Temp (o rastro, os
-    downloads) só vai embora quando o contexto fecha, e numa coleta de horas isso
-    passou de 800 MB por fonte. O rastro de cada
-    item leva os prints, não os snapshots (que guardam o corpo de cada resposta); a
-    evidência do erro continua com o print da página inteira, o HTML e o rastro.
+    `config.ITENS_POR_CONTEXTO`). O rastro de cada item leva os prints, não os
+    snapshots (que guardam o corpo de cada resposta).
+
+    O rastro fica no Temp do navegador (`playwright-artifacts-*`) até o navegador
+    fechar, mesmo com o rastro parado e o contexto trocado (visto em 27/11/2026: 578 MB
+    e 13.775 arquivos .trace numa fonte de itens de vários minutos). Fonte de item
+    longo põe `rastrear = False`: sem rastro, a evidência do erro fica com o print da
+    página inteira e o HTML.
     """
 
     usa_navegador = True
     viewport = {"width": 1400, "height": 1000}
-    # Fonte de item longo (um mês inteiro, um deputado num ano) põe 1: os prints do
-    # rastro também só saem do Temp quando o contexto fecha. None = config.ITENS_POR_CONTEXTO.
+    # None = config.ITENS_POR_CONTEXTO.
     itens_por_contexto: int | None = None
     pode_gravar_video = True
-    # o rastro do Playwright guarda os prints de cada passo; fonte com CPF na tela não o grava
+    # o rastro do Playwright guarda os prints de cada passo; fonte com CPF na tela não o
+    # grava, nem a de item longo (o rastro fica no Temp até o navegador fechar)
     rastrear = True
 
     def __init__(self) -> None:
