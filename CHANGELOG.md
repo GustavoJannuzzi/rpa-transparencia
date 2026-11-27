@@ -7,6 +7,11 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ### Adicionado
 
+- **`importar`**: leva as linhas de algumas fontes de um banco de trabalho para o
+  canônico, numa transação só, com os originais e as evidências delas. A coleta
+  longa pelo navegador roda à parte, e a trava do canônico dura minutos. Rodar de
+  novo dá o mesmo banco, e importar uma fonte não toca as outras.
+
 - **Muitas casas** ([#9](https://github.com/GustavoJannuzzi/rpa-transparencia/pull/9) e o PR seguinte): um
   adaptador por fornecedor, configurado por entidade em `coleta/entidades.toml`. O
   Elotech passa a servir qualquer câmara (mais 12 do PR, 2023–2026, com o subsídio do
