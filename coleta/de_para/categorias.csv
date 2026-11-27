@@ -99,3 +99,15 @@ cldf,ASSESSORIA COMUNICACAO,comunicacao,Serviços de comunicação
 cldf,ASSESSORIA DE COMUNICACAO,comunicacao,Serviços de comunicação
 cldf,ASS COMUNICACAO,comunicacao,Serviços de comunicação
 cldf,COMUNICACAO SOCIAL,comunicacao,Serviços de comunicação
+alap,Combustíveis e Lubrificantes Automotivos,combustivel,Combustível
+alap,Locação de Bens Móveis de Outras Naturezas e Intangíveis,bens_moveis,Locação de móveis e equipamentos
+alap,Locação de Imóveis,imovel,Imóvel: locação e manutenção
+alap,Material de Expediente,material_escritorio,Material de escritório e informática
+alap,Serviço Gráficos e Editoriais,grafica,Gráfica e cópias
+alap,Serviços Gráficos e Editoriais,grafica,Gráfica e cópias
+alap,Serviço de Processamento de Dados,informatica,Serviços de informática e dados
+alap,"Serviço de Áudio, Vídeo e Foto",comunicacao,Serviços de comunicação
+alap,Serviços de Publicidade Legal,divulgacao,Divulgação da atividade
+alap,Vigilância ostensiva,seguranca,Segurança
+alece,Verba de Desempenho Parlamentar,sem_tipo,A casa não separa por tipo de despesa
+aleto,Cota Despesa de Atividade Parlamentar,sem_tipo,A casa não separa por tipo de despesa

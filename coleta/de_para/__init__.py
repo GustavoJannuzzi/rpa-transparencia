@@ -92,3 +92,15 @@ def regra_negativo(fonte: str, categoria_unica: str) -> str | None:
     t = _tabela("negativos.csv")
     linha = t.get((fonte, normalizar_nome(categoria_unica)))
     return linha["explicacao"] if linha else None
+
+
+def grafia(fonte: str, nome: str) -> str:
+    """O nome como a fonte escreve -> o nome da pessoa, pela tabela de grafias revisada
+    à mão (erro de digitação da própria fonte). Sem linha na tabela, o nome fica como
+    veio, com espaços simples; o nome parecido com outro da mesma casa vai para a
+    revisão na conferência."""
+    import re as _re
+
+    limpo = _re.sub(r"\s+", " ", nome or "").strip()
+    linha = _tabela("grafias.csv").get((fonte, normalizar_nome(limpo)))
+    return linha["nome"] if linha else limpo

@@ -6,7 +6,7 @@ AL,ALE-AL,Assembleia Legislativa de Alagoas,27,Plone (PDF escaneado),reserva,"PD
 AM,ALEAM,Assembleia Legislativa do Amazonas,24,WordPress (POST e modais),reserva,"Tela com POST e modais; CNPJ com dados da Receita."
 AP,ALAP,Assembleia Legislativa do Amapá,24,PHP (cascata AJAX e iframe),sem_adaptador,"Navegador: três selects em cascata, POST e modal com iframe por categoria."
 BA,ALBA,Assembleia Legislativa da Bahia,63,Java/Spring (lista e PDF da nota),sem_adaptador,"Navegador: 176 páginas só em 2026, página de detalhe e PDF da nota; servidor lento."
-CE,ALECE,Assembleia Legislativa do Ceará,46,Laravel (modal com iframe),sem_adaptador,"Navegador: a chave do detalhe é base64 de ano, mês e nome."
+CE,ALECE,Assembleia Legislativa do Ceará,46,Laravel (modal com iframe),sem_adaptador,"Navegador: a chave do detalhe é base64 de ano, mês e nome; o CSV do mês, que a casa também publica, confere a tela."
 DF,CLDF,Câmara Legislativa do Distrito Federal,24,CKAN (CSV e XLSX por ano),coletada,
 ES,ALES,Assembleia Legislativa do Espírito Santo,30,ASP.NET MVC,sem_fornecedor,Só o total por produto: não diz quem recebeu.
 GO,ALEGO,Assembleia Legislativa de Goiás,41,AngularJS,sem_adaptador,"Navegador: o dado aberto só tem o total; o CNPJ só aparece na tela."
@@ -27,4 +27,4 @@ RS,ALRS,Assembleia Legislativa do Rio Grande do Sul,55,Drupal 10,reserva,"Só o 
 SC,ALESC,Assembleia Legislativa de Santa Catarina,40,CSV por ano,reserva,O favorecido vem só pelo nome (sem CNPJ).
 SE,ALESE,Assembleia Legislativa de Sergipe,24,WordPress (PDF Crystal),sem_fornecedor,"Total por item, sem CNPJ."
 SP,ALESP,Assembleia Legislativa do Estado de São Paulo,94,CKAN + arquivo JSON,coletada,
-TO,ALETO,Assembleia Legislativa do Tocantins,24,Java (POST e PDF),sem_adaptador,"Navegador: o select vai pelo nome, o PDF traz saldo entre as notas; robots pede 10 s."
+TO,ALETO,Assembleia Legislativa do Tocantins,24,Java (POST e PDF),sem_adaptador,"Navegador: o select vai pelo nome, o PDF traz o saldo de cada nota (conferido linha a linha); robots pede 10 s."

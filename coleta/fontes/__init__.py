@@ -8,7 +8,10 @@ câmara no Elotech, no Betha, no Equiplano ou no Pronim) não muda código: é u
 from __future__ import annotations
 
 from .. import entidades
+from .alap.fonte import Alap
+from .alece.fonte import Alece
 from .alesp.fonte import Alesp
+from .aleto.fonte import Aleto
 from .almg.fonte import Almg
 from .base import Fonte
 from .betha.fonte import BethaCloud
@@ -25,7 +28,7 @@ from .pronim.fonte import Pronim
 from .sapl.fonte import Sapl
 from .tse.fonte import Tse
 
-ASSEMBLEIAS: dict[str, type[Fonte]] = {"cldf": Cldf, "almg": Almg, "alesp": Alesp}
+ASSEMBLEIAS: dict[str, type[Fonte]] = {"cldf": Cldf, "almg": Almg, "alesp": Alesp, "alap": Alap, "alece": Alece, "aleto": Aleto}
 
 
 def _construir() -> list[Fonte]:

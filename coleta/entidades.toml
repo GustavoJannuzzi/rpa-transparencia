@@ -590,3 +590,36 @@ ibge = 4121604
 host = "https://sapl.renascenca.pr.leg.br"
 de = "2025-01-01"
 lote_presenca = 10
+
+# Assembleias que só se leem pela tela (robô de navegador). `inicio` é a página
+# onde a consulta começa; o resto do caminho está no adaptador de cada uma.
+
+[[assembleia]]
+fonte = "alap"
+casa = "al-ap"
+uf = "AP"
+nome = "Assembleia Legislativa do Amapá"
+cargo = "deputado estadual"
+sistema = "Portal da Transparência da ALAP (CEAP)"
+modo = "robo"
+inicio = "https://www.al.ap.leg.br/transparencia/pagina.php?pg=ceap"
+
+[[assembleia]]
+fonte = "alece"
+casa = "al-ce"
+uf = "CE"
+nome = "Assembleia Legislativa do Estado do Ceará"
+cargo = "deputado estadual"
+sistema = "Portal da Transparência da ALECE (verba de desempenho)"
+modo = "robo"
+inicio = "https://transparencia.al.ce.gov.br/despesas/verba-desempenho-parlamentar"
+
+[[assembleia]]
+fonte = "aleto"
+casa = "al-to"
+uf = "TO"
+nome = "Assembleia Legislativa do Estado do Tocantins"
+cargo = "deputado estadual"
+sistema = "Portal da Transparência da ALETO (CODAP em PDF)"
+modo = "robo_pdf"
+inicio = "https://www.al.to.leg.br/transparencia/verbaIndenizatoria"

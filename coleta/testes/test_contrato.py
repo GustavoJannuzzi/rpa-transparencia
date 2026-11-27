@@ -3,6 +3,8 @@ mudou. Separado dos testes normais: python -m pytest -m contrato"""
 
 from __future__ import annotations
 
+import re
+
 import httpx
 import pytest
 from playwright.async_api import async_playwright
@@ -296,3 +298,63 @@ async def test_frequencia_curitiba_cartoes_e_anexos():
     finally:
         await nav.close()
         await pw.stop()
+
+
+# ---------------------------------------------------------------- assembleias lidas pela tela
+def test_alap_selects_em_cascata_e_detalhe_por_elemento():
+    from coleta import entidades
+    from coleta.fontes.alap.fonte import ler_detalhe, opcoes
+    from coleta.fontes.assembleia_tela import decodificar
+
+    inicio = entidades.assembleias()["alap"].extra["inicio"]
+    base = inicio.rsplit("/", 1)[0]
+    try:
+        with _cliente(follow_redirects=True) as c:
+            h = c.get(inicio).text
+            assert 'id="ano_verbaB"' in h and 'id="mes_verbaB"' in h and 'id="idgabineteB"' in h and "acao=buscar" in h
+            meses = opcoes(decodificar(c.post(f"{base}/mes_ceap_json.php", data={"ano_verbaB": "2025"}).content))
+            assert [m for m, _ in meses][:2] == ["01", "02"]
+            gabs = opcoes(decodificar(c.post(f"{base}/gabinete_ceap_json.php", data={"ano_verbaB": "2025", "mes_verbaB": "09"}).content))
+            assert len(gabs) >= 20 and all(v.isdigit() for v, _ in gabs)
+            det = c.get(f"{base}/ceap_exibir_detalhado.php", params={"idgabineteB": "54", "mes_verbaB": "09", "ano_verbaB": "2025",
+                                                                       "cod_despesa": "3390.30", "idsubelemento": "2", "cod_subelemento": "01"})
+            assert ler_detalhe(decodificar(det.content))["notas"]  # PortalMudou se a tabela de notas sumir
+    except (httpx.ConnectTimeout, httpx.ConnectError, httpx.ReadTimeout) as erro:
+        _sem_rede(erro)
+
+
+def test_alece_lista_com_chave_base64_detalhe_e_csv_do_mes():
+    from coleta import entidades
+    from coleta.fontes.alece.fonte import codigo_do_detalhe, ler_csv, ler_detalhe, ler_lista
+    from coleta.fontes.assembleia_tela import decodificar
+
+    inicio = entidades.assembleias()["alece"].extra["inicio"]
+    try:
+        with _cliente(follow_redirects=True) as c:
+            pag = ler_lista(c.get(inicio, params={"mes": "09", "ano": "2025"}).text)
+            assert pag["linhas"] and pag["contador"]
+            rotulo, codigo = pag["linhas"][0]
+            assert codigo == codigo_do_detalhe(2025, "09", rotulo)
+            assert ler_detalhe(decodificar(c.get(f"{inicio}/detalhes", params={"codigo": codigo}).content))["notas"]
+            assert ler_csv(decodificar(c.get(f"{inicio}/csv", params={"mes": "09", "ano": "2025"}).content))
+    except (httpx.ConnectTimeout, httpx.ConnectError, httpx.ReadTimeout) as erro:
+        _sem_rede(erro)
+
+
+def test_aleto_formulario_por_nome_e_crawl_delay():
+    import time
+
+    from coleta import entidades
+
+    inicio = entidades.assembleias()["aleto"].extra["inicio"]
+    try:
+        with _cliente(follow_redirects=True) as c:
+            robots = c.get(inicio.split("/transparencia")[0] + "/robots.txt").text
+            assert "Crawl-delay: 10" in robots
+            time.sleep(10)  # o robots pede 10 s
+            h = c.get(inicio).text
+            assert 'id="verbaindenizatoria_ano"' in h and 'id="verbaindenizatoria_mes"' in h and 'name="parlamentar"' in h
+            # o valor do select de deputado é o nome (não um id)
+            assert re.search(r'<option value="[A-ZÀ-Ú][^"0-9]+"', h)
+    except (httpx.ConnectTimeout, httpx.ConnectError, httpx.ReadTimeout) as erro:
+        _sem_rede(erro)

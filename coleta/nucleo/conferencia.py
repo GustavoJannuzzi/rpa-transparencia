@@ -183,10 +183,16 @@ def _estaduais(con, rv: Revisor, casa: Casa, fontes: list[str]) -> None:
                              (fonte,)):
             pessoas[r["ref"]].append(r)
         refs = {r[0] for r in con.execute("SELECT DISTINCT ref_parlamentar FROM despesas WHERE fonte=? AND ref_parlamentar IS NOT NULL", (fonte,))}
+        parecidos = _nomes_parecidos(con, fonte, set(pessoas) | refs)
         for ref in sorted(set(pessoas) | refs):
             regs = pessoas.get(ref)
             if not regs:
                 rv.revisao(fonte, "identidade", ref, "deputado nas despesas mas fora da lista de deputados da fonte")
+                continue
+            if ref in parecidos:
+                rv.revisao(fonte, "identidade", ref,
+                           f"o nome é quase igual ao de outro deputado da mesma casa ({parecidos[ref]}); sem uma linha na tabela de grafias, "
+                           "não dá para saber se é a mesma pessoa escrita errado")
                 continue
             tipo, _, valor = ref.partition(":")
             pid = f"est-{uf}-{valor if tipo in ('id', 'mat') else slug(valor)}"
@@ -203,6 +209,37 @@ def _estaduais(con, rv: Revisor, casa: Casa, fontes: list[str]) -> None:
             if partido:
                 con.execute("INSERT INTO filiacoes(parlamentar_id, partido, desde, ate, fonte, base) VALUES(?,?,?,?,?,?)",
                             (pid, partido, None, None, fonte, extra.get("partido_de") or "partido informado pela fonte"))
+
+
+def _distancia(a: str, b: str) -> int:
+    """Levenshtein (nomes curtos)."""
+    anterior = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        atual = [i]
+        for j, cb in enumerate(b, 1):
+            atual.append(min(anterior[j] + 1, atual[j - 1] + 1, anterior[j - 1] + (ca != cb)))
+        anterior = atual
+    return anterior[-1]
+
+
+def _nomes_parecidos(con, fonte: str, refs: set[str]) -> dict[str, str]:
+    """Fonte que identifica o deputado pelo nome escrito (ref 'nome:'): dois nomes a
+    até 2 letras um do outro, com o mesmo primeiro nome, são suspeitos de ser a mesma
+    pessoa com erro de digitação. Devolve o de menos notas -> o outro. A tabela de
+    grafias (de_para/grafias.csv) resolve os confirmados já na leitura."""
+    por_nome = [r for r in refs if r.startswith("nome:")]
+    if fonte not in CONFERENCIA_DA_TELA or len(por_nome) < 2:
+        return {}
+    notas = dict(con.execute("SELECT ref_parlamentar, COUNT(*) FROM despesas WHERE fonte=? GROUP BY 1", (fonte,)).fetchall())
+    norm = {r: normalizar_nome(r[5:]) for r in por_nome}
+    out: dict[str, str] = {}
+    for a, b in ((a, b) for i, a in enumerate(sorted(por_nome)) for b in sorted(por_nome)[i + 1:]):
+        na, nb = norm[a], norm[b]
+        if na.split()[:1] != nb.split()[:1] or abs(len(na) - len(nb)) > 2 or _distancia(na, nb) > 2:
+            continue
+        menor, maior = sorted((a, b), key=lambda r: (notas.get(r, 0), r))
+        out[menor] = maior[5:]
+    return out
 
 
 def _deputados(con, rv: Revisor) -> None:
@@ -539,7 +576,9 @@ def _situacao(d, ids, divergentes, legado, rv: Revisor, prefeitura_divergente: f
         if not (d["categoria_original"] or "").strip():
             motivos[:] = [m for m in motivos if m != "categoria sem de-para"]
             rev("a fonte não classifica a despesa (classificação vazia)")
-        if valor < 0:
+        if valor < 0 and extra.get("anulacao_explicada"):
+            motivos.append("anulação de empenho: a descrição da própria casa diz que anula outro empenho (entra na soma, como no total da casa)")
+        elif valor < 0:
             rev("valor negativo: a fonte não explica o sinal", valor=str(valor))
         elif valor == 0 and situacao == OK:
             situacao = FORA_DA_SOMA
@@ -670,7 +709,62 @@ def _divergencias_estaduais(con, rv: Revisor) -> frozenset[tuple[str, str]]:
                        "a fonte publica mais de um arquivo para o mesmo ano; o robô lê o do ano inteiro e confere os outros contra ele")
     for r in con.execute("SELECT escopo, valor, texto_original FROM totais_oficiais WHERE fonte='cldf' AND metrica='recursos_no_conjunto'"):
         rv.conferencia("cldf", "recursos_do_ano", r["escopo"], None, r["valor"], "observacao", r["texto_original"])
+    fora |= _divergencias_da_tela(con, rv)
     return frozenset(fora)
+
+
+# O que cada assembleia lida pela tela confere, em português de leigo.
+CONFERENCIA_DA_TELA = {
+    "alap": "a tela dá o valor de cada elemento de despesa no mês e, no detalhe, as notas dele; as notas somam o elemento, "
+            "os elementos somam o TOTAL do mês, e o TOTAL é o do histórico do ano (com o mês complementar)",
+    "alece": "a tela dá, para cada deputado no mês, os empenhos e o TOTAL GERAL; os empenhos somam o total, e cada empenho da tela "
+             "está no CSV do mês que a própria casa publica (mesmo CNPJ, mesmo valor), e o contrário",
+    "aleto": "o PDF de cada mês traz as notas com o saldo corrido; o saldo de cada linha é o anterior menos a nota, as notas somam o total "
+             "das despesas do quadro do mês, e o valor ressarcido é esse total",
+}
+
+
+def _divergencias_da_tela(con, rv: Revisor) -> set[tuple[str, str]]:
+    """Assembleias lidas pela tela: cada item grava quantos escopos fecham (soma das
+    notas × total que a tela mostra) e a lista dos que não fecham. As notas de um
+    escopo que não fecha vão para a revisão."""
+    fora: set[tuple[str, str]] = set()
+    fontes = [r[0] for r in con.execute("SELECT DISTINCT fonte FROM totais_oficiais WHERE metrica='escopos_que_fecham' ORDER BY 1")]
+    for fonte in fontes:
+        fecham = escopos = 0
+        divergentes: dict[str, str] = {}
+        for r in con.execute("""SELECT t.valor, t.texto_original FROM totais_oficiais t JOIN inventario i ON i.fonte=t.fonte AND i.chave=t.escopo
+                                WHERE t.fonte=? AND t.metrica='escopos_que_fecham' AND i.situacao='ok'""", (fonte,)):
+            a, _, b = str(r[0]).partition("/")
+            fecham += int(a or 0)
+            escopos += int(b or 0)
+            for d in json.loads(r[1] or "[]"):
+                divergentes[d["escopo"]] = d["texto"]
+        if not escopos:
+            continue
+        rv.conferencia(fonte, "soma_das_notas_x_total_da_tela", "todos os itens", f"{escopos} totais na tela", f"{fecham} fecham",
+                       "confere" if fecham == escopos else "parcial",
+                       CONFERENCIA_DA_TELA.get(fonte, "a tela mostra o total de cada recorte e as notas dele; a soma das notas tem de dar o total"))
+        for escopo, texto in sorted(divergentes.items()):
+            rv.revisao(fonte, "total", escopo, texto)
+        # o contador da própria tela × as linhas que ela mostrou (observação: não mexe nas notas)
+        lidos = contados = 0
+        meses_diferentes = 0
+        for r in con.execute("SELECT valor FROM totais_oficiais WHERE fonte=? AND metrica='contador_x_lidos'", (fonte,)):
+            a, _, b = str(r[0]).partition("/")
+            if a.isdigit() and b.isdigit():
+                lidos += int(a)
+                contados += int(b)
+                meses_diferentes += a != b
+        if contados:
+            rv.conferencia(fonte, "contador_da_tela_x_linhas_lidas", "todos os itens", contados, lidos,
+                           "confere" if lidos == contados else "observacao",
+                           f"o contador 'Mostrando ... de N resultados' × as linhas que a lista mostrou; difere em {meses_diferentes} item(ns)")
+        if divergentes:
+            for r in con.execute("SELECT chave, extra FROM despesas WHERE fonte=?", (fonte,)):
+                if any(e in divergentes for e in json.loads(r["extra"] or "{}").get("escopos_conferencia") or ()):
+                    fora.add((fonte, r["chave"]))
+    return fora
 
 
 def _regras_legado(con, rv: Revisor) -> dict[str, tuple[str, str]]:
@@ -836,6 +930,9 @@ def equacoes(con, rv: Revisor) -> None:
             return int(n("SELECT SUM(CAST(valor AS INTEGER)) FROM totais_oficiais WHERE fonte=? AND metrica='linhas_lidas'", fonte)), "linhas de diária nas tabelas dos PDFs"
         if fonte == "cmc_prefeitura":
             return int(n("SELECT SUM(CAST(valor AS INTEGER)) FROM totais_oficiais WHERE fonte=? AND metrica='registros_lidos'", fonte)), "linhas lidas mês a mês (a fonte não publica contagem)"
+        if fonte in CONFERENCIA_DA_TELA:
+            return int(n("""SELECT SUM(CAST(t.valor AS INTEGER)) FROM totais_oficiais t JOIN inventario i ON i.fonte=t.fonte AND i.chave=t.escopo
+                            WHERE t.fonte=? AND t.metrica='linhas_na_origem' AND i.situacao='ok'""", fonte)), "notas que a tela mostrou"
         return None, ""
 
     for fonte in [r[0] for r in con.execute("SELECT DISTINCT fonte FROM inventario")]:

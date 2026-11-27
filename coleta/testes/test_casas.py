@@ -48,7 +48,12 @@ def test_toda_entidade_tem_fonte_casa_e_id_que_a_plataforma_aceita():
     assert all(re.fullmatch(r"[a-z_]+", i) for i in ids), ids
     casas = entidades.casas()
     assert all(f.sistema.casa in casas for f in FONTES)
-    assert {c.uf for c in casas.values() if c.tipo == "assembleia"} == {"DF", "MG", "SP"}
+    ufs = {c.uf for c in casas.values() if c.tipo == "assembleia"}
+    assert {"DF", "MG", "SP", "AP", "CE", "TO"} <= ufs
+    # toda assembleia coletada tem a sua linha no levantamento das 27 (é de lá que vem a Cobertura)
+    from coleta.destinos.cobertura import _ler_csv
+
+    assert ufs <= {l["uf"] for l in _ler_csv("assembleias.csv")}
     # Curitiba, 12 no Elotech, 13 no Betha, 10 no Equiplano e 6 no Pronim
     assert sum(1 for c in casas.values() if c.tipo == "camara_municipal") == 1 + 12 + 13 + 10 + 6
 
