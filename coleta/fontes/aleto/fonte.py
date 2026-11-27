@@ -382,7 +382,11 @@ class Aleto(FonteAssembleiaTela):
             proc_mes = self.procedencia(r.url, h, f"{nome_select}, {mes:02d}/{ano}")
             primeira = primeira or proc_mes
             arquivos = []
-            for t in tabelas_html(decodificar(corpo)):
+            html_mes = decodificar(corpo)
+            # sem o formulário, a página não chegou inteira: não é "mês sem PDF"
+            if "verbaindenizatoria_mes" not in html_mes:
+                raise FalhaTransitoria(f"a página de {mes:02d}/{ano} veio sem o formulário")
+            for t in tabelas_html(html_mes):
                 if t and [c.texto for c in t[0]][:2] == ["Mês de referência", "Descrição"]:
                     arquivos = [(l[0].texto, h2) for l in t[1:] if l for c in l for h2 in c.links if "baixar?arquivo=" in h2]
             for ref_mes, href in arquivos:
