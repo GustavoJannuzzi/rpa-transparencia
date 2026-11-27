@@ -104,12 +104,12 @@ def test_aleto_uma_nota_a_menos_quebra_a_corrente_do_saldo():
 
 
 # ---------------------------------------------------------------- conferência
-def _nota(con, fonte, chave, casa, ref, valor, extra, categoria):
+def _nota(con, fonte, chave, casa, ref, valor, extra, categoria, competencia="2026-10"):
     con.execute(
         """INSERT INTO despesas(chave, fonte, item, tipo, ref_parlamentar, beneficiario_tipo, competencia, ano, categoria_original,
              fornecedor_doc, fornecedor_tipo, fornecedor_nome, valor, url, hash_original, coletado_em, extra, casa, granularidade)
            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-        (chave, fonte, "i", "verba_estadual", ref, "parlamentar", "2026-10", 2026, categoria, "11.222.333/0001-81", "cnpj", "EMPRESA X",
+        (chave, fonte, "i", "verba_estadual", ref, "parlamentar", competencia, 2026, categoria, "11.222.333/0001-81", "cnpj", "EMPRESA X",
          valor, "u", "h", "2026-11-26", json.dumps(extra), casa, "nota"))
 
 
@@ -120,25 +120,46 @@ def _total(con, fonte, escopo, metrica, valor, texto=None):
 
 def test_conferencia_da_tela_manda_para_revisao_o_escopo_que_nao_fecha_e_o_nome_parecido(con):
     cat = "Verba de Desempenho Parlamentar"
-    for ref, nome in (("nome:ANTONIO HENRIQUE", "Antonio Henrique"), ("nome:ANTONIO HEMRIQUE", "Antonio Hemrique"), ("nome:LIA GOMES", "Lia Gomes")):
-        con.execute("INSERT INTO pessoas_fonte(fonte, ref, periodo, nome, casa, extra) VALUES('alece',?,?,?,'al-ce','{}')", (ref, "2026", nome))
-    _nota(con, "alece", "c1", "al-ce", "nome:ANTONIO HENRIQUE", "100.00", {"escopos_conferencia": ["2026-10-DEP ANTONIO HENRIQUE"]}, cat)
-    _nota(con, "alece", "c2", "al-ce", "nome:ANTONIO HENRIQUE", "100.00", {"escopos_conferencia": ["2026-10-DEP ANTONIO HENRIQUE"]}, cat)
-    _nota(con, "alece", "c3", "al-ce", "nome:ANTONIO HEMRIQUE", "-20.00", {"escopos_conferencia": ["2026-10-DEP ANTONIO HEMRIQUE"],
-                                                                          "anulacao_explicada": True}, cat)
-    _nota(con, "alece", "c4", "al-ce", "nome:LIA GOMES", "50.00", {"escopos_conferencia": ["2026-10-DEP LIA GOMES"]}, cat)
-    _nota(con, "alece", "c5", "al-ce", "nome:LIA GOMES", "-5.00", {"escopos_conferencia": ["2026-10-DEP LIA GOMES"]}, cat)
+    nomes = ("ANTONIO HENRIQUE", "ANTONIO HEMRIQUE", "LIA GOMES", "TIN GOMES", "ALMIR BIE",
+             "ALMIR BIE COMBUSTIVEIS E LUBRIFICANTES AUTOMOTIVOS", "PLANO DE SAUDE")
+    for n in nomes:
+        con.execute("INSERT INTO pessoas_fonte(fonte, ref, periodo, nome, casa, extra) VALUES('alece',?,?,?,'al-ce','{}')",
+                    (f"nome:{n}", "2026", n.title()))
+    linhas = 0
+
+    def nota(chave, nome, valor="100.00", competencia="2026-10", **extra):
+        nonlocal linhas
+        linhas += 1
+        _nota(con, "alece", chave, "al-ce", f"nome:{nome}", valor, {"escopos_conferencia": [f"{competencia}-DEP {nome}"], **extra}, cat,
+              competencia)
+
+    for m in ("2026-08", "2026-09", "2026-10"):  # os deputados de verdade aparecem mês a mês
+        nota(f"ah-{m}", "ANTONIO HENRIQUE", competencia=m)
+        nota(f"tin-{m}", "TIN GOMES", competencia=m)
+        nota(f"lia-{m}", "LIA GOMES", competencia=m)
+        nota(f"almir-{m}", "ALMIR BIE", competencia=m)
+    nota("c3", "ANTONIO HEMRIQUE", "-20.00", anulacao_explicada=True)
+    nota("c4", "LIA GOMES", "50.00")
+    nota("c5", "LIA GOMES", "-5.00")
+    nota("suf", "ALMIR BIE COMBUSTIVEIS E LUBRIFICANTES AUTOMOTIVOS", "30.00", competencia="2026-02")
+    nota("plano", "PLANO DE SAUDE", "10.00")
     con.execute("INSERT INTO inventario(fonte, chave, situacao) VALUES('alece', 'verbas-2026-10', 'ok')")
-    _total(con, "alece", "verbas-2026-10", "linhas_na_origem", "5")
+    _total(con, "alece", "verbas-2026-10", "linhas_na_origem", str(linhas))
     _total(con, "alece", "verbas-2026-10", "escopos_que_fecham", "2/3",
            json.dumps([{"escopo": "2026-10-DEP LIA GOMES", "texto": "TOTAL GERAL 50 × soma 45", "url": "u"}]))
     _total(con, "alece", "verbas-2026-10", "contador_x_lidos", "3/4")
     conferir(con)
     s = {r[0]: (r[1], r[2] or "", r[3]) for r in con.execute("SELECT chave, situacao, motivo, parlamentar_id FROM despesa_situacao")}
-    assert s["c1"] == ("ok", "", "est-ce-antonio-henrique")
-    # o nome quase igual, sem linha na tabela de grafias, fica sem identidade e vai para a revisão
-    assert s["c3"][0] == "revisao" and "sem identidade" in s["c3"][1]
-    assert "anulação de empenho" in s["c3"][1]
+    assert s["ah-2026-09"] == ("ok", "", "est-ce-antonio-henrique")
+    # dois nomes frequentes a 2 letras um do outro são duas pessoas (Tin Gomes e Lia Gomes)
+    assert s["tin-2026-09"] == ("ok", "", "est-ce-tin-gomes") and s["lia-2026-09"][2] == "est-ce-lia-gomes"
+    # o nome quase igual e raro, sem linha na tabela de grafias, fica sem identidade e vai para a revisão
+    assert s["c3"][0] == "revisao" and "sem identidade" in s["c3"][1] and "anulação de empenho" in s["c3"][1]
+    # o sufixo que a fonte colou no nome sai: a nota é do deputado
+    assert s["suf"] == ("ok", "", "est-ce-almir-bie")
+    assert con.execute("SELECT nome FROM parlamentares WHERE id='est-ce-almir-bie'").fetchone()[0] == "Almir Bie"
+    # o nome que aparece uma vez só, sem bater com ninguém, não vira deputado
+    assert s["plano"][0] == "revisao"
     # o escopo que não fecha leva as notas dele para a revisão
     assert s["c4"][0] == "revisao" and "não fecha" in s["c4"][1]
     assert s["c5"][0] == "revisao" and "valor negativo" in s["c5"][1]
@@ -146,9 +167,10 @@ def test_conferencia_da_tela_manda_para_revisao_o_escopo_que_nao_fecha_e_o_nome_
         "SELECT verificacao, esperado, obtido, resultado FROM conferencias WHERE fonte='alece'")}
     assert conf["soma_das_notas_x_total_da_tela"][2] == "parcial"
     assert conf["contador_da_tela_x_linhas_lidas"][2] == "observacao"
-    assert conf["origem_igual_coletado_mais_revisao"] == ("5", "5", "confere")
-    motivos = [r[0] for r in con.execute("SELECT motivo FROM revisao WHERE fonte='alece' AND tipo='identidade'")]
-    assert any("ANTONIO HENRIQUE" in m for m in motivos)
+    assert conf["origem_igual_coletado_mais_revisao"] == (str(linhas), str(linhas), "confere")
+    motivos = {r[0]: r[1] for r in con.execute("SELECT chave, motivo FROM revisao WHERE fonte='alece' AND tipo='identidade'")}
+    assert "ANTONIO HENRIQUE" in motivos["nome:ANTONIO HEMRIQUE"] and "num mês só" in motivos["nome:PLANO DE SAUDE"]
+    assert "nome:TIN GOMES" not in motivos
 
 
 # ---------------------------------------------------------------- BA

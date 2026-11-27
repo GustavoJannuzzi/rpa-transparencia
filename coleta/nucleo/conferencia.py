@@ -8,6 +8,7 @@ vai para a fila de revisão e não é publicado.
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from collections import Counter, defaultdict
 from decimal import Decimal
@@ -183,19 +184,24 @@ def _estaduais(con, rv: Revisor, casa: Casa, fontes: list[str]) -> None:
                              (fonte,)):
             pessoas[r["ref"]].append(r)
         refs = {r[0] for r in con.execute("SELECT DISTINCT ref_parlamentar FROM despesas WHERE fonte=? AND ref_parlamentar IS NOT NULL", (fonte,))}
-        parecidos = _nomes_parecidos(con, fonte, set(pessoas) | refs)
+        canon, suspeitos, principal = _nomes_da_fonte(con, fonte, set(pessoas) | refs)
         for ref in sorted(set(pessoas) | refs):
             regs = pessoas.get(ref)
             if not regs:
                 rv.revisao(fonte, "identidade", ref, "deputado nas despesas mas fora da lista de deputados da fonte")
                 continue
-            if ref in parecidos:
-                rv.revisao(fonte, "identidade", ref,
-                           f"o nome é quase igual ao de outro deputado da mesma casa ({parecidos[ref]}); sem uma linha na tabela de grafias, "
-                           "não dá para saber se é a mesma pessoa escrita errado")
+            if ref in suspeitos:
+                rv.revisao(fonte, "identidade", ref, suspeitos[ref])
                 continue
             tipo, _, valor = ref.partition(":")
+            valor = canon.get(ref, valor)
             pid = f"est-{uf}-{valor if tipo in ('id', 'mat') else slug(valor)}"
+            if principal.get(valor, ref) != ref:
+                # a mesma pessoa com um sufixo que a fonte colou no nome: liga a ref, e o nome
+                # exibido fica o da ref principal
+                con.execute("INSERT OR REPLACE INTO parlamentar_ids(fonte, ref, parlamentar_id, metodo) VALUES(?,?,?,?)",
+                            (fonte, ref, pid, "nome, sem o que a fonte colou depois dele (categoria ou 'por solicitação')"))
+                continue
             ult = regs[-1]
             nome = ult["nome_parlamentar"] or ult["nome"]
             civil = ult["nome"] if ult["nome_parlamentar"] and ult["nome"] != ult["nome_parlamentar"] else None
@@ -222,24 +228,60 @@ def _distancia(a: str, b: str) -> int:
     return anterior[-1]
 
 
-def _nomes_parecidos(con, fonte: str, refs: set[str]) -> dict[str, str]:
-    """Fonte que identifica o deputado pelo nome escrito (ref 'nome:'): dois nomes a
-    até 2 letras um do outro, com o mesmo primeiro nome, são suspeitos de ser a mesma
-    pessoa com erro de digitação. Devolve o de menos notas -> o outro. A tabela de
-    grafias (de_para/grafias.csv) resolve os confirmados já na leitura."""
-    por_nome = [r for r in refs if r.startswith("nome:")]
-    if fonte not in CONFERENCIA_DA_TELA or len(por_nome) < 2:
-        return {}
-    notas = dict(con.execute("SELECT ref_parlamentar, COUNT(*) FROM despesas WHERE fonte=? GROUP BY 1", (fonte,)).fetchall())
-    norm = {r: normalizar_nome(r[5:]) for r in por_nome}
-    out: dict[str, str] = {}
-    for a, b in ((a, b) for i, a in enumerate(sorted(por_nome)) for b in sorted(por_nome)[i + 1:]):
-        na, nb = norm[a], norm[b]
-        if na.split()[:1] != nb.split()[:1] or abs(len(na) - len(nb)) > 2 or _distancia(na, nb) > 2:
-            continue
-        menor, maior = sorted((a, b), key=lambda r: (notas.get(r, 0), r))
-        out[menor] = maior[5:]
-    return out
+# O que a fonte cola depois do nome do deputado, no campo do nome (CE, 2023–2026:
+# "DEP ALMIR BIE - COMBUSTIVEIS E LUBRIFICANTES AUTOMOTIVOS", "DEP DRA SILVANA POR
+# SOLICITACAO DA DEPUTADA"). Sai na conferência; a grafia da fonte fica na ligação.
+SUFIXOS_NO_NOME = {
+    "alece": re.compile(r"\s+(?:COMBUSTIVEIS E LUBRIFICANTES AUTOMOTIVOS|SERVICOS POSTAIS|POR SOLICITACAO D[OA] DEPUTAD[OA])$"),
+}
+# Fonte em que o nome do deputado é digitado à mão a cada mês (não vem de uma lista):
+# o nome que aparece num mês só, em até 2 notas, e não bate com ninguém vai para a revisão.
+NOMES_DIGITADOS = frozenset({"alece"})
+
+
+def _nomes_da_fonte(con, fonte: str, refs: set[str]) -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
+    """Fonte que identifica o deputado pelo nome escrito (ref 'nome:'). Devolve:
+    - canon: ref -> nome sem o sufixo que a fonte colou;
+    - suspeitos: ref -> motivo da revisão (nome a até 2 letras de outro mais frequente,
+      ou igual a ele sem os espaços; ou, onde o nome é digitado, um nome que aparece num
+      mês só, em até 2 notas);
+    - principal: nome canônico -> a ref que dá o nome exibido (a de mais notas).
+    A tabela de grafias (de_para/grafias.csv) resolve na leitura os erros confirmados."""
+    por_nome = sorted(r for r in refs if r.startswith("nome:"))
+    if fonte not in CONFERENCIA_DA_TELA or not por_nome:
+        return {}, {}, {}
+    contagem = {r[0]: (r[1], r[2]) for r in con.execute(
+        "SELECT ref_parlamentar, COUNT(*), COUNT(DISTINCT competencia) FROM despesas WHERE fonte=? GROUP BY 1", (fonte,))}
+    sufixo = SUFIXOS_NO_NOME.get(fonte)
+    canon = {r: (sufixo.sub("", normalizar_nome(r[5:])) if sufixo else normalizar_nome(r[5:])) for r in por_nome}
+    grupos: dict[str, list[str]] = defaultdict(list)
+    for r in por_nome:
+        grupos[canon[r]].append(r)
+    notas = {n: sum(contagem.get(r, (0, 0))[0] for r in rs) for n, rs in grupos.items()}
+    meses = {n: max((contagem.get(r, (0, 0))[1] for r in rs), default=0) for n, rs in grupos.items()}
+    principal = {n: max(rs, key=lambda r: (canon[r] == normalizar_nome(r[5:]), contagem.get(r, (0, 0))[0], r)) for n, rs in grupos.items()}
+    suspeito_nome: dict[str, str] = {}
+    nomes = sorted(grupos)
+    for i, a in enumerate(nomes):
+        for b in nomes[i + 1:]:
+            juntos = a.replace(" ", "") == b.replace(" ", "")
+            if not juntos and (min(len(a), len(b)) < 6 or abs(len(a) - len(b)) > 2 or _distancia(a, b) > 2):
+                continue
+            menor, maior = sorted((a, b), key=lambda n: (notas[n], n))
+            # o erro de digitação da fonte é esporádico; dois nomes frequentes e parecidos são
+            # duas pessoas (CE: Tin Gomes e Lia Gomes, a 2 letras um do outro)
+            if meses[menor] > 2 or notas[menor] > 12:
+                continue
+            suspeito_nome.setdefault(menor, f"o nome é quase igual ao de outro deputado da mesma casa ({maior}); sem uma linha na tabela "
+                                             "de grafias, não dá para saber se é a mesma pessoa escrita errado")
+    if fonte in NOMES_DIGITADOS:
+        for n in nomes:
+            if n not in suspeito_nome and (not n or (meses[n] <= 1 and notas[n] <= 2)):
+                suspeito_nome[n] = ("o nome está vazio na fonte" if not n else
+                                    f"o nome aparece num mês só, em {notas[n]} nota(s), e não bate com outro deputado da casa: pode ser "
+                                    "erro de digitação da fonte (sem uma linha na tabela de grafias, não vira deputado)")
+    suspeitos = {r: suspeito_nome[canon[r]] for r in por_nome if canon[r] in suspeito_nome}
+    return canon, suspeitos, principal
 
 
 def _deputados(con, rv: Revisor) -> None:
