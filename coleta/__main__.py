@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import io
 import sys
+from pathlib import Path
 
 import typer
 
@@ -105,6 +106,27 @@ def publicar():
     for linha in _publicar(con):
         eco(linha)
     con.close()
+
+
+OpcDe = typer.Option(..., "--de", help="O estado.db da coleta de trabalho (a pasta dele tem os originais).")
+OpcFontes = typer.Option(..., "--fontes", "-f", help="As fontes a importar (separadas por vírgula ou repetindo).")
+OpcSessao = typer.Option(..., "--sessao", help="O nome de quem importa, para a trava EM-USO.txt do destino.")
+
+
+@app.command()
+def importar(de: Path = OpcDe, fontes: list[str] = OpcFontes, sessao: str = OpcSessao,
+             aceitar_pendentes: bool = typer.Option(False, help="Importa mesmo com itens pendentes ou com erro na origem.")):
+    """Leva as linhas de algumas fontes de outro banco para este (o de RPA_DADOS), numa transação só."""
+    from .nucleo.importar import ImportacaoRecusada, importar as _importar
+
+    ids = [x.strip() for f in fontes for x in f.split(",") if x.strip()]
+    try:
+        r = _importar(de, ids, sessao, aceitar_pendentes=aceitar_pendentes)
+    except ImportacaoRecusada as e:
+        eco(f"importar parou sem mexer nas linhas do destino: {e}")
+        raise typer.Exit(1) from e
+    for linha in r.linhas():
+        eco(linha)
 
 
 @app.command()

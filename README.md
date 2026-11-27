@@ -164,6 +164,20 @@ Cada comando também roda sozinho, e `--fonte` limita a uma fonte ou a um fornec
 inteiro (`--fonte elotech`, `--fonte assembleia`). `coletar --gravar-video` grava o
 navegador em `dados/evidencias/videos/`.
 
+Coleta longa (horas no navegador) roda num banco de trabalho, sem segurar o
+canônico: `RPA_DADOS=<pasta de trabalho>` no `descobrir` e no `coletar`. Quando ela
+fecha, `importar` leva as linhas dessas fontes para o banco de `RPA_DADOS`, numa
+transação só, e move os originais e as evidências delas para lá:
+
+```bash
+.venv/Scripts/python -m coleta importar --de <pasta de trabalho>/estado.db --fontes alap,alece --sessao <nome>
+```
+
+Ele pega a trava `EM-USO.txt` do destino (e para se ela for de outra sessão), recusa
+coleta com item pendente ou com erro na origem, e pode rodar de novo sem duplicar
+nada: as linhas dessas fontes no destino são trocadas pelas da origem, e as das
+outras fontes ficam como estavam. A trava fica até quem importou apagá-la.
+
 A primeira rodada completa baixa ~430 MB de arquivos do TSE e da Câmara dos Deputados
 e o arquivo da ALESP (160 MB, guardado comprimido) para `dados/cache/`. A coleta é
 educada: uma requisição por vez em cada portal, com a pausa que o robots.txt de cada
