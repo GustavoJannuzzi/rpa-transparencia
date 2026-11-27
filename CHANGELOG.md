@@ -7,6 +7,13 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ### Adicionado
 
+- **Assembleias pela tela, AP e CE** (frente D2): `FonteAssembleiaTela`, que espera a
+  vez do portal a cada gesto e guarda a resposta que a tela recebeu, e a conferência de
+  cada uma contra os totais da própria tela. Amapá: cascata AJAX, POST e iframe por
+  elemento de despesa, com a conferência em três degraus. Ceará: chave do detalhe em
+  base64 do nome, tela conferida contra o CSV do mês da casa, tabela de grafias com a
+  prova de cada ligação, e nome digitado com erro que vai para a revisão em vez de virar
+  deputado.
 - **Govbr Pronim em 6 câmaras do PR**: robô de navegador no ASP clássico (formulário
   único, ano com chave interna, entidade e desdobramentos por AJAX, "Gerar"). A tela
   mostra o CPF sem máscara: o robô lê o documento só na memória (para ligar a mesma

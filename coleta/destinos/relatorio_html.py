@@ -53,6 +53,8 @@ def gerar(con: sqlite3.Connection) -> Path:
     fontes = []
     for F in FONTES:
         fid = F.id
+        if not con.execute("SELECT 1 FROM inventario WHERE fonte=? LIMIT 1", (fid,)).fetchone():
+            continue  # fonte que este banco ainda não coletou
         eq = con.execute("SELECT * FROM conferencias WHERE fonte=? AND verificacao='origem_igual_coletado_mais_revisao'", (fid,)).fetchone()
         err = con.execute("SELECT obtido FROM conferencias WHERE fonte=? AND verificacao='erros_em_aberto'", (fid,)).fetchone()
         sit = {r[0]: r[1] for r in con.execute("SELECT s.situacao, COUNT(*) FROM despesas d JOIN despesa_situacao s USING(chave) WHERE d.fonte=? GROUP BY 1", (fid,))}

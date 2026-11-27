@@ -3,6 +3,8 @@ mudou. Separado dos testes normais: python -m pytest -m contrato"""
 
 from __future__ import annotations
 
+import re
+
 import httpx
 import pytest
 from playwright.async_api import async_playwright
@@ -293,6 +295,155 @@ async def test_frequencia_curitiba_cartoes_e_anexos():
             await p.locator("table.table-card tbody tr").first.locator("td.detalhamentoArquivos").click()
         anexos = await (await resp.value).json()
         assert anexos and {"url", "nome", "tipo"} <= set(anexos[0]) and "X-Amz-Expires" in anexos[0]["url"]
+    finally:
+        await nav.close()
+        await pw.stop()
+
+
+# ---------------------------------------------------------------- assembleias lidas pela tela
+def test_alap_selects_em_cascata_e_detalhe_por_elemento():
+    from coleta import entidades
+    from coleta.fontes.alap.fonte import ler_detalhe, opcoes
+    from coleta.fontes.assembleia_tela import decodificar
+
+    inicio = entidades.assembleias()["alap"].extra["inicio"]
+    base = inicio.rsplit("/", 1)[0]
+    try:
+        with _cliente(follow_redirects=True) as c:
+            h = c.get(inicio).text
+            assert 'id="ano_verbaB"' in h and 'id="mes_verbaB"' in h and 'id="idgabineteB"' in h and "acao=buscar" in h
+            meses = opcoes(decodificar(c.post(f"{base}/mes_ceap_json.php", data={"ano_verbaB": "2025"}).content))
+            assert [m for m, _ in meses][:2] == ["01", "02"]
+            gabs = opcoes(decodificar(c.post(f"{base}/gabinete_ceap_json.php", data={"ano_verbaB": "2025", "mes_verbaB": "09"}).content))
+            assert len(gabs) >= 20 and all(v.isdigit() for v, _ in gabs)
+            det = c.get(f"{base}/ceap_exibir_detalhado.php", params={"idgabineteB": "54", "mes_verbaB": "09", "ano_verbaB": "2025",
+                                                                       "cod_despesa": "3390.30", "idsubelemento": "2", "cod_subelemento": "01"})
+            assert ler_detalhe(decodificar(det.content))["notas"]  # PortalMudou se a tabela de notas sumir
+    except (httpx.ConnectTimeout, httpx.ConnectError, httpx.ReadTimeout) as erro:
+        _sem_rede(erro)
+
+
+def test_alece_lista_com_chave_base64_detalhe_e_csv_do_mes():
+    from coleta import entidades
+    from coleta.fontes.alece.fonte import codigo_do_detalhe, ler_csv, ler_detalhe, ler_lista
+    from coleta.fontes.assembleia_tela import decodificar
+
+    inicio = entidades.assembleias()["alece"].extra["inicio"]
+    try:
+        with _cliente(follow_redirects=True) as c:
+            pag = ler_lista(c.get(inicio, params={"mes": "09", "ano": "2025"}).text)
+            assert pag["linhas"] and pag["contador"]
+            rotulo, codigo = pag["linhas"][0]
+            assert codigo == codigo_do_detalhe(2025, "09", rotulo)
+            assert ler_detalhe(decodificar(c.get(f"{inicio}/detalhes", params={"codigo": codigo}).content))["notas"]
+            assert ler_csv(decodificar(c.get(f"{inicio}/csv", params={"mes": "09", "ano": "2025"}).content))
+    except (httpx.ConnectTimeout, httpx.ConnectError, httpx.ReadTimeout) as erro:
+        _sem_rede(erro)
+
+
+def test_aleto_formulario_por_nome_e_crawl_delay():
+    import time
+
+    from coleta import entidades
+
+    inicio = entidades.assembleias()["aleto"].extra["inicio"]
+    try:
+        with _cliente(follow_redirects=True) as c:
+            robots = c.get(inicio.split("/transparencia")[0] + "/robots.txt").text
+            assert "Crawl-delay: 10" in robots
+            time.sleep(10)  # o robots pede 10 s
+            h = c.get(inicio).text
+            assert 'id="verbaindenizatoria_ano"' in h and 'id="verbaindenizatoria_mes"' in h and 'name="parlamentar"' in h
+            # o valor do select de deputado é o nome (não um id)
+            assert re.search(r'<option value="[A-ZÀ-Ú][^"0-9]+"', h)
+    except (httpx.ConnectTimeout, httpx.ConnectError, httpx.ReadTimeout) as erro:
+        _sem_rede(erro)
+
+
+def test_alba_lista_paginada_e_detalhe():
+    from coleta import entidades
+    from coleta.fontes.alba.fonte import ler_detalhe, ler_lista, opcoes_deputado, ultima_pagina
+
+    inicio = entidades.assembleias()["alba"].extra["inicio"]
+    try:
+        with _cliente(follow_redirects=True) as c:
+            h = c.get(inicio, params={"ano": "2026", "page": "0", "size": "20"}).text
+            assert opcoes_deputado(h) and ultima_pagina(h) > 10
+            linhas = ler_lista(h)  # PortalMudou se as colunas mudarem
+            assert linhas
+            assert ler_detalhe(c.get(f"https://www.al.ba.gov.br{linhas[0]['detalhe']}").text)
+    except (httpx.ConnectTimeout, httpx.ConnectError, httpx.ReadTimeout) as erro:
+        _sem_rede(erro)
+
+
+def test_alego_dado_aberto_so_tem_o_total_e_a_tela_pede_o_detalhe():
+    from coleta.fontes.alego.fonte import API
+
+    try:
+        with _cliente(follow_redirects=True) as c:
+            aberto = c.get(f"{API}.json", params={"ano": "2025", "mes": "9", "todos": "true"}).json()
+            assert aberto and {"deputado", "valor_indenizado", "valor_apresentado"} <= set(aberto[0]) and "grupos" not in aberto[0]
+    except (httpx.ConnectTimeout, httpx.ConnectError, httpx.ReadTimeout) as erro:
+        _sem_rede(erro)
+
+
+async def test_alego_a_rota_do_deputado_pede_o_detalhe_com_cnpj():
+    from coleta import entidades
+
+    inicio = entidades.assembleias()["alego"].extra["inicio"]
+    pw, nav, p = await _pagina(config.UA_ROBO)
+    try:
+        async with p.expect_response(lambda r: "/verbas_indenizatorias/exibir?" in r.url, timeout=60000) as info:
+            await p.goto(f"{inicio}/exibir/808/2025/9", wait_until="domcontentloaded")
+        j = await (await info.value).json()
+        assert {"grupos", "valor_indenizado"} <= set(j)
+    except Exception as erro:
+        if "Timeout" in type(erro).__name__ or "net::" in str(erro):
+            _sem_rede(erro)
+        raise
+    finally:
+        await nav.close()
+        await pw.stop()
+
+
+async def test_alepe_selects_puxam_meses_pedidos_e_notas():
+    from coleta import entidades
+
+    inicio = entidades.assembleias()["alepe"].extra["inicio"]
+    pw, nav, p = await _pagina(config.UA_ROBO)
+    try:
+        await p.goto(inicio, wait_until="networkidle")
+        assert await p.locator("select#parlamentar option").count() > 50
+        async with p.expect_response(lambda r: "dep-meses.php" in r.url, timeout=60000):
+            await p.select_option("select#parlamentar", "4508")
+        async with p.expect_response(lambda r: "verbaindenizatorianotas.php" in r.url, timeout=60000):
+            await p.select_option("select#mes", "1")
+    except Exception as erro:
+        if "Timeout" in type(erro).__name__ or "net::" in str(erro):
+            _sem_rede(erro)
+        raise
+    finally:
+        await nav.close()
+        await pw.stop()
+
+
+async def test_alrn_so_pela_tela_mat_select_e_resposta_da_pesquisa():
+    from coleta import entidades
+
+    inicio = entidades.assembleias()["alrn"].extra["inicio"]
+    pw, nav, p = await _pagina(config.UA_ROBO)
+    try:
+        await p.goto(inicio, wait_until="networkidle")
+        for controle in ("legislaturasControl", "anoControl", "mesesControl", "parlamentaresControl"):
+            assert await p.locator(f"mat-select[formcontrolname='{controle}']").count() == 1
+        async with p.expect_response(lambda r: "/verbas/despesas/" in r.url, timeout=90000) as info:
+            await p.get_by_role("button", name="PESQUISAR").click()
+        j = await (await info.value).json()
+        assert {"data", "count", "somatorio"} <= set(j)
+    except Exception as erro:
+        if "Timeout" in type(erro).__name__ or "net::" in str(erro):
+            _sem_rede(erro)
+        raise
     finally:
         await nav.close()
         await pw.stop()
