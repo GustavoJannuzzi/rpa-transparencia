@@ -81,9 +81,23 @@ if (existsSync(path.join(DADOS, "casas"))) {
   }
 }
 
+// 4. atividade nas sessões: cada bloco diz de qual fonte, de quando e onde conferir
+let atividades = 0;
+for (const arq of readdirSync(path.join(DADOS, "parlamentares"))) {
+  const p = path.join(DADOS, "parlamentares", arq);
+  if (statSync(p).isDirectory()) continue;
+  for (const a of JSON.parse(readFileSync(p, "utf-8")).atividade ?? []) {
+    atividades++;
+    if (!/^[a-z_]+$/.test(a.fonte ?? "") || !/^\d{4}-\d{2}-\d{2}$/.test(a.coleta ?? "") || !/^https:\/\//.test(a.documento ?? ""))
+      falhas.push(`${arq}: atividade sem fonte, sem data de coleta ou sem documento`);
+  }
+}
+
 if (falhas.length) {
   console.error(`${falhas.length} falha(s):`);
   for (const f of falhas.slice(0, 30)) console.error("  " + f);
   process.exit(1);
 }
-console.log(`ok: ${paginas} páginas, ${valores} valores em reais no HTML, ${linhas} linhas de despesa nos JSON e ${casas} casas, todos com procedência`);
+console.log(
+  `ok: ${paginas} páginas, ${valores} valores em reais no HTML, ${linhas} linhas de despesa nos JSON, ${casas} casas e ${atividades} blocos de atividade, todos com procedência`,
+);

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AtividadeDaCasa } from "@/componentes/Atividade";
 import Barras, { type ItemBarra } from "@/componentes/Barras";
 import { CarimboRevisao } from "@/componentes/EmRevisao";
 import Valor from "@/componentes/Valor";
@@ -354,6 +355,8 @@ export default async function PaginaCasa({ params }: { params: Promise<{ id: str
           )}
         </aside>
       </div>
+
+      <AtividadeDaCasa atividade={c.atividade ?? []} />
     </article>
   );
 }

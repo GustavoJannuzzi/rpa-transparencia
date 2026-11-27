@@ -19,7 +19,7 @@ from .. import config, entidades
 from ..fontes import FONTES
 from ..nucleo.banco import carimbo_publicacao
 from ..nucleo.texto import cpfs_expostos, mascarar_cpf, normalizar_nome, slug
-from . import cobertura as cob
+from . import atividade, cobertura as cob
 from .grafo import layout
 
 PUBLICAVEIS = ("ok", "fora_da_soma")
@@ -117,7 +117,7 @@ def publicar(con: sqlite3.Connection) -> list[str]:
     # período que as fontes de cada casa cobrem, e os anos em que a fonte diz não ter diária nenhuma
     cobertura_casa: dict[str, tuple[int, int]] = {}
     for fo in FONTES:
-        if fo.id == "tse":
+        if fo.id == "tse" or fo.dado != "despesa":
             continue
         de_c, ate_c = cobertura_casa.get(fo.sistema.casa, (fo.sistema.cobre_de, fo.sistema.cobre_ate))
         cobertura_casa[fo.sistema.casa] = (min(de_c, fo.sistema.cobre_de), max(ate_c, fo.sistema.cobre_ate))
@@ -267,6 +267,9 @@ def publicar(con: sqlite3.Connection) -> list[str]:
                               "data_referencia": r["data_referencia"], "k": r["coletado_em"][:10], "src": r["url"],
                               "loc": r["localizador"], "cargo": r["cargo_original"]})
 
+    # ---------- atividade legislativa (sessão, presença, voto): não é despesa ----------
+    ativ_parl, ativ_casa, ativ_cob = atividade.resumos(con)
+
     # ---------- arquivos por parlamentar ----------
     indice = []
     for pid, p in parl.items():
@@ -292,6 +295,7 @@ def publicar(con: sqlite3.Connection) -> list[str]:
             "em_revisao": rev_parl.get(pid, []),
             "granularidade": "agregado" if granularidade_parl.get(pid) == {"agregado"} else ("misto" if len(granularidade_parl.get(pid, ())) > 1 else "nota"),
             "subsidio": subsidio.get(pid, []),
+            "atividade": ativ_parl.get(pid, []),
         }
         casa_p = entidades.casas().get(p["casa"])
         if casa_p is not None and casa_p.tipo == "camara_municipal":
@@ -308,6 +312,7 @@ def publicar(con: sqlite3.Connection) -> list[str]:
             tamanho += _escrever(destino / "parlamentares" / pid / f"{a}.json", _arquivo_ano([l for l in linhas if l[1].startswith(str(a))]))
         indice.append({"id": pid, "nome": p["nome"], "casa": p["casa"], "uf": p["uf"], "partido": p["partido_atual"],
                        "total": _d(total), "linhas": cab["linhas"], "gabinete": bool(cab["gabinete"]),
+                       **({"atividade": True} if cab["atividade"] else {}),
                        **({"municipio": p["municipio"]} if p["municipio"] else {})})
     indice.sort(key=lambda x: (normalizar_nome(x["nome"]), x["id"]))
     tamanho += _escrever(destino / "parlamentares.json", indice)
@@ -353,10 +358,14 @@ def publicar(con: sqlite3.Connection) -> list[str]:
     tamanho += _escrever(destino / "revisao.json", _revisao(con))
     casas_pub = cob.casas(con, indice, coleta, municipal_ano, casa_ano, casa_cat, casa_linhas, casa_forn, nomes_forn, cobertura_casa,
                           sem_publicacao, subsidio, _d)
+    for c in casas_pub:
+        ativ = ativ_casa.get(c["resumo"]["id"], [])
+        c["detalhe"]["atividade"] = ativ
+        c["resumo"]["atividade"] = [{k: x[k] for k in ("fonte", "sistema", "de", "ate", "situacao")} for x in ativ]
     tamanho += _escrever(destino / "casas.json", [c["resumo"] for c in casas_pub])
     for c in casas_pub:
         tamanho += _escrever(destino / "casas" / f"{c['resumo']['id']}.json", c["detalhe"])
-    tamanho += _escrever(destino / "cobertura.json", cob.cobertura(casas_pub))
+    tamanho += _escrever(destino / "cobertura.json", {**cob.cobertura(casas_pub), "atividade": {**ativ_cob, **cob.levantamento_atividade()}})
     for nome, mapa in cob.mapas().items():
         tamanho += _escrever(destino / nome, mapa)
 
@@ -709,9 +718,13 @@ def _linhas_por_grupo(con) -> dict[tuple, int]:
 
 
 def _revisao(con) -> dict:
-    linhas = _linhas_por_grupo(con)
+    # a fila daqui é a das despesas; a da atividade nas sessões fica na página da casa
+    ativ = {f.id for f in FONTES if f.dado == "atividade"}
+    linhas = {k: v for k, v in _linhas_por_grupo(con).items() if k[0] not in ativ}
     grupos = []
     for r in con.execute("""SELECT fonte, tipo, motivo, COUNT(*) n FROM revisao GROUP BY 1, 2, 3 ORDER BY n DESC"""):
+        if r["fonte"] in ativ:
+            continue
         exemplos = []
         for e in con.execute("SELECT chave, detalhe FROM revisao WHERE fonte=? AND tipo=? AND motivo=? LIMIT 3", (r["fonte"], r["tipo"], r["motivo"])):
             det = json.loads(e["detalhe"] or "{}")

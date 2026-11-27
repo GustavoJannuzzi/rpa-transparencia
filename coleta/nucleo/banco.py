@@ -103,6 +103,16 @@ CREATE TABLE IF NOT EXISTS remuneracoes(
   PRIMARY KEY(fonte, ref_parlamentar, competencia)
 );
 
+-- Atividade legislativa (sessão, presença, ausência, voto, frequência). Não é despesa.
+CREATE TABLE IF NOT EXISTS atividades(
+  chave TEXT PRIMARY KEY, fonte TEXT NOT NULL, item TEXT NOT NULL, casa TEXT NOT NULL,
+  tipo TEXT NOT NULL, ref_parlamentar TEXT, ref_sessao TEXT, data TEXT, competencia TEXT,
+  rotulo TEXT, quantidade INTEGER NOT NULL DEFAULT 1,
+  url TEXT, hash_original TEXT, localizador TEXT, coletado_em TEXT, extra TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_ativ_fonte ON atividades(fonte, tipo);
+CREATE INDEX IF NOT EXISTS ix_ativ_item ON atividades(fonte, item);
+
 -- Daqui para baixo, tudo é refeito pelo `conferir` a cada rodada.
 CREATE TABLE IF NOT EXISTS parlamentares(
   id TEXT PRIMARY KEY, nome TEXT NOT NULL, nome_civil TEXT, casa TEXT NOT NULL,

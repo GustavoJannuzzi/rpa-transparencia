@@ -16,6 +16,7 @@ from typing import Any
 
 from .. import de_para, entidades
 from ..modelo import Casa
+from . import atividade
 from .banco import agora, js, transacao
 from .texto import normalizar_nome, slug
 
@@ -29,9 +30,15 @@ def fontes_por_casa() -> dict[str, list[str]]:
 
     out: dict[str, list[str]] = defaultdict(list)
     for f in FONTES:
-        if f.id != "tse":
+        if f.id != "tse" and f.dado == "despesa":
             out[f.sistema.casa].append(f.id)
     return dict(out)
+
+
+def fontes_de_atividade() -> list[str]:
+    """Fontes de atividade legislativa (sessão, presença, voto): ficam fora da identidade
+    montada pelas fontes de despesa e se ligam a ela depois (`nucleo.atividade`)."""
+    return list(atividade.fontes_de_atividade())
 
 
 def eh_elotech(fonte: str) -> bool:
@@ -274,7 +281,10 @@ def _vereadores(con, rv: Revisor, casa: Casa, fontes: list[str]) -> None:
 
     marcas = ",".join("?" * len(fontes))
     municipio = normalizar_nome(casa.municipio)
-    for r in con.execute("SELECT fonte, ref, periodo, nome, nome_parlamentar, matricula FROM pessoas_fonte WHERE casa=?", (casa.id,)):
+    ativ = fontes_de_atividade()
+    sem_ativ = f"AND fonte NOT IN ({','.join('?' * len(ativ))})" if ativ else ""
+    for r in con.execute(f"SELECT fonte, ref, periodo, nome, nome_parlamentar, matricula FROM pessoas_fonte WHERE casa=? {sem_ativ}",
+                         (casa.id, *ativ)):
         toks = [] if r["ref"].startswith("gab:") else [token_ref(r["ref"])]
         if r["nome"]:
             toks.append("n:" + normalizar_nome(r["nome"]))
@@ -290,7 +300,8 @@ def _vereadores(con, rv: Revisor, casa: Casa, fontes: list[str]) -> None:
             u.achar(t)
     refs = {(r[0], r[1]) for r in con.execute(
         f"SELECT DISTINCT fonte, ref_parlamentar FROM despesas WHERE fonte IN ({marcas}) AND ref_parlamentar IS NOT NULL", fontes)}
-    refs |= {(r[0], r[1]) for r in con.execute("SELECT DISTINCT fonte, ref FROM pessoas_fonte WHERE casa=? AND ref NOT LIKE 'gab:%'", (casa.id,))}
+    refs |= {(r[0], r[1]) for r in con.execute(f"SELECT DISTINCT fonte, ref FROM pessoas_fonte WHERE casa=? AND ref NOT LIKE 'gab:%' {sem_ativ}",
+                                               (casa.id, *ativ))}
 
     # em ordem: a ordem de entrada na união decide a ordem dos componentes
     for _, ref in sorted(refs):
@@ -869,6 +880,9 @@ def conferir(con: sqlite3.Connection) -> list[str]:
         pendencias(con, rv)
         contagens(con, rv)
         equacoes(con, rv)
+        # atividade legislativa: liga os nomes aos vereadores que as fontes de despesa já identificaram
+        atividade.ligar(con, rv)
+        atividade.equacoes(con, rv)
     resumo = []
     for r in con.execute("""SELECT fonte, resultado, COUNT(*) n FROM conferencias GROUP BY 1, 2 ORDER BY 1, 2"""):
         resumo.append(f"  conferência {r['fonte']}: {r['n']} {r['resultado']}")

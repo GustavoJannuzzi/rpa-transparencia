@@ -39,6 +39,9 @@ class Fonte(ABC):
     ua: str = config.UA_ROBO
     pausa: float | None = None
     usa_navegador: bool = False
+    # "despesa" ou "atividade" (sessão, presença, voto): a atividade não entra em
+    # nenhuma soma, nem no período de despesas que a casa cobre
+    dado: str = "despesa"
 
     def __init__(self) -> None:
         self.educacao = Educacao(self.pausa, self.ua)

@@ -27,6 +27,72 @@ export type Subsidio = {
   cargo: string | null;
 };
 
+/** Uma contagem por rótulo, como a fonte escreve ("Sim", "Atestado médico"). */
+export type Rotulado = { rotulo: string; n: number };
+
+/** Atividade nas sessões: não é despesa e não entra em soma nenhuma em reais. */
+type BaseAtividade = { fonte: string; sistema: string; fornecedor: string; modo: string; situacao: "completa" | "parcial" };
+
+/** SAPL (Interlegis): presença, ausência e voto, contados registro a registro na janela de coleta. */
+export type AtividadeSapl = BaseAtividade & {
+  de: string;
+  ate: string;
+  /** coleta parcial: presença e voto publicados só até estas datas (o trecho que fechou) */
+  presenca_ate: string | null;
+  votos_ate: string | null;
+  /** a página de ausências justificadas já foi lida (senão a tela diz "ainda não lido", nunca zero) */
+  ausencias_lidas: boolean;
+  /** sessões da casa na janela em que a presença já foi coletada */
+  sessoes_da_casa: number;
+  /** dessas, em quantas o sistema da câmara tem presença registrada (de qualquer vereador) */
+  sessoes_com_presenca_registrada: number;
+  presencas: number;
+  ausencias: Rotulado[];
+  votos: Rotulado[];
+  coleta: string;
+  /** a página do parlamentar no SAPL da câmara */
+  documento: string;
+  id_na_fonte: string;
+};
+
+/** Um relatório de frequência (mês ou ano), com as colunas como a Câmara publica. */
+export type PeriodoFrequencia = {
+  periodo: string;
+  sessoes: number | null;
+  presenca_ou_falta_justificada?: number;
+  falta_descontada?: number;
+  licenca?: number;
+  presidiu?: boolean;
+  nota?: string;
+  nome_na_fonte?: string;
+  k: string;
+  loc: string;
+};
+
+export type AnoFrequencia = {
+  ano: number;
+  relatorios: number;
+  presidiu: number;
+  presenca_ou_falta_justificada: number;
+  falta_descontada: number;
+  licenca: number;
+  anual: boolean;
+};
+
+/** Relatório de frequência que a própria Câmara publica (Curitiba, Betha): contagens já somadas pela fonte. */
+export type AtividadeFrequencia = BaseAtividade & {
+  de: string;
+  ate: string;
+  por_ano: AnoFrequencia[];
+  periodos: PeriodoFrequencia[];
+  /** anos dentro do período dele em que a Câmara publicou relatório e o nome não aparece */
+  anos_sem_o_nome?: number[];
+  documento: string;
+  coleta: string;
+};
+
+export type AtividadeDoParlamentar = AtividadeSapl | AtividadeFrequencia;
+
 export type Parlamentar = {
   id: string;
   nome: string;
@@ -61,6 +127,7 @@ export type Parlamentar = {
   /** "agregado": a fonte publica a despesa já somada (por fornecedor, tipo e mês), não nota a nota. */
   granularidade?: "nota" | "agregado" | "misto";
   subsidio?: Subsidio[];
+  atividade?: AtividadeDoParlamentar[];
 };
 
 export type GrupoRevisao = { fonte: string; motivo: string; categoria: string; anos: number[]; linhas: number };
@@ -75,6 +142,7 @@ export type ItemIndice = {
   total: string;
   linhas: number;
   gabinete: boolean;
+  atividade?: boolean;
 };
 
 export type Partido = {
@@ -202,7 +270,45 @@ export type ResumoCasa = {
   em_revisao: number;
   situacao: "coletada" | "em_revisao";
   p: { fontes: string[]; coleta: string };
+  atividade?: { fonte: string; sistema: string; de: string | null; ate: string | null; situacao: "completa" | "parcial" }[];
 };
+
+type BaseAtividadeCasa = BaseAtividade & {
+  endereco: string;
+  coleta: string;
+  conferencia: { esperado: string | null; obtido: string | null; resultado: string; detalhe: string | null } | null;
+  em_revisao: { motivo: string; n: number; registros: number }[];
+};
+
+export type CasaAtividadeSapl = BaseAtividadeCasa & {
+  de: string;
+  ate: string;
+  presenca_ate: string | null;
+  votos_ate: string | null;
+  ausencias_lidas: boolean;
+  sessoes: number;
+  sessoes_por_tipo: Rotulado[];
+  sessoes_com_presenca_coletada: number;
+  sessoes_com_presenca_registrada: number;
+  presencas: number;
+  ausencias: Rotulado[];
+  votos: Rotulado[];
+  vereadores: { id: string; nome: string; presencas: number; ausencias: number; votos: number }[];
+  pedidos: number;
+  pedidos_feitos: number;
+  crawl_delay: number;
+};
+
+export type CasaAtividadeFrequencia = BaseAtividadeCasa & {
+  de: string | null;
+  ate: string | null;
+  relatorios: number;
+  consolidados_nao_somados: number;
+  por_ano: { ano: number; relatorios: number; sessoes: number; sessoes_sem_nota: number; anual: boolean }[];
+  vereadores: { id: string; nome: string; relatorios: number }[];
+};
+
+export type CasaAtividade = CasaAtividadeSapl | CasaAtividadeFrequencia;
 
 export type Casa = ResumoCasa & {
   por_ano: {
@@ -221,6 +327,7 @@ export type Casa = ResumoCasa & {
   conferencia: { fonte: string; esperado?: string; obtido?: string; resultado?: string; detalhe?: string; erros?: string | null }[];
   outras_conferencias: (Conferencia & { fonte: string })[];
   em_revisao_por_motivo: { fonte: string; motivo: string; linhas: number }[];
+  atividade?: CasaAtividade[];
 };
 
 export type SituacaoCobertura = "coletada" | "em_revisao" | "fora";
@@ -270,6 +377,22 @@ export type Cobertura = {
   camaras_pr: CamaraCobertura[];
   assembleias: AssembleiaCobertura[];
   federal: { id: string; nome: string; situacao: SituacaoCobertura; motivo?: string; parlamentares?: number; linhas?: number }[];
+  atividade?: CoberturaAtividade;
+};
+
+export type CoberturaAtividade = {
+  coletadas: {
+    casa: string;
+    fonte: string;
+    sistema: string;
+    de: string | null;
+    ate: string | null;
+    situacao: "completa" | "parcial";
+    presenca_ate?: string | null;
+    votos_ate?: string | null;
+  }[];
+  fora: { casa: string | null; municipio: string; ibge: number | null; sistema: string | null; motivo: string; base: string | null; no_site: boolean }[];
+  levantamento: { data: string; camaras_que_linkam: number; enderecos_no_dns: number; crawl_delay: number };
 };
 
 export type Mapa = { viewBox: string; areas: { id: number | string; d: string }[]; fonte: string; baixado_em: string };
@@ -280,7 +403,10 @@ export type Procedencia = {
   coleta: string;
   documento?: string | null;
   local?: string | null;
-  situacao?: "conferido" | "fora_da_soma" | "soma";
+  /** contagem: o robô contou os registros da fonte; da_fonte: o número é o que a fonte publica, já somado */
+  situacao?: "conferido" | "fora_da_soma" | "soma" | "contagem" | "da_fonte";
   nota?: string | null;
   linhas?: number;
+  /** atividade: quantos registros da fonte este número conta, e de quê ("registros de presença") */
+  registros?: string;
 };

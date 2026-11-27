@@ -30,7 +30,7 @@ def _selecionar(fontes: list[str] | None) -> list[str]:
     return [f.id for f in FONTES if f.id in fontes or grupo(f) in fontes]
 
 
-async def _rodar(etapa: str, ids: list[str], refazer: bool, gravar_video: bool) -> dict[str, execucao.Placar | int]:
+async def _rodar(etapa: str, ids: list[str], refazer: bool, gravar_video: bool, paralelo: int = 1) -> dict[str, execucao.Placar | int]:
     from .fontes.base import Contexto
 
     con = conectar()
@@ -44,7 +44,8 @@ async def _rodar(etapa: str, ids: list[str], refazer: bool, gravar_video: bool) 
             pw = await async_playwright().start()
             navegador = await pw.chromium.launch()
         ctx = Contexto(con=con, navegador=navegador, gravar_video=gravar_video)
-        for i in ids:
+
+        async def uma(i: str) -> None:
             fonte = criar(i)
             await fonte.abrir(ctx)
             try:
@@ -62,6 +63,24 @@ async def _rodar(etapa: str, ids: list[str], refazer: bool, gravar_video: bool) 
                     resultados[i] = await execucao.coletar(fonte, refazer=refazer)
             finally:
                 await fonte.fechar()
+
+        if paralelo <= 1:
+            for i in ids:
+                await uma(i)
+        else:
+            # Fontes em portais diferentes andam juntas; dentro de cada portal continua
+            # um pedido por vez, com a pausa (ou o Crawl-delay) daquele portal.
+            vez = asyncio.Semaphore(paralelo)
+
+            async def com_vez(i: str) -> None:
+                async with vez:
+                    try:
+                        await uma(i)
+                    except Exception as e:
+                        eco(f"  {i}: {etapa} parou — {type(e).__name__}: {str(e)[:300]}")
+                        resultados[i] = e
+
+            await asyncio.gather(*(com_vez(i) for i in ids))
     finally:
         if navegador:
             await navegador.close()
@@ -71,18 +90,22 @@ async def _rodar(etapa: str, ids: list[str], refazer: bool, gravar_video: bool) 
     return resultados
 
 
+OpcParalelo = typer.Option(1, help="Quantas fontes ao mesmo tempo (cada uma num portal; dentro do portal, um pedido por vez).")
+
+
 @app.command()
-def descobrir(fonte: list[str] | None = OpcFonte):
+def descobrir(fonte: list[str] | None = OpcFonte, paralelo: int = OpcParalelo):
     """Inventário de cada fonte e os totais que a própria fonte mostra."""
-    asyncio.run(_rodar("descobrir", _selecionar(fonte), False, False))
+    asyncio.run(_rodar("descobrir", _selecionar(fonte), False, False, paralelo))
 
 
 @app.command()
 def coletar(fonte: list[str] | None = OpcFonte,
             refazer: bool = typer.Option(False, help="Coleta de novo até o que já está ok."),
-            gravar_video: bool = typer.Option(False, help="Grava vídeo do navegador em dados/evidencias/videos.")):
+            gravar_video: bool = typer.Option(False, help="Grava vídeo do navegador em dados/evidencias/videos."),
+            paralelo: int = OpcParalelo):
     """Percorre o inventário e grava no modelo único. Rodar de novo só pega o que falta."""
-    asyncio.run(_rodar("coletar", _selecionar(fonte), refazer, gravar_video))
+    asyncio.run(_rodar("coletar", _selecionar(fonte), refazer, gravar_video, paralelo))
 
 
 @app.command()
@@ -146,11 +169,12 @@ def relatorio():
 @app.command()
 def tudo(fonte: list[str] | None = OpcFonte,
          refazer: bool = typer.Option(False),
-         gravar_video: bool = typer.Option(False)):
+         gravar_video: bool = typer.Option(False),
+         paralelo: int = OpcParalelo):
     """descobrir, coletar, conferir, publicar e relatorio, em sequência."""
     ids = _selecionar(fonte)
-    asyncio.run(_rodar("descobrir", ids, False, False))
-    asyncio.run(_rodar("coletar", ids, refazer, gravar_video))
+    asyncio.run(_rodar("descobrir", ids, False, False, paralelo))
+    asyncio.run(_rodar("coletar", ids, refazer, gravar_video, paralelo))
     conferir()
     publicar()
     relatorio()

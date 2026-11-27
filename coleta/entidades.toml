@@ -472,3 +472,65 @@ modo = "arquivo"
 conjunto = "https://dadosabertos.al.sp.gov.br/dataset/despesas-de-gabinete"
 arquivo = "https://www3.al.sp.gov.br/repositorio/dados-abertos/output/json/despesas.json"
 deputados = "https://www3.al.sp.gov.br/repositorio/dados-abertos/output/json/deputados.json"
+
+# ---------------------------------------------------------------------------
+# Atividade legislativa (sessões, presença, ausências e votos nominais) no SAPL,
+# o sistema legislativo do Interlegis. Não é despesa. O robots.txt pede 60 s entre
+# pedidos: cada câmara tem uma janela (de `de` até a data de corte da descoberta),
+# e `lote_presenca` é quantas sessões cabem num pedido de presença (100 registros
+# por página, um registro por vereador presente).
+[[sapl]]
+fonte = "sapl_maringa"
+casa = "cm-maringa"
+municipio = "Maringá"
+ibge = 4115200
+host = "https://sapl.cmm.pr.gov.br"
+# Maringá vota quase tudo no painel: 83.647 votos nominais registrados de 01/2025 a
+# 11/2026, 837 pedidos (14 h) só de voto. A janela é 2026, que cabe numa noite.
+de = "2026-01-01"
+lote_presenca = 4
+
+[[sapl]]
+fonte = "sapl_foz_do_iguacu"
+casa = "cm-foz-do-iguacu"
+municipio = "Foz do Iguaçu"
+ibge = 4108304
+host = "https://sapl.fozdoiguacu.pr.leg.br"
+de = "2025-01-01"
+lote_presenca = 6
+
+[[sapl]]
+fonte = "sapl_sarandi"
+casa = "cm-sarandi"
+municipio = "Sarandi"
+ibge = 4126256
+host = "https://sapl.sarandi.pr.leg.br"
+de = "2025-01-01"
+lote_presenca = 7
+
+[[sapl]]
+fonte = "sapl_irati"
+casa = "cm-irati"
+municipio = "Irati"
+ibge = 4110706
+host = "https://sapl.irati.pr.leg.br"
+de = "2025-01-01"
+lote_presenca = 8
+
+[[sapl]]
+fonte = "sapl_campina_grande_do_sul"
+casa = "cm-campina-grande-do-sul"
+municipio = "Campina Grande do Sul"
+ibge = 4104006
+host = "https://sapl.campinagrandedosul.pr.leg.br"
+de = "2025-01-01"
+lote_presenca = 8
+
+[[sapl]]
+fonte = "sapl_renascenca"
+casa = "cm-renascenca"
+municipio = "Renascença"
+ibge = 4121604
+host = "https://sapl.renascenca.pr.leg.br"
+de = "2025-01-01"
+lote_presenca = 10

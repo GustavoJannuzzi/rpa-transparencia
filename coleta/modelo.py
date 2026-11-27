@@ -166,8 +166,40 @@ class Pendencia(BaseModel):
     procedencia: Procedencia
 
 
+# Atividade legislativa: o que a fonte registra de sessão, presença, ausência e voto.
+# Não é despesa e não tem valor em reais. Cada registro tem procedência, como a despesa.
+TipoAtividade = Literal["sessao", "pauta", "presenca", "ausencia", "voto", "frequencia"]
+
+
+class Atividade(BaseModel):
+    """Um registro de atividade como a fonte o publica.
+
+    - sessao: uma sessão plenária (rotulo = tipo da sessão);
+    - pauta: um item da pauta de uma sessão (só liga o voto à sessão; não é publicado);
+    - presenca: o parlamentar consta como presente na sessão;
+    - ausencia: ausência registrada, com o motivo que a fonte der (rotulo);
+    - voto: voto nominal (rotulo = o voto como a fonte escreve: "Sim", "Não", "Abstenção"...);
+    - frequencia: contagem que a própria fonte já somou (relatório mensal de frequência),
+      com o rótulo da coluna da fonte e a quantidade.
+    """
+
+    chave: str
+    fonte: str
+    casa: str
+    tipo: TipoAtividade
+    ref_parlamentar: str | None = None  # id do parlamentar NA FONTE
+    ref_sessao: str | None = None
+    data: date | None = None
+    competencia: str  # AAAA-MM
+    rotulo: str | None = None
+    quantidade: int = 1
+    procedencia: Procedencia
+    extra: dict = Field(default_factory=dict)
+
+
 class Resultado(BaseModel):
     despesas: list[Despesa] = Field(default_factory=list)
+    atividades: list[Atividade] = Field(default_factory=list)
     pendencias: list[Pendencia] = Field(default_factory=list)
     pessoas: list[PessoaFonte] = Field(default_factory=list)
     candidaturas: list[Candidatura] = Field(default_factory=list)

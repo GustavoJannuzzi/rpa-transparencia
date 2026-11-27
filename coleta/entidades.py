@@ -93,6 +93,23 @@ class EntidadeAssembleia:
     extra: dict
 
 
+@dataclass(frozen=True)
+class EntidadeSapl:
+    """Uma câmara no SAPL (Interlegis): sessões, presença, ausências e votos nominais."""
+
+    fonte: str
+    casa: str
+    municipio: str
+    ibge: int
+    host: str
+    de: str  # início da janela (AAAA-MM-DD); o fim é a data de corte da descoberta
+    lote_presenca: int  # sessões por pedido de presença (cabe numa página de 100)
+
+    @property
+    def api(self) -> str:
+        return f"{self.host}/api"
+
+
 @cache
 def _bruto() -> dict:
     with ARQUIVO.open("rb") as f:
@@ -168,6 +185,13 @@ def assembleias() -> dict[str, EntidadeAssembleia]:
             fonte=a["fonte"], casa=a["casa"], uf=a["uf"], nome=a["nome"], cargo=a["cargo"], sistema=a["sistema"],
             modo=a["modo"], extra={k: v for k, v in a.items() if k not in chaves})
     return out
+
+
+@cache
+def sapl() -> tuple[EntidadeSapl, ...]:
+    return tuple(EntidadeSapl(fonte=e["fonte"], casa=e["casa"], municipio=e["municipio"], ibge=int(e["ibge"]),
+                              host=e["host"].rstrip("/"), de=e["de"], lote_presenca=int(e.get("lote_presenca", 4)))
+                 for e in _bruto().get("sapl", []))
 
 
 @cache

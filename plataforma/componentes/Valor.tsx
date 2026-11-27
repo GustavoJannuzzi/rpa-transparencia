@@ -12,6 +12,8 @@ type Props = {
   p: Procedencia;
   tamanho?: "pequeno" | "medio" | "grande";
   className?: string;
+  /** o que aparece no lugar do valor em reais: uma contagem (atividade nas sessões), já formatada */
+  texto?: string;
 };
 
 /**
@@ -22,7 +24,7 @@ type Props = {
  * num contêiner com rolagem: no computador, sai ao lado do número sem passar da
  * borda da tela; no celular, sobe da base da tela como uma folha.
  */
-export default function Valor({ valor, p, tamanho = "pequeno", className = "" }: Props) {
+export default function Valor({ valor, p, tamanho = "pequeno", className = "", texto }: Props) {
   const [aberta, setAberta] = useState(false);
   const id = useId();
   const botao = useRef<HTMLButtonElement>(null);
@@ -53,7 +55,7 @@ export default function Valor({ valor, p, tamanho = "pequeno", className = "" }:
         aria-describedby="dica-ficha"
         onClick={() => setAberta((a) => !a)}
       >
-        {reais(valor)}
+        {texto ?? reais(valor)}
       </button>
       {aberta && <Ficha id={id} p={p} ancora={botao} fechar={fechar} />}
     </span>
@@ -142,7 +144,15 @@ function Ficha({
   };
 
   const carimbo =
-    p.situacao === "fora_da_soma" ? "FORA DA SOMA" : p.situacao === "soma" ? "SOMA CONFERIDA" : "CONFERIDO";
+    p.situacao === "fora_da_soma"
+      ? "FORA DA SOMA"
+      : p.situacao === "soma"
+        ? "SOMA CONFERIDA"
+        : p.situacao === "contagem"
+          ? "CONTAGEM CONFERIDA"
+          : p.situacao === "da_fonte"
+            ? "NÚMERO DA FONTE"
+            : "CONFERIDO";
 
   const conteudo = (
     <div
@@ -181,6 +191,12 @@ function Ficha({
       <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[0.8rem] leading-snug">
         <dt className="text-manilha-tinta-2">Coleta</dt>
         <dd className="num">{data(p.coleta)}</dd>
+        {p.registros && (
+          <>
+            <dt className="text-manilha-tinta-2">Registros</dt>
+            <dd className="num">{p.registros}</dd>
+          </>
+        )}
         {p.linhas !== undefined && (
           <>
             <dt className="text-manilha-tinta-2">Linhas</dt>

@@ -45,6 +45,14 @@ export const FONTES: Record<string, { nome: string; curto: string; como: string 
   cldf: { nome: "Câmara Legislativa do DF — dados abertos (CSV e planilha)", curto: "CLDF", como: "arquivo" },
   almg: { nome: "Assembleia de Minas Gerais — API de dados abertos", curto: "ALMG", como: "API" },
   alesp: { nome: "Assembleia de São Paulo — dados abertos (arquivo JSON)", curto: "ALESP", como: "arquivo" },
+  // atividade nas sessões (não é despesa)
+  cmc_frequencia: { nome: "Câmara de Curitiba — relatórios de frequência (Betha)", curto: "Frequência (Betha)", como: "robô de navegador + PDF" },
+  sapl_maringa: { nome: "Câmara de Maringá — SAPL (Interlegis)", curto: "SAPL (Maringá)", como: "API" },
+  sapl_foz_do_iguacu: { nome: "Câmara de Foz do Iguaçu — SAPL (Interlegis)", curto: "SAPL (Foz do Iguaçu)", como: "API" },
+  sapl_sarandi: { nome: "Câmara de Sarandi — SAPL (Interlegis)", curto: "SAPL (Sarandi)", como: "API" },
+  sapl_irati: { nome: "Câmara de Irati — SAPL (Interlegis)", curto: "SAPL (Irati)", como: "API" },
+  sapl_campina_grande_do_sul: { nome: "Câmara de Campina Grande do Sul — SAPL (Interlegis)", curto: "SAPL (Campina Grande do Sul)", como: "API" },
+  sapl_renascenca: { nome: "Câmara de Renascença — SAPL (Interlegis)", curto: "SAPL (Renascença)", como: "API" },
 };
 
 export function nomeFonte(id: string): string {

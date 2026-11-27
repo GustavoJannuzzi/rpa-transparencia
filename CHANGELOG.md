@@ -31,6 +31,18 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   fica no Temp do navegador até ele fechar, mesmo com o contexto trocado: a fonte de
   item longo põe `rastrear = False` (a evidência do erro fica com o print e o
   HTML da página).
+- **Atividade nas sessões** (frente D3): um tipo de dado novo, não despesa. O
+  adaptador do SAPL (Interlegis) lê sessões, presença, ausências justificadas (com o
+  motivo da fonte) e votos nominais de 6 câmaras do PR, respeitando o Crawl-delay de
+  60 s do robots.txt: janela por câmara com data de corte, inventário página a página
+  com filtro congelado, retomada sem repetir pedido, `--paralelo` para câmaras em
+  servidores diferentes e reprodução da coleta gravada num banco de trabalho. A
+  frequência dos vereadores de Curitiba vem dos 64 relatórios em PDF do Betha
+  (2019–2026), pelo navegador, com o link de 24 h usado na hora e nunca guardado. Os
+  nomes se ligam aos vereadores das fontes de despesa; o que não fecha vai para
+  revisão. Na plataforma: a seção "Nas sessões" na página do vereador e na da casa,
+  contagem bruta com a ficha de procedência de cada número, e o bloco "Atividade nas
+  sessões" na Cobertura, com a janela, o corte e o motivo de cada câmara de fora.
 
 ### Corrigido
 
