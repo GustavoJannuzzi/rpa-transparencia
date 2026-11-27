@@ -205,3 +205,13 @@ def test_alrn_a_linha_da_resposta_e_a_da_tabela_da_tela_sao_a_mesma():
     assert chave_resposta(x) == chave_tela("TOMBA FARIAS", "31/07/2025", "35.304.542/0008-09", "R$ 278,46")
     assert centavos(7215827.399999997) == Decimal("7215827.40")
     assert sum(Decimal(l["valor"]) for l in j["data"]) == centavos(j["somatorio"]) and j["count"] == len(j["data"])
+
+
+def test_aleto_pdf_sem_linha_de_cabecalho_acha_as_colunas_pelas_notas():
+    """Fev/2023 vem sem a linha "Item ... Valor Saldo", com "anteriror" e uma observação de combustível deduzido."""
+    palavras = json.loads((AMOSTRAS / "aleto/pdf_2023_02_sem_cabecalho.json").read_text(encoding="utf-8"))["palavras"]
+    pdf = ler_pdf(palavras)
+    assert pdf["mes"] == 2 and len(pdf["notas"]) == 10
+    assert pdf["quadro"]["total_despesas"] == Decimal("44978.72") and "saldo_anterior" in pdf["quadro"]
+    fecha, problemas = conferir_pdf(pdf)
+    assert fecha, problemas

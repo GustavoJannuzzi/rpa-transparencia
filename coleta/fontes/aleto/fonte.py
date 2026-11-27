@@ -53,7 +53,7 @@ RE_DOC = re.compile(r"^(\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}|\d{3}\.\d{3}\.\d{3}-\d{2
 RE_DATA = re.compile(r"^\d{2}/\d{2}/\d{4}$")
 # o que parece data, mesmo escrita errado ("0107/2025"): marca onde a data estaria
 RE_DATA_SOLTA = re.compile(r"^\d{1,2}/?\d{1,2}/\d{2,4}$")
-QUADRO = {"VALOR MENSAL": "valor_mensal", "SALDO DO MES ANTERIOR": "saldo_anterior", "DESP. COM TELEFONE": "telefone",
+QUADRO = {"VALOR MENSAL": "valor_mensal", "SALDO DO MES ANTER": "saldo_anterior", "DESP. COM TELEFONE": "telefone",
           "SALDO ATUAL": "saldo_atual", "TOTAL DAS DESPESAS": "total_despesas", "VALOR RESSARCIDO": "ressarcido"}
 
 
@@ -84,10 +84,18 @@ def ler_pdf(palavras: list[dict]) -> dict:
     """Notas (com o saldo de cada linha) e o quadro do mês."""
     linhas = _linhas(palavras)
     cab = next((l for l in linhas if {"Item", "Valor", "Saldo"} <= {w["t"] for w in l}), None)
-    if cab is None:
-        raise PortalMudou("o PDF da ALETO não tem o cabeçalho 'Item ... Valor Saldo'")
-    x_saldo = next(w for w in cab if w["t"] == "Saldo")["x0"] - 8
-    x_valor = next(w for w in cab if w["t"] == "Valor")["x0"] - 30
+    if cab is not None:
+        x_saldo = next(w for w in cab if w["t"] == "Saldo")["x0"] - 8
+        x_valor = next(w for w in cab if w["t"] == "Valor")["x0"] - 30
+    else:
+        # alguns meses (fev/2023) vêm sem a linha de cabeçalho: as colunas saem das linhas
+        # de nota, onde o valor e o saldo são os dois últimos números da linha
+        finais = [[w for w in l if RE_DINHEIRO.match(w["t"])][-2:] for l in linhas if l[0]["t"].isdigit() and len(l) >= 4]
+        pares = [f for f in finais if len(f) == 2]
+        if not pares:
+            raise PortalMudou("o PDF da ALETO não tem o cabeçalho 'Item ... Valor Saldo' nem linhas de nota com valor e saldo")
+        x_saldo = min(f[1]["x0"] for f in pares) - 8
+        x_valor = min(f[0]["x0"] for f in pares) - 30
     deputado = processo = mes = None
     notas: list[dict] = []
     quadro: dict[str, Decimal] = {}
@@ -109,7 +117,8 @@ def ler_pdf(palavras: list[dict]) -> dict:
                 continue
         rotulo = next((v for k, v in QUADRO.items() if sa.startswith(k)), None)
         if rotulo:
-            vals = [w for w in l if w["x0"] >= x_saldo and (RE_DINHEIRO.match(w["t"]) or w["t"] == "-")]
+            vals = [w for w in l if w["x0"] >= x_saldo and (RE_DINHEIRO.match(w["t"]) or w["t"] == "-")] or \
+                [w for w in l if RE_DINHEIRO.match(w["t"]) or w["t"] == "-"][-1:]
             quadro[rotulo] = Decimal(0) if not vals or vals[-1]["t"] == "-" else dinheiro_br(vals[-1]["t"])
             continue
         saldo_w = [w for w in l if w["x0"] >= x_saldo and RE_DINHEIRO.match(w["t"])]
