@@ -59,3 +59,11 @@ ESPERA_BASE = float(os.environ.get("RPA_ESPERA_BASE", "2.0"))
 
 # Arquivo baixado mais novo que isto é reaproveitado (horas).
 VALIDADE_CACHE_H = float(os.environ.get("RPA_VALIDADE_CACHE_H", "20"))
+
+# Coleta longa: abaixo deste espaço livre no disco (MB), a coleta para antes do próximo
+# item e o deixa pendente para a retomada (o rastro de um item longo não cabe e
+# derrubava o processo no meio).
+DISCO_MINIMO_MB = float(os.environ.get("RPA_DISCO_MINIMO_MB", "400"))
+# Fonte com navegador: a cada tantos itens o contexto é trocado por um novo, o que
+# libera o que o navegador acumulou no Temp.
+ITENS_POR_CONTEXTO = int(os.environ.get("RPA_ITENS_POR_CONTEXTO", "20"))

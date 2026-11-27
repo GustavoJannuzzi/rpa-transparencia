@@ -101,7 +101,14 @@ class Fonte(ABC):
 
 
 class FonteNavegador(Fonte):
-    """Fonte que precisa de navegador. Um contexto por fonte, rastro por item."""
+    """Fonte que precisa de navegador. Um contexto por vez, rastro por item.
+
+    O contexto é trocado por um novo a cada `config.ITENS_POR_CONTEXTO` itens: o que o
+    navegador acumula no Temp (respostas, downloads) só vai embora quando o contexto
+    fecha, e numa coleta de horas isso passou de 800 MB por fonte. O rastro de cada
+    item leva os prints, não os snapshots (que guardam o corpo de cada resposta); a
+    evidência do erro continua com o print da página inteira, o HTML e o rastro.
+    """
 
     usa_navegador = True
     viewport = {"width": 1400, "height": 1000}
@@ -111,10 +118,16 @@ class FonteNavegador(Fonte):
         self.contexto: BrowserContext | None = None
         self.pagina: Page | None = None
         self._rastreando = False
+        self._itens_no_contexto = 0
 
     async def abrir(self, ctx: Contexto) -> None:
         await super().abrir(ctx)
         assert ctx.navegador is not None, "fonte com navegador precisa do Playwright aberto"
+        await self._criar_contexto()
+
+    async def _criar_contexto(self) -> None:
+        ctx = self.ctx
+        assert ctx is not None and ctx.navegador is not None
         opcoes: dict[str, Any] = dict(user_agent=self.ua, viewport=self.viewport, locale="pt-BR", accept_downloads=True)
         if ctx.gravar_video:
             pasta = config.evidencias() / "videos" / self.id
@@ -126,6 +139,11 @@ class FonteNavegador(Fonte):
             await self.contexto.route(padrao, tratador)
         self.pagina = await self.contexto.new_page()
         self.pagina.set_default_timeout(45000)
+        self._itens_no_contexto = 0
+
+    def ao_renovar(self) -> None:  # noqa: B027 (gancho opcional, vazio de propósito)
+        """Gancho: o contexto foi trocado; o que a fonte guardava da página aberta (um
+        ouvinte de respostas, o filtro já escolhido) deixa de valer."""
 
     async def fechar(self) -> None:
         if self.contexto:
@@ -133,9 +151,15 @@ class FonteNavegador(Fonte):
         await super().fechar()
 
     async def antes_do_item(self, item: ItemInventario) -> None:
-        if self.contexto and not self._rastreando:
-            await self.contexto.tracing.start(screenshots=True, snapshots=True, sources=False)
-            self._rastreando = True
+        if self.contexto is None or self._rastreando:
+            return
+        if self._itens_no_contexto >= config.ITENS_POR_CONTEXTO:
+            await self.contexto.close()
+            await self._criar_contexto()
+            self.ao_renovar()
+        self._itens_no_contexto += 1
+        await self.contexto.tracing.start(screenshots=True, snapshots=False, sources=False)
+        self._rastreando = True
 
     async def evidencia(self, pasta: Path, sucesso: bool) -> list[str]:
         arquivos: list[str] = []

@@ -105,16 +105,57 @@ def test_trava_de_outra_sessao_e_coleta_aberta_param_antes_de_mexer(pastas):
     importar(trabalho / "estado.db", ["alrn"], "D2", pasta_destino=canonico, aceitar_pendentes=True)
 
 
-def test_candidaturas_so_vem_com_o_tse(pastas):
+def _candidaturas(pasta: Path, linhas: list[tuple[str, int, str, str]], *, tse: bool = True) -> None:
+    con = conectar(pasta / "estado.db")
+    for municipio, ano, sq, partido in linhas:
+        con.execute("INSERT INTO candidaturas(ano_eleicao, municipio, cargo, sq_candidato, nome, partido) VALUES(?,?,?,?,?,?)",
+                    (ano, municipio, "VEREADOR", sq, f"Candidato {sq}", partido))
+    if tse:
+        con.execute("INSERT OR IGNORE INTO inventario(fonte, chave, situacao) VALUES('tse', 'eleicoes', 'ok')")
+    con.close()
+
+
+def _partidos(pasta: Path) -> list[tuple]:
+    con = sqlite3.connect(pasta / "estado.db")
+    out = sorted(con.execute("SELECT municipio, ano_eleicao, sq_candidato, partido FROM candidaturas").fetchall())
+    con.close()
+    return out
+
+
+def test_candidaturas_so_vem_com_o_tse_e_a_origem_tem_de_cobrir_o_destino(pastas):
+    """Destino com A e B; origem com B' e C: recusa (o partido de A sumiria). Origem com A', B' e C: fica A', B' e C."""
+    trabalho, canonico = pastas
+    _candidaturas(canonico, [("A", 2024, "1", "P1"), ("B", 2024, "2", "P2")], tse=False)
+    _candidaturas(trabalho, [("B", 2024, "2", "P2-novo"), ("C", 2024, "3", "P3")])
+    antes = _partidos(canonico)
+    importar(trabalho / "estado.db", ["alap"], "D2", pasta_destino=canonico)  # sem o tse, nada muda
+    assert _partidos(canonico) == antes
+    (canonico / TRAVA).unlink()
+    with pytest.raises(ImportacaoRecusada, match="A 2024"):
+        importar(trabalho / "estado.db", ["tse"], "D2", pasta_destino=canonico)
+    assert _partidos(canonico) == antes and not (canonico / TRAVA).exists()  # a trava que ele criou é desfeita
+    _candidaturas(trabalho, [("A", 2024, "1", "P1-novo")], tse=False)
+    importar(trabalho / "estado.db", ["tse"], "D2", pasta_destino=canonico)
+    assert _partidos(canonico) == [("A", 2024, "1", "P1-novo"), ("B", 2024, "2", "P2-novo"), ("C", 2024, "3", "P3")]
+
+
+def test_perda_do_tse_so_com_a_opcao_explicita(pastas):
+    trabalho, canonico = pastas
+    _candidaturas(canonico, [("A", 2024, "1", "P1")], tse=False)
+    _candidaturas(trabalho, [("C", 2024, "3", "P3")])
+    importar(trabalho / "estado.db", ["tse"], "D2", pasta_destino=canonico, aceitar_perda_tse=True)
+    assert _partidos(canonico) == [("C", 2024, "3", "P3")]
+
+
+def test_colunas_diferentes_entre_origem_e_destino_param(pastas):
     trabalho, canonico = pastas
     con = conectar(trabalho / "estado.db")
-    con.execute("INSERT INTO candidaturas(ano_eleicao, municipio, cargo, sq_candidato, nome) VALUES(2024,'X','VEREADOR','1','Fulano')")
-    con.execute("INSERT INTO inventario(fonte, chave, situacao) VALUES('tse', 'eleicoes', 'ok')")
+    con.execute("ALTER TABLE despesas ADD COLUMN coluna_de_outra_versao TEXT")
     con.close()
-    importar(trabalho / "estado.db", ["alap"], "D2", pasta_destino=canonico)
-    assert _foto(canonico / "estado.db")["candidaturas"] == []
-    importar(trabalho / "estado.db", ["tse"], "D2", pasta_destino=canonico)
-    assert len(_foto(canonico / "estado.db")["candidaturas"]) == 1
+    antes = _foto(canonico / "estado.db")
+    with pytest.raises(ImportacaoRecusada, match="coluna_de_outra_versao"):
+        importar(trabalho / "estado.db", ["alap"], "D2", pasta_destino=canonico)
+    assert _foto(canonico / "estado.db") == antes and not (canonico / TRAVA).exists()
 
 
 def test_tabela_nova_de_outra_sessao_entra_se_tiver_a_coluna_fonte(pastas):

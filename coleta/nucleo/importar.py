@@ -15,7 +15,9 @@ numa transação só, e o tempo de trava no canônico cai de horas para minutos:
 
 As tabelas que o `conferir` refaz a cada rodada não entram: ele as reconstrói. Tabela
 de coleta sem a coluna `fonte` só pode vir com a fonte dona dela (as candidaturas são
-do TSE); outra qualquer faz o `importar` parar antes de mexer em nada.
+do TSE, e vêm inteiras: a origem tem de ter todo município e eleição que o destino
+tem); outra qualquer faz o `importar` parar antes de mexer em nada. Origem e destino
+são migrados com o código atual, e as colunas de cada tabela têm de ser as mesmas.
 """
 
 from __future__ import annotations
@@ -116,8 +118,11 @@ def _mover_arvore(origem: Path, destino: Path, rel: str, rel_out: Relatorio) -> 
 
 
 def importar(banco_origem: Path, fontes: list[str], sessao: str, *, destino: sqlite3.Connection | None = None,
-             pasta_destino: Path | None = None, aceitar_pendentes: bool = False) -> Relatorio:
-    """Importa as `fontes` de `banco_origem` para o banco de destino (o de `RPA_DADOS`)."""
+             pasta_destino: Path | None = None, aceitar_pendentes: bool = False, aceitar_perda_tse: bool = False) -> Relatorio:
+    """Importa as `fontes` de `banco_origem` para o banco de destino (o de `RPA_DADOS`).
+
+    `aceitar_perda_tse`: importa o `tse` mesmo que a origem não tenha as candidaturas
+    de algum município e eleição que o destino tem (elas somem do destino)."""
     from .. import config
 
     fontes = sorted(set(fontes))
@@ -132,7 +137,9 @@ def importar(banco_origem: Path, fontes: list[str], sessao: str, *, destino: sql
         raise ImportacaoRecusada("a origem e o destino são a mesma pasta")
     rel = Relatorio(destino=pasta_destino, fontes=fontes)
 
-    # 1. confere a origem antes de mexer em qualquer coisa
+    # 1. a origem com o esquema do código atual (as mesmas migrações do destino); depois,
+    # confere a origem antes de mexer em qualquer coisa
+    conectar(banco_origem).close()
     src = sqlite3.connect(f"file:{banco_origem.as_posix()}?mode=ro", uri=True)
     try:
         tab_src = tabelas_da_coleta(src)
@@ -149,18 +156,41 @@ def importar(banco_origem: Path, fontes: list[str], sessao: str, *, destino: sql
             if "fonte" not in cols and SEM_COLUNA_FONTE.get(t) is None:
                 raise ImportacaoRecusada(f"a tabela {t} não tem a coluna fonte, e o importar não sabe de quem ela é")
         caminhos = [r[0] for r in src.execute(f"SELECT caminho FROM originais WHERE fonte IN ({marcas}) AND caminho IS NOT NULL", fontes)]
+        pares_tse_origem = (set(src.execute("SELECT DISTINCT municipio, ano_eleicao FROM candidaturas").fetchall())
+                            if "tse" in fontes and "candidaturas" in tab_src else set())
     finally:
         src.close()
 
-    # 2. a trava do destino (e o esquema do código atual, que conectar() cria)
+    # 2. a trava do destino (e o esquema do código atual, que conectar() cria). Se o
+    # importar parar daqui até a cópia, a trava que ele mesmo criou é desfeita.
     pasta_destino.mkdir(parents=True, exist_ok=True)
     rel.trava = pegar_trava(pasta_destino, sessao)
+    trava_nova = rel.trava.startswith("criada")
     con = destino or conectar(pasta_destino / "estado.db")
     try:
-        tab_dst = tabelas_da_coleta(con)
-        faltam = sorted(t for t in tab_src if t not in tab_dst and (SEM_COLUNA_FONTE.get(t) is None or SEM_COLUNA_FONTE[t] in fontes))
-        if faltam:
-            raise ImportacaoRecusada(f"o destino não tem as tabelas {faltam}: rode o importar com o código que as cria")
+        try:
+            tab_dst = tabelas_da_coleta(con)
+            faltam = sorted(t for t in tab_src if t not in tab_dst and (SEM_COLUNA_FONTE.get(t) is None or SEM_COLUNA_FONTE[t] in fontes))
+            if faltam:
+                raise ImportacaoRecusada(f"o destino não tem as tabelas {faltam}: rode o importar com o código que as cria")
+            diferentes = {t: sorted(set(tab_src[t]) ^ set(tab_dst[t])) for t in tab_src if t in tab_dst and set(tab_src[t]) != set(tab_dst[t])}
+            if diferentes:
+                raise ImportacaoRecusada("as colunas da origem e do destino não são as mesmas, mesmo depois de migrar os dois: "
+                                         + "; ".join(f"{t}: {', '.join(c)}" for t, c in sorted(diferentes.items())))
+            if "tse" in fontes:
+                # as candidaturas não têm a coluna fonte: elas vêm inteiras, então a origem tem
+                # de ter todo município e eleição que o destino tem (senão o partido some)
+                pares_destino = {tuple(r) for r in con.execute("SELECT DISTINCT municipio, ano_eleicao FROM candidaturas")}
+                perdidos = sorted(pares_destino - pares_tse_origem)
+                if perdidos and not aceitar_perda_tse:
+                    raise ImportacaoRecusada(
+                        f"a origem não tem as candidaturas de {len(perdidos)} município(s) e eleição(ões) que o destino tem "
+                        f"({', '.join(f'{m} {a}' for m, a in perdidos[:8])}{'…' if len(perdidos) > 8 else ''}): o TSE tem de ser "
+                        "coletado inteiro no banco de trabalho (ou importe com --aceitar-perda-tse)")
+        except ImportacaoRecusada:
+            if trava_nova:
+                (pasta_destino / TRAVA).unlink(missing_ok=True)
+            raise
 
         # 3. os arquivos primeiro: quando a linha existir no destino, o arquivo dela já está lá
         for c in caminhos:
@@ -182,7 +212,7 @@ def importar(banco_origem: Path, fontes: list[str], sessao: str, *, destino: sql
                         filtro, args = "", []
                     else:
                         filtro, args = f" WHERE fonte IN ({marcas})", fontes
-                    cols = [c for c in tab_src[t] if c in tab_dst[t] and c != ID_SEQUENCIAL.get(t)]
+                    cols = [c for c in tab_src[t] if c != ID_SEQUENCIAL.get(t)]
                     lista = ", ".join(cols)
                     apagadas = con.execute(f"DELETE FROM main.{t}{filtro}", args).rowcount
                     # originais: a chave é o hash do conteúdo; se outra fonte já guardou o mesmo

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import asyncio
 import random
+import shutil
 import sys
 import traceback
 from dataclasses import dataclass, field
@@ -141,6 +142,14 @@ def _gravar_resultado(con, fonte_id: str, chave_item: str, r: Resultado, casa: s
     gravar_totais(con, r.totais)
 
 
+def espaco_livre_mb() -> float:
+    """O espaço livre no disco da pasta de dados, em MB."""
+    pasta = config.dados()
+    while not pasta.exists() and pasta.parent != pasta:
+        pasta = pasta.parent
+    return shutil.disk_usage(pasta).free / 2**20
+
+
 async def coletar(fonte: Fonte, *, refazer: bool = False, parar_apos: int | None = None) -> Placar:
     con = fonte.con
     placar = Placar(fonte.id)
@@ -165,6 +174,12 @@ async def coletar(fonte: Fonte, *, refazer: bool = False, parar_apos: int | None
                               parametros=json.loads(linha["parametros"] or "{}"))
         if parar_apos is not None and feitos >= parar_apos:
             raise Interrompido(f"interrompido depois de {feitos} itens")
+        livre = espaco_livre_mb()
+        if livre < config.DISCO_MINIMO_MB:
+            # o item (e os que faltam) ficam pendentes: a próxima rodada retoma daqui
+            placar.parou = f"disco quase cheio: {livre:.0f} MB livres (mínimo {config.DISCO_MINIMO_MB:.0f} MB)"
+            eco(f"  {fonte.id}: PAROU antes de {item.chave} — {placar.parou}; {len(itens) - feitos} item(ns) ficam pendentes")
+            break
         ultimo_erro: Exception | None = None
         for tentativa in range(1, config.TENTATIVAS + 1):
             await fonte.antes_do_item(item)
