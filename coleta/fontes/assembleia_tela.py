@@ -11,7 +11,9 @@ O que é comum às sete casas desta família (AP, CE, TO, BA, GO, PE, RN):
   `total_diverge`; as notas daquele escopo levam `escopo_conferencia` e vão para a
   revisão com o motivo;
 - `linhas_na_origem` conta as notas que a tela mostrou; é o lado "origem" da
-  equação origem = coletado + revisão.
+  equação origem = coletado + revisão;
+- o original de uma tela HTML é guardado enxuto (sem scripts, estilos e SVG, que eram
+  a maior parte do peso); JSON, CSV e o texto do PDF ficam como vieram.
 """
 
 from __future__ import annotations
@@ -129,6 +131,15 @@ def texto_html(html: str) -> str:
     return re.sub(r"\s+", " ", " ".join(t.partes).replace("\xa0", " ")).strip()
 
 
+_RE_PESO = re.compile(r"<(script|style|svg|noscript)\b.*?</\1>|<link\b[^>]*>|<!--.*?-->", re.S | re.I)
+
+
+def enxuto(html: str) -> str:
+    """A página sem scripts, estilos, SVG e comentários: o que o robô guarda como
+    original de uma tela HTML (o texto e as tabelas ficam; o peso era o resto)."""
+    return re.sub(r"\n\s*\n+", "\n", _RE_PESO.sub("", html))
+
+
 _RE_DUPLA = re.compile(r"[ÂÃ][\x80-\xbf]")
 
 
@@ -237,6 +248,10 @@ class FonteAssembleiaTela(FonteAssembleia, FonteNavegador):
         self.endereco = self.endereco or self.inicio
         super().__init__(ent)
 
+    def recorte(self, html: str, url: str) -> str:
+        """O pedaço da tela HTML que vale guardar como original (cada casa diz o seu)."""
+        return html
+
     def absoluto(self, href: str, base: str | None = None) -> str:
         return urljoin(base or self.inicio, href)
 
@@ -264,6 +279,10 @@ class FonteAssembleiaTela(FonteAssembleia, FonteNavegador):
             corpo = await r.body()
         except Exception as e:  # a página navegou antes de o corpo ser lido
             raise FalhaTransitoria(f"corpo da resposta indisponível ({type(e).__name__}) em {r.url}") from e
-        # guardar=False: a fonte guarda ela mesma um trecho (a página inteira é menu repetido)
-        h = guardar_original(self.con, self.id, corpo, r.url, tipo) if guardar else None
+        # guardar=False: a fonte guarda ela mesma um trecho (a página inteira é menu repetido).
+        # Uma tela HTML é guardada enxuta (sem scripts, estilos e SVG); JSON e CSV, como vieram.
+        h = None
+        if guardar:
+            guardado = self.recorte(enxuto(decodificar(corpo)), r.url).encode("utf-8") if tipo == "html" else corpo
+            h = guardar_original(self.con, self.id, guardado, r.url, tipo)
         return r, corpo, h

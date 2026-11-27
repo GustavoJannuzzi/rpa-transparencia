@@ -177,6 +177,11 @@ class Aleto(FonteAssembleiaTela):
         self.sistema.cobre_de, self.sistema.cobre_ate = self.de, self.ate
         self._ano_na_tela: int | None = None
 
+    def recorte(self, html: str, url: str) -> str:
+        """Da página do POST, guarda do título ao rodapé: o formulário e a tabela do mês."""
+        i, j = html.find('<h1 class="page-title">'), html.find("<footer")
+        return html[i:j] if 0 <= i < j else html
+
     async def _escolher_ano(self, ano: int) -> list[str]:
         """Escolher o ano envia o formulário; a página volta com os deputados do ano."""
         assert self.pagina is not None

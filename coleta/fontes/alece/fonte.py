@@ -135,6 +135,12 @@ class Alece(FonteAssembleiaTela):
     o_que_tem = ("Verba de desempenho parlamentar de cada deputado estadual, empenho a empenho, com o credor e o CNPJ, lida na tela "
                  "(lista paginada e detalhe no modal), conferida contra o CSV do mês que a própria casa publica.")
 
+    def recorte(self, html: str, url: str) -> str:
+        """Da lista, guarda o bloco dos resultados até a paginação (o resto é o menu)."""
+        i = html.find('id="resultados"')
+        j = html.find("</nav>", i)
+        return html[html.rfind("<div", 0, i):j + 6] if i >= 0 and j > i else html
+
     async def _listar(self, ano: int, mes: str):
         """Abre o mês pelo formulário e devolve a primeira página lida (e o original)."""
         assert self.pagina is not None

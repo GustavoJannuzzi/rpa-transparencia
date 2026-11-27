@@ -127,6 +127,14 @@ class Alap(FonteAssembleiaTela):
     o_que_tem = ("Cota para o exercício da atividade parlamentar (CEAP) de cada deputado estadual, nota a nota, com a empresa e o CNPJ, "
                  "lida na tela: elemento de despesa do mês e o detalhe de cada um.")
 
+    def recorte(self, html: str, url: str) -> str:
+        """Do POST do mês, guarda do formulário ao histórico do ano (o resto é o menu)."""
+        if "acao=buscar" not in url:
+            return html
+        i, j = html.find('<form  name="dados"'), html.find("Mapa do site")
+        i = i if i >= 0 else html.find("<form")
+        return html[i:j] if 0 <= i < j else html
+
     # ---- os três selects -------------------------------------------------
     async def _ano(self, ano: int) -> list[tuple[str, str]]:
         assert self.pagina is not None
