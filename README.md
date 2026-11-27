@@ -92,11 +92,12 @@ cada fonte, **origem = coletado + revisão**, e nenhum item com erro em aberto:
 | Betha | 54 | 54 | 0 |
 | Elotech, 12 câmaras do PR | 2.671 | 2.374 | 297 |
 | Betha, 13 câmaras do PR | 2.729 | 1.785 | 944 |
+| Equiplano, 10 câmaras do PR | 3.096 | 3.090 | 6 |
 | Câmara Legislativa do DF | 3.183 | 2.614 | 569 |
 | Assembleia de Minas Gerais (notas) | 94.209 | 94.209 | 0 |
 | Assembleia de São Paulo (linhas agregadas) | 82.182 | 82.182 | 0 |
 
-São 30 casas, com 1.371 parlamentares na plataforma. Nas câmaras do Elotech, a
+São 40 casas, com 1.514 parlamentares na plataforma. Nas câmaras do Elotech, a
 maior parte do que está em revisão é diária sem cargo cujo nome não está no cadastro
 de vereadores do ano: pode ser de servidor, então o nome é descartado e a linha fica
 de fora, contada. No Betha, 877 das 944 linhas em revisão são de Cornélio Procópio,
@@ -111,6 +112,13 @@ e 2025 inteiros (ver o achado abaixo).
 
 Achados reais, todos visíveis no relatório e na fila de revisão:
 
+- **O relatório que fecha consigo mesmo.** No Equiplano não há API nem contador: o
+  "CSV" é o relatório impresso. Nas 10 câmaras, em todos os 40 anos coletados, a
+  soma dos empenhos lidos (empenhado menos o estorno de empenho) dá, centavo a
+  centavo, o total que o próprio relatório imprime no rodapé.
+- **CPF e RG inteiros no relatório de uma câmara.** O relatório de diárias de Santo
+  Antônio do Sudoeste traz o CPF e o RG de quem viajou sem máscara. O robô intercepta
+  a resposta do "Visualizar" e tira os dois na memória, antes de gravar o original.
 - **A consulta da Câmara com diárias da Prefeitura.** No Betha de Cornélio Procópio,
   a consulta "Diárias." da Câmara traz cargos como "Chefe de Gabinete do Prefeito",
   "Secretário Mun. Agric., Pec. e Meio Ambiente" e "Chefe de Divisão de Galerias de
