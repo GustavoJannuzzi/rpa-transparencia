@@ -143,6 +143,10 @@ class Alba(FonteAssembleiaTela):
         html = decodificar(corpo)
         if r.status >= 400:
             raise FalhaTransitoria(f"HTTP {r.status} em {r.url}")
+        # página sem o formulário é resposta que não chegou inteira (já veio vazia), e
+        # não "nenhuma nota": a lista vazia de verdade vem com o formulário em volta
+        if "/transparencia/verbas-idenizatorias" not in html:
+            raise FalhaTransitoria(f"a página veio sem o formulário em {r.url}")
         h = guardar_original(self.con, self.id, trecho(html).encode("utf-8"), r.url, "html")
         return r.url, html, h
 
