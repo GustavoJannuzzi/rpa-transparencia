@@ -39,9 +39,9 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
   fica no Temp do navegador até ele fechar, mesmo com o contexto trocado: a fonte de
   item longo põe `rastrear = False` (a evidência do erro fica com o print e o
   HTML da página).
-- **Atividade nas sessões** (frente D3): um tipo de dado novo, não despesa. O
-  adaptador do SAPL (Interlegis) lê sessões, presença, ausências justificadas (com o
-  motivo da fonte) e votos nominais de 6 câmaras do PR, respeitando o Crawl-delay de
+- **Atividade nas sessões** (frente D3, [#21](https://github.com/GustavoJannuzzi/rpa-transparencia/pull/21) e [#25](https://github.com/GustavoJannuzzi/rpa-transparencia/pull/25)): um tipo de dado novo, não despesa. O
+  adaptador do SAPL (Interlegis) lê sessões, presença, ausências (com o motivo da
+  fonte, que pode ser "não apresentou justificativa") e votos nominais de 6 câmaras do PR, respeitando o Crawl-delay de
   60 s do robots.txt: janela por câmara com data de corte, inventário página a página
   com filtro congelado, retomada sem repetir pedido, `--paralelo` para câmaras em
   servidores diferentes e reprodução da coleta gravada num banco de trabalho. A

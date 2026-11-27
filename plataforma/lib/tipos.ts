@@ -40,7 +40,7 @@ export type AtividadeSapl = BaseAtividade & {
   /** coleta parcial: presença e voto publicados só até estas datas (o trecho que fechou) */
   presenca_ate: string | null;
   votos_ate: string | null;
-  /** a página de ausências justificadas já foi lida (senão a tela diz "ainda não lido", nunca zero) */
+  /** a página de ausências (com o motivo da fonte) já foi lida (senão a tela diz "ainda não lido", nunca zero) */
   ausencias_lidas: boolean;
   /** sessões da casa na janela em que a presença já foi coletada */
   sessoes_da_casa: number;
