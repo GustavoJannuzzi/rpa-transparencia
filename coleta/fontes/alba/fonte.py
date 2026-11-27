@@ -115,6 +115,12 @@ class Alba(FonteAssembleiaTela):
         self.ate = int(ent.extra.get("ate", self.ate))
         self.sistema.cobre_de, self.sistema.cobre_ate = self.de, self.ate
 
+    async def abrir(self, ctx) -> None:
+        await super().abrir(ctx)
+        assert self.pagina is not None
+        # o servidor às vezes leva mais de 45 s para devolver uma página (e dá 500 no meio)
+        self.pagina.set_default_navigation_timeout(self.timeout_resposta)
+
     async def _buscar(self, ano: int, deputado: str = "") -> tuple[str, str, str]:
         """Preenche o formulário e clica em BUSCAR. Devolve (url, html, hash)."""
         assert self.pagina is not None
