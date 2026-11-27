@@ -16,7 +16,7 @@ MS,ALEMS,Assembleia Legislativa de Mato Grosso do Sul,24,PHP (CSV por GET),reser
 MT,ALMT,Assembleia Legislativa de Mato Grosso,24,não verificado,fora_do_ar,O portal não respondeu no dia do levantamento.
 PA,ALEPA,Assembleia Legislativa do Pará,41,DevExpress Dashboard,sem_fornecedor,"Auxílio de valor fixo, sem fornecedor."
 PB,ALPB,Assembleia Legislativa da Paraíba,36,WordPress (ODS por deputado),reserva,CNPJ mascarado na própria fonte.
-PE,ALEPE,Assembleia Legislativa de Pernambuco,49,React (cascata de 4 níveis),sem_adaptador,"Navegador: deputado, meses, pedidos e notas, cada nível pedido pela própria tela; notas conferidas com o total do pedido."
+PE,ALEPE,Assembleia Legislativa de Pernambuco,49,React (cascata de 4 níveis),em_coleta,"Navegador: deputado, meses, pedidos e notas, cada nível pedido pela própria tela; notas conferidas com o total do pedido."
 PI,ALEPI,Assembleia Legislativa do Piauí,30,ScriptCase + Akamai,anti_robo,O robots.txt e os PDFs devolvem 403 de proteção anti-robô.
 PR,ALEP,Assembleia Legislativa do Paraná,54,Laravel + Angular,captcha,"reCAPTCHA na consulta (2011 a 2019 e de 2020 em diante) e robots.txt que proíbe /api/."
 RJ,ALERJ,Assembleia Legislativa do Rio de Janeiro,70,Laravel,nao_existe,A casa não tem verba indenizatória (FAQ da própria ALERJ).
