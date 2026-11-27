@@ -36,7 +36,7 @@ from ...de_para import grafia
 from ...modelo import Descoberta, ItemInventario, Pendencia, PessoaFonte, Resultado, TotalOficial
 from ...nucleo.erros import FalhaTransitoria, PortalMudou
 from ...nucleo.evidencia import guardar_original
-from ...nucleo.texto import ValorIlegivel, chave_hash, dinheiro_br, so_digitos
+from ...nucleo.texto import ValorIlegivel, chave_hash, dinheiro_br, normalizar_nome, so_digitos
 from ..assembleia_tela import Conferencias, FonteAssembleiaTela, decodificar, tabelas_html, texto_html, titulo_nome
 
 CATEGORIA = "Verba de Desempenho Parlamentar"
@@ -127,7 +127,8 @@ def resumo_do_empenho(descricao: str) -> str | None:
     return corte[:160] or None
 
 
-RE_ANULACAO = re.compile(r"\bANULA(?:CAO|ÇÃO|R)\b", re.I)
+# a casa escreve "ANULACAO", "ANULAÇÃO", "ANULACAL", "ANULCAO", "AANULACAO", "ANULACA", "ANULACOA"
+RE_ANULACAO = re.compile(r"\bA?ANUL", re.I)
 
 
 class Alece(FonteAssembleiaTela):
@@ -215,10 +216,14 @@ class Alece(FonteAssembleiaTela):
         pag = ler_lista(html)
         contador = pag["contador"]
         csv_linhas, url_csv, h_csv = await self._csv_do_mes(ano, mes)
+        # tela × CSV pelo nome normalizado: o CSV tira o acento solto que a tela mantém
+        # ("DEP ´SARGENTO REGINAURO"), e a tela tem variantes do mesmo nome que são entradas
+        # vazias ("DEP CLAUDIO  PINHO"); as variantes de um nome são juntadas dos dois lados
         no_csv: dict[str, Counter] = {}
         for l in csv_linhas:
             s = assinatura(l.get("DEPUTADO", ""), l.get("EMPENHO", ""), l.get("CNPJ", ""), l.get("VALOR", ""))
-            no_csv.setdefault(s[0], Counter())[s[1:]] += 1
+            no_csv.setdefault(normalizar_nome(s[0]), Counter())[s[1:]] += 1
+        na_tela_mes: dict[str, Counter] = {}
         vistos: list[str] = []
         n_notas = 0
         pagina_n = 1
@@ -236,12 +241,13 @@ class Alece(FonteAssembleiaTela):
                 await self.pagina.locator("#detalhesParlamentar").wait_for(state="hidden", timeout=10000)
                 nome_fonte = nome_sem_prefixo(rotulo)
                 nome = grafia(self.id, nome_fonte)
-                ref = f"nome:{nome}"
+                ref = f"nome:{normalizar_nome(nome)}"
                 rotulo_limpo = re.sub(r"\s+", " ", rotulo).strip()
                 escopo = f"{ano}-{mes}-{rotulo_limpo}"
+                escopo_csv = f"{ano}-{mes}-csv-{normalizar_nome(rotulo)}"
                 soma = Decimal(0)
                 lidas = 0
-                na_tela: Counter = Counter()
+                na_tela = na_tela_mes.setdefault(normalizar_nome(rotulo), Counter())
                 for j, n in enumerate(det["notas"]):
                     n_notas += 1
                     proc = self.procedencia(rd.url, hd, f"empenho {n['empenho']}")
@@ -259,15 +265,11 @@ class Alece(FonteAssembleiaTela):
                         chave=chave, item=item.chave, ref=ref, nome=titulo_nome(nome), data=None, competencia=f"{ano}-{mes}",
                         categoria=CATEGORIA, documento=n["documento"], fornecedor=n["credor"], valor=valor, proc=proc,
                         descricao=resumo_do_empenho(n["descricao"]),
-                        extra={"empenho": n["empenho"], "nome_na_fonte": rotulo, "descricao_inteira": n["descricao"], "escopos_conferencia": [escopo],
+                        extra={"empenho": n["empenho"], "nome_na_fonte": rotulo, "descricao_inteira": n["descricao"],
+                               "escopos_conferencia": [escopo, escopo_csv],
                                **({"anulacao_explicada": True} if valor < 0 and RE_ANULACAO.search(n["descricao"]) else {})}))
-                csv_dep = no_csv.get(rotulo.strip().upper(), Counter())
-                iguais = csv_dep == na_tela
-                faltam = sum((na_tela - csv_dep).values())
-                sobram = sum((csv_dep - na_tela).values())
                 conf.conferir(escopo, det["total"], soma, proc_lista, f"{rotulo} {mes}/{ano}, TOTAL GERAL × soma dos empenhos",
-                              lidas_todas=lidas == len(det["notas"]),
-                              outra=(iguais, f"tela × CSV do mês: {faltam} empenho(s) só na tela, {sobram} só no CSV"))
+                              lidas_todas=lidas == len(det["notas"]))
                 res.pessoas.append(PessoaFonte(fonte=self.id, ref=ref, periodo=str(ano), nome=titulo_nome(nome), uf="CE", casa=self.ent.casa,
                                                extra={"grafias_na_fonte": [rotulo], "partido_de": None}, procedencia=proc_lista))
             if not pag["proxima"]:
@@ -281,9 +283,16 @@ class Alece(FonteAssembleiaTela):
             pagina_n += 1
             if pagina_n > 20:
                 raise PortalMudou("a paginação da ALECE não termina")
-        # a lista inteira: o contador da tela e o CSV (todo deputado do CSV apareceu na tela)
+        # cada nome (com as suas variantes): os empenhos da tela são os do CSV, e o contrário
+        for nome_norm in sorted(set(na_tela_mes) | set(no_csv)):
+            tela, do_csv = na_tela_mes.get(nome_norm, Counter()), no_csv.get(nome_norm, Counter())
+            faltam, sobram = sum((tela - do_csv).values()), sum((do_csv - tela).values())
+            conf.conferir(f"{ano}-{mes}-csv-{nome_norm}", Decimal(sum(do_csv.values())), Decimal(sum((tela & do_csv).values())), proc_lista,
+                          f"{nome_norm or '(nome vazio)'} {mes}/{ano}, empenhos do CSV × da tela",
+                          outra=(tela == do_csv, f"{faltam} empenho(s) só na tela, {sobram} só no CSV"))
+        # a lista inteira: todo deputado do CSV apareceu na tela
         nomes_csv = set(no_csv)
-        nomes_tela = {v.strip().upper() for v in vistos}
+        nomes_tela = {normalizar_nome(v) for v in vistos}
         conf.conferir(f"{ano}-{mes}-lista", Decimal(len(nomes_csv)), Decimal(len(nomes_csv & nomes_tela)), proc_lista,
                       f"{mes}/{ano}, nomes do CSV × nomes da lista da tela",
                       outra=(nomes_csv <= nomes_tela, f"{len(nomes_csv - nomes_tela)} nome(s) do CSV fora da lista da tela"))
