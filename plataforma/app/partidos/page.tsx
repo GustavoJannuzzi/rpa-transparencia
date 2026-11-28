@@ -18,32 +18,59 @@ export default function Partidos() {
         Em ordem alfabética, sem comparação de gasto entre partidos: o tamanho de uma bancada muda tudo, e um total lado a
         lado diz mais sobre o número de cadeiras do que sobre qualquer outra coisa.
       </p>
-      <table className="mt-8 w-full text-left">
-        <caption className="sr-only">Partidos com parlamentares na plataforma</caption>
-        <thead className="text-sm text-tinta-3">
-          <tr className="border-b border-aco-2">
-            <th scope="col" className="py-2 pr-4 font-medium">Partido</th>
-            <th scope="col" className="py-2 pr-4 font-medium">Deputados federais</th>
-            <th scope="col" className="py-2 pr-4 font-medium">Deputados estaduais</th>
-            <th scope="col" className="py-2 font-medium">Vereadores</th>
-          </tr>
-        </thead>
-        <tbody>
-          {lista.map((p) => (
-            <tr key={p.sigla} className="border-b border-aco">
-              <td className="py-2 pr-4">
-                <Link href={`/partidos/${p.slug}/`} className="font-titulo font-medium underline decoration-tinta-3 hover:text-carimbo-claro">
-                  {p.sigla}
-                </Link>
-              </td>
-              <td className="num py-2 pr-4 text-tinta-2">{p.federal || "—"}</td>
-              <td className="num py-2 pr-4 text-tinta-2">{p.estadual || "—"}</td>
-              <td className="num py-2 text-tinta-2">{p.municipal || "—"}</td>
+      {/* no celular, rótulos curtos (o leitor de tela ouve o nome inteiro) e números à direita; numa tela
+          estreita demais, a tabela rola dentro deste quadro, sem empurrar a página para o lado */}
+      <div className="mt-8 overflow-x-auto">
+        <table className="w-full text-left">
+          <caption className="sr-only">Partidos com parlamentares na plataforma</caption>
+          <thead className="text-xs text-tinta-3 sm:text-sm">
+            <tr className="border-b border-aco-2">
+              <th scope="col" className="py-2 pr-3 font-medium sm:pr-4">
+                Partido
+              </th>
+              <th scope="col" className="py-2 pr-3 text-right font-medium sm:pr-4">
+                <Rotulo curto="Federais" inteiro="Deputados federais" />
+              </th>
+              <th scope="col" className="py-2 pr-3 text-right font-medium sm:pr-4">
+                <Rotulo curto="Estaduais" inteiro="Deputados estaduais" />
+              </th>
+              <th scope="col" className="py-2 text-right font-medium">
+                Vereadores
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {lista.map((p) => (
+              <tr key={p.sigla} className="border-b border-aco">
+                <td className="py-2 pr-3 sm:pr-4">
+                  <Link
+                    href={`/partidos/${p.slug}/`}
+                    className="font-titulo text-[0.95rem] font-medium underline decoration-tinta-3 hover:text-carimbo-claro sm:text-base"
+                  >
+                    {p.sigla}
+                  </Link>
+                </td>
+                <td className="num py-2 pr-3 text-right text-tinta-2 sm:pr-4">{p.federal || "—"}</td>
+                <td className="num py-2 pr-3 text-right text-tinta-2 sm:pr-4">{p.estadual || "—"}</td>
+                <td className="num py-2 text-right text-tinta-2">{p.municipal || "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <p className="mt-4 text-sm text-tinta-3">Contagem pelo partido atual de cada parlamentar.</p>
     </div>
+  );
+}
+
+/** Cabeçalho com rótulo curto no celular; o nome inteiro fica para o leitor de tela e para telas maiores. */
+function Rotulo({ curto, inteiro }: { curto: string; inteiro: string }) {
+  return (
+    <>
+      <span aria-hidden="true" className="sm:hidden">
+        {curto}
+      </span>
+      <span className="sr-only sm:not-sr-only">{inteiro}</span>
+    </>
   );
 }

@@ -103,6 +103,17 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
     quando o endereço aponta a casa (`#casa-<id>`), e os links não pedem nada de
     antemão. Na casa, a lista de membros só começa recolhida acima de 200 nomes (a da
     Câmara dos Deputados).
+  - Textos de cobertura escritos à mão e desatualizados ("DF, MG e SP", "13 câmaras",
+    "12 câmaras") na página inicial, em "Como os dados chegam aqui", na descrição de
+    Parlamentares e na Sobre: agora saem dos dados no build (`lib/resumo.ts`). Na
+    inicial, o que cada grafo mostra é contado no próprio grafo. A busca vazia
+    deixou de listar casas e aponta a Cobertura.
+  - O painel "A coleta" da inicial diz que as fichas são da Câmara dos Deputados, de
+    Curitiba e do TSE, e ganhou o resumo das outras casas por sistema.
+  - A tabela de `/partidos/` estourava a tela do celular (400 px num espaço de 358 px
+    a 390 px de largura). No celular, os cabeçalhos ficam curtos (o leitor de tela
+    ouve o nome inteiro), os números vão à direita, e numa tela estreita demais a
+    tabela rola dentro do quadro, sem empurrar a página.
   - Não eram defeito: os portais do Equiplano abrem no navegador (o servidor não
     manda o certificado intermediário, e só um cliente HTTP sem o Chromium recusa), e
     os 504 da nota fiscal eletrônica são do servidor da Câmara dos Deputados.

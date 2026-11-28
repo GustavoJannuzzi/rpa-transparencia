@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { revisao } from "@/lib/dados";
+import { MODO } from "@/lib/fontes";
+import { contagem, listaE } from "@/lib/formato";
+import { assembleias, camarasPorSistema } from "@/lib/resumo";
 import { metadadosDaPagina } from "@/lib/site";
 
 export const metadata: Metadata = metadadosDaPagina({
@@ -10,6 +13,11 @@ export const metadata: Metadata = metadadosDaPagina({
 });
 
 export default function Sobre() {
+  // as casas e os sistemas vêm dos dados publicados: casa nova entra sem editar esta página
+  const camaras = camarasPorSistema();
+  const outrasCamaras = camaras.reduce((s, c) => s + c.camaras, 0);
+  const porModo = new Map<string, string[]>();
+  for (const a of assembleias()) porModo.set(a.modo, [...(porModo.get(a.modo) ?? []), a.uf]);
   const divergentes = revisao()
     .grupos.filter((g) => g.tipo === "api_x_arquivo")
     .flatMap((g) => g.exemplos.map((e) => e.chave))
@@ -36,13 +44,15 @@ export default function Sobre() {
             portal de transparência da Prefeitura (2024–2025) e o Betha (2026).
           </li>
           <li>
-            Mais 12 câmaras municipais do Paraná no Elotech (API pública, 2023–2026), com o mesmo adaptador de Curitiba, cada uma
-            configurada pela sua entidade.
+            Mais {contagem(outrasCamaras, "câmara municipal", "câmaras municipais")} do Paraná, um adaptador por sistema, cada câmara
+            configurada pela sua entidade:{" "}
+            {listaE(camaras.map((c) => `${c.sistema} (${contagem(c.camaras, "câmara", "câmaras")}, ${MODO[c.modo] ?? c.modo})`))}.
           </li>
           <li>
-            Assembleias: a Câmara Legislativa do DF (arquivos abertos em CSV e planilha), a de Minas Gerais (API de dados abertos) e
-            a de São Paulo (arquivo aberto em JSON), de 2023 a 2026.
+            Assembleias legislativas (o período de cada uma está na Cobertura):{" "}
+            {listaE([...porModo.entries()].map(([modo, ufs]) => `${listaE(ufs)} por ${MODO[modo] ?? modo}`))}.
           </li>
+          <li>Atividade nas sessões (presença, ausência e voto): o SAPL (Interlegis) das câmaras que o publicam e os relatórios de frequência da Câmara de Curitiba.</li>
           <li>TSE: dados abertos de candidaturas, para o partido de cada vereador na eleição do mandato.</li>
         </ul>
         <p>
