@@ -7,6 +7,14 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ### Adicionado
 
+- **Documentação da arquitetura** ([`docs/arquitetura.md`](docs/arquitetura.md)):
+  componentes, fluxo de dados e a sequência de uma coleta com Playwright em Mermaid;
+  os padrões que o código usa e onde (adaptador por fornecedor, esqueleto único de
+  coleta, registro em `entidades.toml`, pipeline pelo banco, camada do SQLite,
+  dependências invertidas para os testes sem rede, erros com tipo); e as decisões de
+  projeto. O README ganha o que o projeto demonstra, os robôs por plataforma com a
+  técnica de cada um e como pôr uma casa nova; o `docs/ci.md`, a contagem certa de
+  telas no axe (23) e nos prints (14).
 - **Assembleias pela tela, GO e RN** (frente D2). Goiás: a rota da tela de cada deputado
   no mês, lida pela resposta que a tela recebe, conferida em três níveis contra o dado
   aberto da casa; janela 2025–2026, pelo peso no site e porque o portal recusa conexão
