@@ -170,6 +170,9 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ### Alterado
 
+- **`docs/produto.md`**: para quem é o site, os princípios e o que ele não faz, em
+  vez de um arquivo de briefing solto na raiz. O `DESIGN.md` passa a ter os títulos em
+  português.
 - **Estrutura do núcleo, sem mudar a saída**: a gravação no SQLite sai do executor
   para `nucleo/repositorio.py` (o executor fica com a retomada, a repetição, a
   evidência e a decisão pelo tipo do erro), e o `publicar` de 310 linhas vira uma

@@ -24,12 +24,6 @@ plataforma/*.tsbuildinfo
 .DS_Store
 Thumbs.db
 
-# Artefatos de trabalho do processo de design (o contrato da direção fica em
-# .impeccable/surfaces/; o sistema documentado, em DESIGN.md)
-.impeccable/questions/
-.impeccable/mocks/
-.impeccable/review/
-
 # Testes de navegador da plataforma (relatórios e resultados de cada rodada)
 plataforma/testes/resultados/
 plataforma/testes/relatorio-playwright/

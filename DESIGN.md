@@ -114,42 +114,42 @@ components:
     padding: "8px 16px"
 ---
 
-# Design System: rpa-transparencia
+# Sistema visual: rpa-transparencia
 
-## Overview
+## Visão geral
 
-**Creative North Star: "O fichário de arquivo à noite"**
+**A ideia: "o fichário de arquivo à noite"**
 
 Uma gaveta de aço grafite aberta sob luz baixa. O fundo é escuro e plano; o texto é tinta creme; tudo o que é procedência (de onde veio um número, se a coleta fechou) sai em fichas de cartolina manilha com texto escuro. A tinta violeta de carimbo é rara: marca conferência, foco e o item ativo, nada mais. Os partidos aparecem como abas de fichário em tons apagados, atribuídos pela ordem de frequência na vista, nunca pela cor oficial de partido.
 
 Não há moldura decorativa. A estrutura vem do tipo (Archivo grande e apertado contra Libre Franklin calma), dos campos de cor (gaveta, aço, manilha) e de filetes de 1px. A hierarquia é contraste de escala: um título ou um total em reais grande, todo o resto pequeno e tabular. O gesto assinatura é a ficha que sobe da gaveta quando se clica num número, com o carimbo batendo logo depois.
 
-**Key Characteristics:**
+**Características:**
 - Escuro e plano; profundidade só nas fichas que saem.
 - Manilha = procedência. Violeta = conferência e foco. Nada mais usa essas duas cores.
 - Todo valor em reais é clicável e tem ficha; algarismos sempre tabulares.
 - Abas de fichário (canto superior arredondado) para vistas e para a cor de partido.
 - Carimbos girados (-6deg), em caixa alta, com borda de 2px.
 
-## Colors
+## Cores
 
 Grafite esverdeado em camadas, tinta creme em três pesos, cartolina manilha e uma única tinta de carimbo violeta.
 
-### Primary
+### Principal
 - **Violeta de carimbo** (carimbo): sublinhado do item ativo da navegação, borda do campo em foco, nó selecionado no grafo, seleção de texto.
 - **Violeta claro** (carimbo-claro): anel de foco global (2px, offset 2px), hover dos valores e links sobre a gaveta, links de texto sobre o fundo escuro, contorno do nó em hover.
 - **Violeta fundo de tinta** (carimbo-escuro): texto e borda do carimbo CONFERIDO e links dentro da ficha manilha.
 
-### Secondary
+### Secundária
 - **Cartolina manilha** (manilha): fundo de toda ficha (procedência, coleta, nó selecionado), aba de vista ativa, filete de 2px sob as abas, preenchimento das barras (a 80%), nó de partido no grafo.
 - **Manilha clara** (manilha-2): rótulo de partido desenhado no grafo.
 - **Tinta de ficha** (manilha-tinta) e **tinta de ficha secundária** (manilha-tinta-2): texto principal e rótulos de campo dentro da manilha.
 
-### Tertiary
+### Terciária
 - **Sépia de revisão** (sepia, #5f4f27): carimbos VER CONFERÊNCIA / EM REVISÃO / FORA DA SOMA sobre manilha. Só para carimbo. Escurecida em 26/11 para 4,8:1 sobre a manilha (a anterior, #7a6635, dava 3,3:1).
 - **Sépia clara** (sepia-claro): nota "Não somada" sobre a gaveta, na tabela de despesas, e o carimbo EM REVISÃO quando ele fica sobre a gaveta (linha "Fora desta soma" do parlamentar, ano em revisão na tabela de diárias).
 
-### Neutral
+### Neutras
 - **Gaveta** (gaveta): fundo da página e `theme-color`.
 - **Gaveta 2** (gaveta-2): campos, lista da busca, fundo do quadro do grafo.
 - **Gaveta 3** (gaveta-3): aba inativa, opção ativa da busca, trilho das barras, chip de partido em foco.
@@ -159,21 +159,21 @@ Grafite esverdeado em camadas, tinta creme em três pesos, cartolina manilha e u
 
 Abas de partido (lib/cores.ts): dez tons apagados (ouro, verde-água, malva, azul-acinzentado, terracota, oliva, azul-névoa, areia, sálvia, rosa-pó) mais um cinza (#6f7a75) para "demais". O violeta fica fora dessa lista.
 
-### Named Rules
-**The Carimbo Raro Rule.** O violeta só aparece onde houve conferência, foco ou estado ativo. Nunca como fundo de área, nunca em gráfico, nunca como cor de partido.
+### Regras
+**Carimbo raro.** O violeta só aparece onde houve conferência, foco ou estado ativo. Nunca como fundo de área, nunca em gráfico, nunca como cor de partido.
 
-**The Manilha É Procedência Rule.** Superfície manilha significa "isto diz de onde veio o dado". Não use manilha para cartões de conteúdo comum, destaques de marketing ou botões.
+**Manilha é procedência.** Superfície manilha significa "isto diz de onde veio o dado". Não use manilha para cartões de conteúdo comum, destaques de marketing ou botões.
 
-**The Aba Não É Partido Rule.** A cor de um partido vem da posição dele na contagem da vista, nunca da cor oficial. A mesma sigla pode trocar de tom entre vistas.
+**Aba não é partido.** A cor de um partido vem da posição dele na contagem da vista, nunca da cor oficial. A mesma sigla pode trocar de tom entre vistas.
 
-## Typography
+## Tipografia
 
-**Display Font:** Archivo (com system-ui, sans-serif), pesos 400/500/600
-**Body Font:** Libre Franklin (com system-ui, sans-serif), pesos 400/500
+**Títulos:** Archivo (com system-ui, sans-serif), pesos 400/500/600
+**Texto:** Libre Franklin (com system-ui, sans-serif), pesos 400/500
 
-**Character:** Archivo, grotesca de arquivo, aperta os títulos e os totais; Libre Franklin carrega a leitura com calma. Números sempre `tabular-nums lining-nums` (classe `.num`).
+**Caráter:** Archivo, grotesca de arquivo, aperta os títulos e os totais; Libre Franklin carrega a leitura com calma. Números sempre `tabular-nums lining-nums` (classe `.num`).
 
-### Hierarchy
+### Hierarquia
 - **Display** (500, 2.4rem a 3.2rem; 3rem a 4rem no nome do partido; altura 1.02 a 1.04; -0.02em): título de página, no máximo ~20 a 24ch.
 - **Número grande** (500, 2.4rem a 2.9rem, altura 1, -0.02em, tabular): total conferido no cabeçalho do parlamentar e do partido, sempre clicável com ficha.
 - **Headline** (500, 1.5rem a 2.2rem): seções ("A coleta", "Despesas, uma a uma").
@@ -182,30 +182,30 @@ Abas de partido (lib/cores.ts): dez tons apagados (ouro, verde-água, malva, azu
 - **Label** (400, 0.78rem a 0.8rem, tinta-3 ou manilha-tinta-2): cabeçalho de tabela, CNPJ, rótulos de campo na ficha.
 - **Carimbo** (Archivo 600, 0.62rem a 0.68rem, 0.06em a 0.08em, caixa alta): só dentro de carimbos.
 
-### Named Rules
-**The Caixa Alta É Carimbo Rule.** Caixa alta com espaçamento só existe no carimbo, que é objeto do mundo. Nada de rótulo em caixa alta acima de título.
+### Regras
+**Caixa alta é carimbo.** Caixa alta com espaçamento só existe no carimbo, que é objeto do mundo. Nada de rótulo em caixa alta acima de título.
 
 ## Layout
 
 Container de até 1600px, margens laterais de 16px (32px a partir de `sm`). Barra superior de 64px em `lg` com marca, navegação e busca à direita; abaixo de `lg` ela empilha. A página inicial é uma grade de duas áreas em `lg`: o grafo ocupa `1fr` com altura mínima de tela menos a barra, e "A coleta" é uma coluna fixa de 440px separada por filete de aço; no celular a coleta desce para baixo do grafo. Páginas de leitura usam ~1180px de largura; a do parlamentar divide em tabela larga à esquerda e coluna de barras à direita. Ritmo vertical em passos de 4px (gap de 12px entre fichas, 20px entre blocos). Densidade alta e tabular: é um arquivo, não uma vitrine.
 
-## Elevation & Depth
+## Profundidade
 
 Tudo é plano e em camadas tonais (gaveta, gaveta-2, gaveta-3) separadas por filetes de aço. Sombra existe só no que flutua sobre a gaveta: a ficha de procedência, a ficha do nó selecionado e a lista da busca. Sombras são longas, escuras e deslocadas para baixo, como papel erguido de uma gaveta.
 
-### Shadow Vocabulary
+### Sombras
 - **Ficha erguida** (`box-shadow: 0 14px 30px -8px rgba(0,0,0,0.6)`): ficha de procedência.
 - **Ficha do nó** (`box-shadow: 0 18px 36px -12px rgba(0,0,0,0.7)`): ficha do ponto selecionado no grafo.
 - **Lista suspensa** (`box-shadow: 0 14px 30px -10px rgba(0,0,0,0.7)`): resultados da busca.
 
-### Named Rules
-**The Só O Que Sai Da Gaveta Rule.** Superfície em repouso não tem sombra. Sombra só em ficha ou lista que abre sobre o conteúdo.
+### Regras
+**Sombra só no que sai da gaveta.** Superfície em repouso não tem sombra. Sombra só em ficha ou lista que abre sobre o conteúdo.
 
-## Shapes
+## Formas
 
 Cantos quase retos. Fichas e carimbos com 3px; campos, selects e botões com 6px; abas de vista com 5px só nos cantos de cima, presas sobre um filete manilha de 2px; amostra de partido é uma aba de 14 x 8px arredondada em cima. As fichas da coleta alternam um recuo de 6px, como cartões mal alinhados numa gaveta. Carimbos giram -6deg (o segundo, -3deg). Barras de proporção são o único elemento totalmente arredondado.
 
-## Components
+## Componentes
 
 ### Ficha de procedência (assinatura)
 Todo valor em reais passa pelo componente de valor: sublinhado pontilhado em tinta-3, hover em violeta claro, `cursor: help`. O clique abre uma ficha manilha de até 22rem: título "De onde vem este número", carimbo no canto (CONFERIDO, SOMA CONFERIDA ou FORA DA SOMA; nas contagens da atividade, CONTAGEM CONFERIDA quando o robô contou os registros e NÚMERO DA FONTE quando o número é o que a fonte publica), filete, fontes, grade rótulo/valor (Coleta, Registros, Linhas, No original, Nota), link "Abrir o documento oficial" e "fechar". A ficha é desenhada fora do fluxo (portal no body), para nunca ficar presa num contêiner com rolagem. No computador, sai embaixo do número (em cima, se não couber), alinhada pela borda que cabe e nunca a menos de 16px da borda da tela. Abaixo de 640px, sobe da base da tela como uma folha de largura inteira, com a mesma manilha e o mesmo carimbo. Recebe o foco ao abrir; fecha com Esc, clique fora ou o Tab que sai dela, e o foco volta ao número. Valor fora da soma aparece riscado e em tinta-3.
@@ -238,18 +238,18 @@ A página de cada casa segue o desenho do parlamentar: cabeçalho com o total na
 
 ### Nas sessões (atividade legislativa)
 Outro tipo de dado, que nunca entra em soma em reais: presença registrada, ausência com o motivo da fonte e voto nominal por tipo. Toda contagem passa pelo mesmo componente de valor, com a mesma ficha manilha (texto no lugar do R$). Na página do parlamentar é uma seção da coluna, depois dos blocos de dinheiro: rótulo em tinta-2, número médio em Archivo, a frase de contexto em tinta-3 (quantas sessões a câmara fez e em quantas registrou presença; quem tomou posse ou saiu no meio tem menos) e as listas por motivo e por tipo de voto com o rótulo como a fonte escreve. A frequência de Curitiba é uma tabela por ano com as três colunas da Câmara; o ano em que o vereador presidiu as sessões vira uma célula só ("presidiu as sessões"), e o ano em que o nome não aparece fica na tabela, dito. Na casa, a seção vem no fim da página, com a ficha do sistema (a equação "N registros na origem = publicados + em revisão"), os totais e os vereadores em ordem alfabética (tabela no computador, lista no celular).
-**The Zero Não É Ainda Rule.** O que a coleta ainda não leu aparece como "ainda não lido", em tinta-3 e sem ficha, nunca como 0; a coleta parcial tem o carimbo COLETA PARCIAL em sépia e diz até que data cada coisa entrou. Nada de taxa, ordem por quem falta mais, cor de alerta ou palavra de acusação.
+**Zero não é "ainda não".** O que a coleta ainda não leu aparece como "ainda não lido", em tinta-3 e sem ficha, nunca como 0; a coleta parcial tem o carimbo COLETA PARCIAL em sépia e diz até que data cada coisa entrou. Nada de taxa, ordem por quem falta mais, cor de alerta ou palavra de acusação.
 
-### Inputs / Fields
-- **Style:** fundo gaveta-2, borda contorno de 1px, cantos de 6px, 40px de altura na busca e nos selects; placeholder tinta-3; cursor de texto violeta claro.
-- **Focus:** a borda passa a violeta; o resto do sistema usa o contorno global violeta claro.
+### Campos
+- **Estilo:** fundo gaveta-2, borda contorno de 1px, cantos de 6px, 40px de altura na busca e nos selects; placeholder tinta-3; cursor de texto violeta claro.
+- **Foco:** a borda passa a violeta; o resto do sistema usa o contorno global violeta claro.
 - **Busca:** combobox com lista suspensa gaveta-2; opção ativa em gaveta-3, nome à esquerda e "partido · UF" em tinta-3 à direita.
 
-### Buttons
+### Botões
 - **Secundário:** sem fundo, borda aço-2, cantos de 6px, 8 x 16px, texto tinta-2 que clareia para tinta no hover ("Mostrar mais").
 - **Ações em texto:** a maioria das ações é link sublinhado (offset 3px, 1px), tinta-2 indo a tinta ou violeta claro.
 
-### Navigation
+### Navegação
 Itens em Libre Franklin 0.95rem, tinta-2; hover em tinta; ativo em tinta com sublinhado interno violeta de 2px. No celular a lista quebra em linhas sob a marca.
 
 ### Tabelas e barras
@@ -258,20 +258,20 @@ Tabelas sem zebra: cabeçalho em Label tinta-3 sobre filete aço-2, linhas separ
 ### Movimento
 A ficha sai em 260ms (`cubic-bezier(0.16, 1, 0.3, 1)`), subindo 10px com leve giro e revelada de cima para baixo; o carimbo bate em 320ms com atraso de 120ms, de escala 1.35 a 1. Com movimento reduzido, tudo vira corte.
 
-## Do's and Don'ts
+## O que fazer e o que evitar
 
-### Do:
-- **Do** passar todo número em reais pelo componente de valor, com ficha e algarismos tabulares.
-- **Do** usar manilha com texto manilha-tinta para qualquer superfície de procedência, cantos de 3px.
-- **Do** reservar o violeta para conferência, foco e item ativo (The Carimbo Raro Rule).
-- **Do** tirar a cor de partido da lista de abas por ordem de frequência na vista, com o cinza para "demais".
-- **Do** separar áreas com filetes de aço de 1px e camadas tonais da gaveta, sem sombra em repouso.
-- **Do** oferecer uma lista acessível equivalente a qualquer vista em canvas.
+### Fazer:
+- Passar todo número em reais pelo componente de valor, com ficha e algarismos tabulares.
+- Usar manilha com texto manilha-tinta para qualquer superfície de procedência, cantos de 3px.
+- Reservar o violeta para conferência, foco e item ativo (regra do carimbo raro).
+- Tirar a cor de partido da lista de abas por ordem de frequência na vista, com o cinza para "demais".
+- Separar áreas com filetes de aço de 1px e camadas tonais da gaveta, sem sombra em repouso.
+- Oferecer uma lista acessível equivalente a qualquer vista em canvas.
 
-### Don't:
-- **Don't** usar a cor oficial de um partido, nem violeta em partido.
-- **Don't** pôr rótulo em caixa alta acima de títulos; caixa alta é só do carimbo.
-- **Don't** montar painel de cartões de KPI nem a cara de portal institucional azul.
-- **Don't** usar néon, brilho ou estética hacker; a gaveta é fosca.
-- **Don't** usar sépia para texto corrido sobre manilha; ela fica nos carimbos.
-- **Don't** pôr sombra em superfície que não abre sobre o conteúdo.
+### Evitar:
+- Não usar a cor oficial de um partido, nem violeta em partido.
+- Não pôr rótulo em caixa alta acima de títulos; caixa alta é só do carimbo.
+- Não montar painel de cartões de KPI nem a cara de portal institucional azul.
+- Não usar néon, brilho ou estética hacker; a gaveta é fosca.
+- Não usar sépia para texto corrido sobre manilha; ela fica nos carimbos.
+- Não pôr sombra em superfície que não abre sobre o conteúdo.
