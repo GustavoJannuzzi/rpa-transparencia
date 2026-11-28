@@ -7,13 +7,16 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ### Adicionado
 
+- **Assembleia de Pernambuco pela tela** (frente D2): o app React em quatro níveis
+  (deputado e ano, meses, pedidos, notas), cada um pedido pela própria tela, com as notas
+  de cada pedido conferidas contra o total do pedido.
 - **Assembleias pela tela, GO e RN** (frente D2). Goiás: a rota da tela de cada deputado
   no mês, lida pela resposta que a tela recebe, conferida em três níveis contra o dado
   aberto da casa; janela 2025–2026, pelo peso no site e porque o portal recusa conexão
   em rajadas (o motivo está em `entidades.toml` e na Cobertura). Rio Grande do Norte:
   `mat-select`, PESQUISAR e a resposta da tela (a API dá 401 fora do app), conferida
   contra a frase do total, o paginador e a tabela lida página a página.
-- **"Em coleta" na Cobertura**: TO, BA e PE têm o robô pronto e a coleta em andamento, e
+- **"Em coleta" na Cobertura**: TO e BA têm o robô pronto e a coleta em andamento, e
   a página diz isso, em vez de "sem adaptador".
 - **Assembleias pela tela, AP e CE** (frente D2): `FonteAssembleiaTela`, que espera a
   vez do portal a cada gesto e guarda a resposta que a tela recebeu, e a conferência de
@@ -69,6 +72,11 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ### Corrigido
 
+- **Resposta que não chegou inteira não vira "nenhuma nota"** (PE, BA e TO): na rede que
+  oscila, a tela recebe o 200 sem o corpo, e o leitor do PE lia isso como pedido sem nota
+  (52 pedidos de um deputado; a conferência pegou e nada foi ao ar). Corpo vazio, no PE, e
+  página sem o formulário da casa, na BA e no TO, agora são falha transitória, e o robô
+  tenta de novo.
 - **PE**: a casa manda o valor como texto, inteiro ("21880") ou com vírgula decimal
   ("8372,5" é 8.372,50); a leitura só aceitava ponto e mandava a nota para pendência.
 - **TO**: a planilha tem duas formas (a de 2023 diz "CODAP", "Saldo acumulado" e "Gasto
