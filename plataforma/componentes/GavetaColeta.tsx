@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FONTES, MODO } from "@/lib/fontes";
-import { data, inteiro } from "@/lib/formato";
+import { contagem, data, inteiro, listaE } from "@/lib/formato";
+import { camarasPorSistema, ufsDasAssembleias } from "@/lib/resumo";
 import type { Fonte, Fontes } from "@/lib/tipos";
 
 function equacao(f: Fonte) {
@@ -14,14 +15,17 @@ function equacao(f: Fonte) {
 
 const COMO = "/como-os-dados-chegam-aqui/";
 
-/** A gaveta da coleta: uma ficha por fonte, com a equação da conferência. Cada
- * ficha leva à fonte em "Como os dados chegam aqui"; o carimbo de revisão, à fila
- * daquela fonte. */
+/** A gaveta da coleta: uma ficha por fonte da Câmara dos Deputados, da Câmara de
+ * Curitiba e do TSE, com a equação da conferência, e o resumo das outras casas, por
+ * sistema, contado nos dados. Cada ficha leva à fonte em "Como os dados chegam aqui";
+ * o carimbo de revisão, à fila daquela fonte. */
 export default function GavetaColeta({ fontes }: { fontes: Fontes }) {
   const publicadas = fontes.fontes.reduce((s, f) => s + (f.situacoes.ok ?? 0) + (f.situacoes.fora_da_soma ?? 0), 0);
   const ultimaColeta = fontes.fontes.map((f) => f.ultima_coleta?.fim ?? "").sort().at(-1) ?? "";
   const ordem = ["camara_deputados", "cmc_legado", "cmc_elotech", "cmc_prefeitura", "cmc_betha", "tse"];
   const lista = ordem.map((id) => fontes.fontes.find((f) => f.id === id)).filter(Boolean) as Fonte[];
+  const outras = camarasPorSistema();
+  const ufs = ufsDasAssembleias();
   return (
     <section aria-labelledby="coleta-titulo" className="px-4 pb-8 pt-5 sm:px-8 lg:px-6">
       <h2 id="coleta-titulo" className="font-titulo text-2xl font-medium">
@@ -31,7 +35,8 @@ export default function GavetaColeta({ fontes }: { fontes: Fontes }) {
         <span className="num">{inteiro(publicadas)}</span> despesas passaram na conferência · última coleta em{" "}
         <span className="num">{data(ultimaColeta)}</span>
       </p>
-      <ol className="mt-5 space-y-3">
+      <p className="mt-4 text-sm text-tinta-2">Ficha a ficha: a Câmara dos Deputados, os quatro sistemas da Câmara de Curitiba e o TSE.</p>
+      <ol className="mt-3 space-y-3">
         {lista.map((f, i) => {
           const { eq, revisao, publicadas, cruzada, semErro } = equacao(f);
           const confere = eq ? eq.resultado === "confere" && semErro : semErro;
@@ -91,6 +96,24 @@ export default function GavetaColeta({ fontes }: { fontes: Fontes }) {
           );
         })}
       </ol>
+      <section aria-labelledby="outras-casas" className="mt-6 border-t border-aco pt-4">
+        <h3 id="outras-casas" className="font-titulo text-lg font-medium">
+          As outras casas
+        </h3>
+        <p className="mt-1 text-sm text-tinta-3">Mesmo modelo e mesma conferência, um adaptador por sistema:</p>
+        <ul className="mt-2 space-y-1 text-sm text-tinta-2">
+          {outras.map((s) => (
+            <li key={s.sistema}>
+              {s.sistema} <span className="text-tinta-3">· {contagem(s.camaras, "câmara do PR", "câmaras do PR")}</span>
+            </li>
+          ))}
+          {ufs.length > 0 && (
+            <li>
+              Assembleias legislativas <span className="text-tinta-3">· {listaE(ufs)}</span>
+            </li>
+          )}
+        </ul>
+      </section>
       <p className="mt-5 text-sm">
         <Link href={COMO} className="text-carimbo-claro underline">
           Como os dados chegam aqui: os quatro sistemas de Curitiba, a conferência e a fila de revisão

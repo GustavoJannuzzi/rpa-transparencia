@@ -137,8 +137,8 @@ export default function Busca({ aoEscolher, rotulo = "Buscar deputado ou vereado
         {itens === null && <p className="px-3.5 py-2.5 text-sm text-tinta-3">Abrindo o índice…</p>}
         {itens !== null && achados.length === 0 && (
           <p className="px-3.5 py-2.5 text-sm leading-relaxed text-tinta-3">
-            Nenhum nome encontrado. A busca cobre os deputados federais da 57ª legislatura, os deputados estaduais do DF, de MG e de SP
-            e os vereadores das câmaras do PR que a coleta cobre (lista em{" "}
+            Nenhum nome encontrado. A busca cobre os deputados federais da 57ª legislatura e os deputados estaduais e vereadores das
+            casas que a coleta cobre (lista em{" "}
             <Link href="/cobertura/" className="text-tinta-2 underline hover:text-tinta" onClick={() => setAberta(false)}>
               Cobertura
             </Link>
