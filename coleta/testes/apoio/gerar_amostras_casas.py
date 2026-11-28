@@ -1,7 +1,7 @@
 """Gera as amostras das fontes novas (Elotech genérico, CLDF, ALMG, ALESP) a partir dos
 originais que a coleta guardou em `dados/`. Roda na máquina que coleta:
 
-    python -m coleta.testes.gerar_amostras_casas
+    python -m coleta.testes.apoio.gerar_amostras_casas
 
 Anonimização (o repositório é público):
 - nome de servidor vira "SERVIDOR TARJADO n"; só fica o nome de quem tem cargo de
@@ -24,13 +24,13 @@ import zipfile
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-from .. import config
-from ..de_para import eh_cargo_parlamentar
-from ..fontes.elotech.fonte import eh_natureza_parlamentar
-from ..nucleo.planilha import ler_xlsx
-from ..nucleo.texto import normalizar_nome, so_digitos
+from ... import config
+from ...de_para import eh_cargo_parlamentar
+from ...fontes.elotech.fonte import eh_natureza_parlamentar
+from ...nucleo.planilha import ler_xlsx
+from ...nucleo.texto import normalizar_nome, so_digitos
 
-AMOSTRAS = Path(__file__).parent / "amostras"
+AMOSTRAS = Path(__file__).parents[1] / "amostras"
 CPF_FALSO = ["111.111.111-11", "222.222.222-22", "333.333.333-33", "444.444.444-44", "555.555.555-55", "666.666.666-66",
              "777.777.777-77", "888.888.888-88", "999.999.999-99"]
 
@@ -161,7 +161,7 @@ def alesp(con) -> None:
     regs: list[dict] = []
     vistos_anos: dict[int, int] = {}
     with gzip.open(config.dados() / "cache" / "alesp" / "despesas.json.gz", "rt", encoding="utf-8") as f:
-        from ..fontes.alesp.fonte import registros
+        from ...fontes.alesp.fonte import registros
 
         for x in registros(f):
             a = int(x["ano"])

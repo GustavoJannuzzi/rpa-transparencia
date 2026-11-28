@@ -10,7 +10,7 @@ from collections import defaultdict
 
 import httpx
 
-from .conftest import AMOSTRAS
+from ..conftest import AMOSTRAS
 
 SPA = AMOSTRAS / "cmc_legado" / "spa"
 PDFS = AMOSTRAS / "cmc_legado"

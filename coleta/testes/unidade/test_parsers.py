@@ -24,7 +24,7 @@ from coleta.modelo import Despesa, ItemInventario, Procedencia, Resultado
 from coleta.nucleo.erros import PortalMudou
 from coleta.nucleo.texto import ValorIlegivel, cpfs_expostos, decimal_ponto, dinheiro_br, documento_fornecedor, mascarar_cpf, normalizar_nome
 
-from .conftest import AMOSTRAS
+from ..conftest import AMOSTRAS
 
 
 def _soma(valores: Iterable[Decimal | None]) -> Decimal:
