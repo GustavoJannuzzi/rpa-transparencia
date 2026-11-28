@@ -1,6 +1,6 @@
 # Amostras dos testes
 
-Gravadas pelo próprio robô em 2026-11-25 e geradas por `python -m coleta.testes.gerar_amostras`.
+Gravadas pelo próprio robô em 2026-11-25 e geradas por `python -m coleta.testes.apoio.gerar_amostras`.
 
 São as respostas reais dos portais, com estas trocas antes de entrar no repositório:
 
@@ -13,7 +13,7 @@ Parlamentar mantém o nome, que é o dado público que a plataforma mostra.
 
 ## Fontes novas (2026-11-26)
 
-`elotech/`, `cldf/`, `almg/` e `alesp/` vêm de `python -m coleta.testes.gerar_amostras_casas`, a partir dos
+`elotech/`, `cldf/`, `almg/` e `alesp/` vêm de `python -m coleta.testes.apoio.gerar_amostras_casas`, a partir dos
 originais da coleta de 26/11/2026, com estas trocas:
 
 - Elotech (Câmara de Maringá): o nome de quem não é vereador vira `SERVIDOR TARJADO n`, e a matrícula sai; o motivo

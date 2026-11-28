@@ -6,7 +6,7 @@ não usa. Parlamentar continua com o nome (é o dado público que a plataforma
 mostra). Tudo o mais é a resposta real, como veio.
 
 Uso (precisa do PyMuPDF só para tarjar os PDFs; não é dependência do robô):
-    python -m coleta.testes.gerar_amostras
+    python -m coleta.testes.apoio.gerar_amostras
 """
 
 from __future__ import annotations
@@ -19,11 +19,11 @@ import sqlite3
 import zipfile
 from pathlib import Path
 
-from .. import config
-from ..de_para import eh_cargo_parlamentar
-from ..nucleo.texto import normalizar_nome, sem_acento
+from ... import config
+from ...de_para import eh_cargo_parlamentar
+from ...nucleo.texto import normalizar_nome, sem_acento
 
-AMOSTRAS = Path(__file__).parent / "amostras"
+AMOSTRAS = Path(__file__).parents[1] / "amostras"
 DATA = "2026-11-25"
 
 
@@ -36,7 +36,7 @@ def legado(con) -> None:
     import fitz  # PyMuPDF
     import pdfplumber
 
-    from ..fontes.cmc_legado.parser import CABECALHOS, _norm_cab
+    from ...fontes.cmc_legado.parser import CABECALHOS, _norm_cab
     pasta = AMOSTRAS / "cmc_legado"
     pasta.mkdir(parents=True, exist_ok=True)
     for url, caminho in _orig(con, "cmc_legado", "%Diarias_%.pdf"):
@@ -248,7 +248,7 @@ def main() -> None:
     ceap()
     tse()
     (AMOSTRAS / "LEIA-ME.md").write_text(
-        f"# Amostras dos testes\n\nGravadas pelo próprio robô em {DATA} e geradas por `python -m coleta.testes.gerar_amostras`.\n\n"
+        f"# Amostras dos testes\n\nGravadas pelo próprio robô em {DATA} e geradas por `python -m coleta.testes.apoio.gerar_amostras`.\n\n"
         "São as respostas reais dos portais, com estas trocas antes de entrar no repositório:\n\n"
         "- nome e matrícula de servidor: tarjados nos PDFs; nos JSON e HTML, o nome vira `SERVIDOR(A) n` e a matrícula, 0 ou 9000nn;\n"
         "- texto de finalidade que cita servidor: omitido no Elotech; na Prefeitura e no Betha, fica com o nome trocado;\n"

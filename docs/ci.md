@@ -121,7 +121,7 @@ por quê.
 ## Contrato com os portais (`contrato.yml`), toda segunda-feira
 
 `python -m pytest -m contrato`: um teste por fonte contra o portal de verdade
-([`coleta/testes/test_contrato.py`](../coleta/testes/test_contrato.py)). Confere o
+([`coleta/testes/contrato/test_contrato.py`](../coleta/testes/contrato/test_contrato.py)). Confere o
 que o robô precisa encontrar: o menu e os botões do portal legado, os filtros e o
 postback do portal da Prefeitura, a tabela e o contador do Betha, os campos da API
 do Elotech e da Câmara dos Deputados, e os arquivos do TSE e da Câmara.

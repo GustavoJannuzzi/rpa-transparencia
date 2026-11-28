@@ -143,6 +143,12 @@ versões seguem o [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
 ### Alterado
 
+- **Testes organizados por tipo**, em `coleta/testes/`: `unidade/` (leitura de
+  amostras gravadas, regras da conferência, importar e determinismo, sem rede nem
+  navegador), `portal_falso/` (o robô inteiro contra API falsa, portal gravado ou
+  portal falso local), `contrato/` (o portal de verdade, `-m contrato`) e `apoio/`
+  (os portais falsos e os geradores de amostra). Os arquivos que misturavam os
+  tipos foram divididos; são os mesmos 197 testes, com os mesmos nomes.
 - Grafo no celular: abre na vista Paraná quando a URL não diz outra; a ficha do
   ponto sobe da base da tela e a câmera põe o ponto acima dela; um toque a até
   22 px de um ponto vale como toque nele; a ficha mostra todas as ligações e os

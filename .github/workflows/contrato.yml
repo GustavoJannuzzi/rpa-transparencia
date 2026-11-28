@@ -23,7 +23,7 @@ on:
   pull_request:
     paths:
       - .github/workflows/contrato.yml
-      - coleta/testes/test_contrato.py
+      - coleta/testes/contrato/**
 
 permissions:
   contents: read

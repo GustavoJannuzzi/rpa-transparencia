@@ -15,7 +15,7 @@ from coleta.fontes.assembleia_tela import decodificar, desfazer_dupla_codificaca
 from coleta.nucleo.conferencia import conferir
 from coleta.nucleo.texto import cpfs_expostos, documento_fornecedor
 
-from .conftest import AMOSTRAS
+from ..conftest import AMOSTRAS
 
 
 def _ler(rel: str) -> str:

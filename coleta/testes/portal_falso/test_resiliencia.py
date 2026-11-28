@@ -19,8 +19,8 @@ from coleta.fontes.cmc_legado.fonte import CmcLegado
 from coleta.nucleo import execucao
 from coleta.nucleo.banco import conectar
 
-from .conftest import AMOSTRAS
-from .replay_legado import Replay, transporte_sem_rede
+from ..apoio.replay_legado import Replay, transporte_sem_rede
+from ..conftest import AMOSTRAS
 
 
 def foto(con, fonte: str) -> list[tuple]:

@@ -22,7 +22,7 @@ import pytest
 from coleta.nucleo.banco import conectar
 from coleta.nucleo.conferencia import _nome_parlamentar
 
-RAIZ = Path(__file__).resolve().parents[2]
+RAIZ = Path(__file__).resolve().parents[3]
 # As duas sementes dão ordens diferentes aos dois casos abaixo no código de antes do
 # conserto (conferido ao escrever o teste): com elas, o teste reprova a volta do defeito.
 SEMENTES = ("0", "1")
