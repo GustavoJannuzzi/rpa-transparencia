@@ -231,6 +231,24 @@ def test_alepe_notas_do_pedido_somam_o_total_e_a_rubrica_vem_do_numero_da_catego
     assert rubricas[int(notas[0]["rubrica"])] == "ASSESSORIA JURÍDICA"
 
 
+def test_alepe_resposta_sem_corpo_e_falha_transitoria_e_nao_nenhuma_nota():
+    """Na rede que oscila, a tela recebe o 200 sem o corpo: isso não pode virar "o pedido não tem nota"."""
+    import asyncio
+
+    from coleta.fontes.alepe.fonte import Alepe
+    from coleta.nucleo.erros import FalhaTransitoria
+
+    class Resposta:
+        status = 200
+        url = "https://www.alepe.pe.gov.br/servicos/transparencia/adm/verbaindenizatorianotas.php?docid=4626"
+
+        async def body(self):
+            return b""
+
+    with pytest.raises(FalhaTransitoria):
+        asyncio.run(Alepe._json(object.__new__(Alepe), Resposta()))
+
+
 def test_alepe_valor_vem_inteiro_ou_com_virgula_decimal():
     from coleta.fontes.alepe.fonte import valor_da_alepe
     from coleta.nucleo.texto import ValorIlegivel

@@ -97,9 +97,13 @@ class Alepe(FonteAssembleiaTela):
             corpo = await r.body()
         except Exception as e:
             raise FalhaTransitoria(f"corpo indisponível em {r.url}") from e
+        # a lista vazia vem como "[]"; corpo vazio é resposta que não chegou inteira (na
+        # rede que oscila, a tela recebe o 200 sem o corpo), não "nenhuma nota"
+        if not corpo or not corpo.strip():
+            raise FalhaTransitoria(f"resposta sem corpo em {r.url}")
         h = guardar_original(self.con, self.id, corpo, r.url, tipo)
         try:
-            return json.loads(corpo or b"[]"), h
+            return json.loads(corpo), h
         except ValueError as e:
             raise PortalMudou(f"a ALEPE respondeu sem JSON em {r.url}") from e
 

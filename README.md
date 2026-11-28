@@ -17,9 +17,9 @@ entidade**: o mesmo robô do Elotech serve 13 câmaras do Paraná, o do Betha se
 Começou pela Câmara Municipal de Curitiba, que trocou de sistema três vezes: o
 histórico das diárias está em quatro lugares, de quatro fornecedores (um portal
 antigo que só gera PDF, o Elotech, o portal da Prefeitura e o Betha). Hoje junta,
-num modelo único, a cota dos deputados federais, as verbas dos deputados do DF, de
-MG e de SP e as diárias de 42 câmaras municipais do PR. Robô de navegador (Python +
-Playwright) onde não há API; API e arquivo onde há. Cada número passa por
+num modelo único, a cota dos deputados federais, as verbas dos deputados de oito
+assembleias (DF, MG, SP, AP, CE, GO, RN e PE) e as diárias de 42 câmaras municipais
+do PR. Robô de navegador (Python + Playwright) onde não há API; API e arquivo onde há. Cada número passa por
 conferência contra o que a própria fonte diz de si, tem a procedência anotada, e o
 que não fecha vai para uma fila de revisão em vez de ser chutado.
 
@@ -76,7 +76,7 @@ recortada acima da grade: nome de servidor não é publicado, nem em imagem.*
 | **Portal da Prefeitura de Curitiba** (ASP.NET WebForms) | Curitiba, 2024–2025 | Playwright | Cada filtro e cada página é um postback, e a paginação não se repete: o robô lê mês a mês, lê duas vezes o mês que pagina e compara com a consulta do ano inteiro. |
 | **Sistema legado da Câmara de Curitiba** (React + PDF) | Curitiba, 2013–2016 | Playwright + PDF | Subpágina não abre direto: o robô navega pelo menu, clica e captura o download (`wait_for_event("download")`), correndo contra o alerta de sessão vencida. O PDF é lido pela grade da tabela (pdfplumber), com layout de 11 e de 15 colunas. |
 | **Frequência da Câmara de Curitiba** (Betha + PDF) | Curitiba, 2019–2026 | Playwright + PDF | O PDF só aparece depois de "Ver arquivos", num link S3 que vence em 24 horas: o robô abre, clica, lê a lista que a tela recebe e baixa na hora. Quatro layouts de tabela em oito anos. |
-| **Assembleias pela tela** | AP, CE, GO e RN; TO, BA e PE em coleta, entram no próximo envio | Playwright | AP: três selects em cascata por AJAX e um iframe por elemento de despesa. CE: lista paginada e modal com iframe, conferida contra o CSV do mês. GO (AngularJS) e RN (Angular Material): o robô lê a resposta que a tela recebe (a API do RN responde 401 fora do app). |
+| **Assembleias pela tela** | AP, CE, GO, RN e PE; TO e BA em coleta, entram no próximo envio | Playwright | AP: três selects em cascata por AJAX e um iframe por elemento de despesa. CE: lista paginada e modal com iframe, conferida contra o CSV do mês. GO (AngularJS), RN (Angular Material) e PE (React): o robô lê a resposta que a tela recebe (a API do RN responde 401 fora do app; no PE, o select controlado pelo React só dispara a busca quando escolhido como uma pessoa). |
 | **Elotech** | Curitiba (2017–2023) e outras câmaras do PR | API (httpx) | A entidade da Câmara é conferida pelo CNPJ antes de coletar; a diária que vem só com a matrícula ganha o nome pelo quadro de pessoal do mesmo ano. |
 | **SAPL (Interlegis)** | atividade nas sessões de câmaras do PR | API (httpx) | Crawl-delay de 60 s: inventário de páginas com o filtro congelado na descoberta, câmaras em paralelo, respostas gravadas que reproduzem a coleta sem pedido nenhum. |
 | **Câmara dos Deputados** | 57ª legislatura | API + arquivo anual | Arquivo anual para a carga, API para a lista de deputados e para conferir por amostra (o arquivo arredonda alguns valores; a API troca o sinal do valor líquido). |
@@ -106,6 +106,7 @@ logo abaixo; como as peças se encaixam, em [`docs/arquitetura.md`](docs/arquite
 | Assembleia do Ceará | 2023–2026 | robô | Lista paginada e um modal com iframe, cuja chave é o base64 de "ano_mês_NOME", com o nome exato como a casa digita. O robô lê a tela e confere cada empenho contra o CSV do mês que a própria casa publica. O nome do deputado vem com erro de digitação, sufixo colado e espaço duplo: grafia só é ligada com prova na fonte (a anulação "para correção do nome do deputado", o mesmo nome civil no reembolso); o resto vai para a revisão. A coluna "CNPJ" do reembolso ao deputado traz o CPF dele, mascarado na leitura. |
 | Assembleia de Goiás | 2025–2026 (pelo peso no site e porque o portal recusa conexão em rajadas) | robô | App AngularJS. O dado aberto da casa só tem o total do mês por deputado; o fornecedor e o CNPJ só existem na tela. O robô abre a rota da tela de cada deputado no mês e lê a resposta que a própria tela recebe. A conferência tem três níveis: os lançamentos somam o grupo, os grupos somam o total da tela, e o total da tela é o do dado aberto. O valor publicado é o indenizado (o apresentado e a glosa ficam ao lado). |
 | Assembleia do Rio Grande do Norte | 2023–2026 | robô | App Angular Material: os filtros são `mat-select`, que abrem um painel fora do componente. A API responde 401 a quem não é o app, então a tela é a única entrada: o robô pesquisa como uma pessoa e lê a resposta que a tela recebe. A contagem e a soma da resposta batem com as linhas, a soma é a da frase da tela ("os parlamentares utilizaram um total de R$ …"), o paginador diz quantas linhas há, e a tabela, lida página a página, mostra as mesmas linhas. |
+| Assembleia de Pernambuco | 2023–2026 | robô | App React em quatro níveis, cada um pedido pela própria tela: o deputado e o ano trazem os meses com prestação, o mês traz os pedidos, e cada pedido traz as notas. O select é controlado pelo React (trocar o valor por script não dispara a busca), então o robô escolhe como uma pessoa e lê as respostas que a tela recebe. O valor vem como texto, inteiro ("21880") ou com vírgula decimal ("8372,5"). As notas de cada pedido somam o total do pedido. Resposta sem corpo é falha de rede, e o robô tenta de novo; não vira "pedido sem nota". |
 | Betha em mais 13 câmaras do PR | 2014–2026 (o que cada câmara publica) | robô, o mesmo adaptador de Curitiba | Cada câmara monta o próprio menu, e a mesma consulta aparece com outro número, em outro grupo e com outro texto ("Diárias", "Diárias.", "DIÁRIAS"). O robô acha a consulta pelo texto do item na tela e tira o número do menu que a página recebe; quando dois itens têm o mesmo texto (Bandeirantes), fica o que tem as colunas de diária. "0 registros" é resultado: a câmara tem a consulta e não a alimenta (Almirante Tamandaré). A consulta de Cornélio Procópio traz cargos da Prefeitura: as diárias de servidor dela vão para revisão. |
 | Equiplano em 10 câmaras do PR | 2023–2026 | robô de tela + relatório | O formulário é uma cascata: a entidade dispara um AJAX que carrega os exercícios, o exercício recarrega a página, o período é obrigatório (sem ele, "Período de Empenho inválido" depois de recarregar) e tem máscara por tecla, e "Visualizar" devolve o arquivo como anexo. O "CSV" é o relatório impresso: cabeçalho de página repetido, rótulos e datas cortados pela largura do papel, descrição em várias linhas. A conta fecha com o próprio papel: a soma dos empenhos líquidos de cada ano dá, centavo a centavo, o total que o relatório imprime. Quem é vereador sai da natureza da despesa (agentes políticos). Em algumas câmaras o relatório traz **CPF e RG inteiros**: o robô intercepta a resposta e tira os dois na memória, antes de gravar o original. |
 | Govbr Pronim em 6 câmaras do PR | 2023–2026 | robô, ASP clássico | Um formulário único com os campos de todas as consultas; o ano tem valor de chave interna, a entidade e os desdobramentos chegam por AJAX, o período vem com o mês corrente e "Gerar" passa por uma função de reCAPTCHA que, neste domínio, só envia o formulário (o robô para se o reCAPTCHA aparecer). **A tabela mostra o CPF sem máscara**: o robô lê o documento só na memória, para ligar a mesma pessoa entre as consultas, e mascara a página antes de gravar qualquer coisa, inclusive o original. A tela soma por credor no período: cada linha é um agregado (credor × mês), e a soma dos meses de cada credor é conferida contra a consulta do ano inteiro. Vereador = credor no desdobramento "agentes políticos"; a unidade gestora é a da Câmara, porque a "consolidada" de Salto do Lontra inclui a Prefeitura. |
@@ -132,7 +133,7 @@ e as despesas das 27 assembleias. O que ficou de fora:
 | União da Vitória, Goioerê, Jaguariaíva e Mandirituba (Betha) | O portal não tem a consulta de diárias com o cargo de quem recebeu: só a de empenhos de viagem, que mistura passagem e diária e não diz o cargo. |
 | As outras câmaras Betha (o levantamento contou 59) | O adaptador já serve: falta pôr a câmara na configuração. |
 | As outras câmaras Elotech (o levantamento contou 108) | O adaptador já serve: falta pôr a câmara na configuração. |
-| Assembleias do TO, BA e PE | O robô está pronto e a coleta está em andamento: entram no próximo envio, depois de conferidas (AP, CE, GO e RN já entraram). |
+| Assembleias do TO e da BA | O robô está pronto e a coleta está em andamento: entram no próximo envio, depois de conferidas (AP, CE, GO, RN e PE já entraram). |
 | Assembleias de MS, AM, RO, PB, AL, RS e SC | Na reserva: fonte aberta, ainda sem adaptador (em PB o CNPJ vem mascarado; em AL é PDF escaneado). |
 | Assembleias do ES, PA, RR, SE e AC | Só totais, sem dizer quem recebeu, ou nada por deputado. A do RJ não tem verba indenizatória. |
 | Assembleia do PI | Proteção contra robô no portal. MT estava fora do ar, e a do MA voltou vazia (não verificadas). |
@@ -188,8 +189,9 @@ cada fonte, **origem = coletado + revisão**, e nenhum item com erro em aberto:
 | Assembleia do Ceará (empenhos, pela tela) | 17.316 | 17.246 | 70 |
 | Assembleia de Goiás (lançamentos, pela tela, 2025–2026) | 26.234 | 26.204 | 30 |
 | Assembleia do Rio Grande do Norte (notas, pela tela) | 16.501 | 16.501 | 0 |
+| Assembleia de Pernambuco (notas, pela tela) | 9.876 | 9.874 | 0 (2 de valor zero na fonte, fora da soma) |
 
-São 50 casas, com 1.797 parlamentares na plataforma. Nas câmaras do Elotech, a
+São 51 casas, com 1.865 parlamentares na plataforma. Nas câmaras do Elotech, a
 maior parte do que está em revisão é diária sem cargo cujo nome não está no cadastro
 de vereadores do ano: pode ser de servidor, então o nome é descartado e a linha fica
 de fora, contada. No Betha, 877 das 944 linhas em revisão são de Cornélio Procópio,
@@ -283,6 +285,9 @@ Achados reais, todos visíveis no relatório e na fila de revisão:
   40.486,82 apresentados; as 30 notas desse mês ficam em revisão.
 - **No Rio Grande do Norte, a resposta que a tela recebe e a tabela que ela mostra são
   as mesmas linhas**, nos quatro anos: 16.501 notas, nenhuma em revisão.
+- **Em Pernambuco, as notas de cada pedido somam o total do pedido** nos 3.110 pedidos
+  de 2023 a 2026. A casa manda o valor como texto, sem centavos quando o valor é
+  inteiro ("21880") e com vírgula quando não é ("8372,5" é 8.372,50).
 
 ## Como rodar
 
