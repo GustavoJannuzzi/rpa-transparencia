@@ -17,7 +17,7 @@ fixado pelo SHA do commit, com a versão ao lado; o Dependabot atualiza os dois.
 
 ### axe (`plataforma/testes/e2e/acessibilidade.spec.ts`)
 
-Regras WCAG 2.0, 2.1 e 2.2 (A e AA) e as de boas práticas, em 19 telas
+Regras WCAG 2.0, 2.1 e 2.2 (A e AA) e as de boas práticas, em 23 telas
 ([`estados.ts`](../plataforma/testes/e2e/estados.ts)): uma de cada tipo de página do
 export, mais a lista do grafo, a busca aberta, a ficha de procedência aberta e a
 página 404. Cada tela roda a 1366 px e no tamanho do Pixel 7.
@@ -42,7 +42,7 @@ de acessibilidade da plataforma
 
 ### Prints de referência (`plataforma/testes/e2e/visual.spec.ts`)
 
-`toHaveScreenshot` em 13 telas, no desktop e no celular, com animação desligada. O
+`toHaveScreenshot` em 14 telas, no desktop e no celular, com animação desligada. O
 desenho do grafo fica mascarado (é WebGL, e o runner não tem GPU); a casca em volta
 é comparada. As imagens ficam em `plataforma/testes/e2e/prints/`; as primeiras
 entraram pelo workflow abaixo, em

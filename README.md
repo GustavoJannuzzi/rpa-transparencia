@@ -4,6 +4,10 @@
 [![Contrato com os portais](https://github.com/GustavoJannuzzi/rpa-transparencia/actions/workflows/contrato.yml/badge.svg?branch=main)](https://github.com/GustavoJannuzzi/rpa-transparencia/actions/workflows/contrato.yml)
 [![Licença: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
 
+**Site:** [rpa-transparencia.vercel.app](https://rpa-transparencia.vercel.app) ·
+**Arquitetura, padrões e decisões:** [`docs/arquitetura.md`](docs/arquitetura.md) ·
+**Relatório de conferência:** [/conferencia/](https://rpa-transparencia.vercel.app/conferencia/)
+
 Cada casa legislativa publica os gastos num sistema diferente, e muitas casas usam o
 mesmo fornecedor. Este projeto tem **um adaptador por sistema, configurado por
 entidade**: o mesmo robô do Elotech serve 13 câmaras do Paraná, o do Betha serve
@@ -32,6 +36,58 @@ estão.
 própria coleta (`coletar --gravar-video`, 26/11/2026), em trechos escolhidos. As
 tabelas que listam servidores aparecem borradas, e a página da Prefeitura está
 recortada acima da grade: nome de servidor não é publicado, nem em imagem.*
+
+## O que o projeto demonstra
+
+- **RPA de navegador onde não há API.** Aplicação Vue que troca só o `#` (Betha),
+  ASP.NET WebForms em que cada filtro é um postback (Prefeitura de Curitiba), ASP
+  clássico com reCAPTCHA no caminho (Govbr Pronim), formulário em cascata com
+  máscara por tecla e download do relatório (Equiplano), React que não abre
+  subpágina direto (sistema legado de Curitiba), AngularJS, Angular Material,
+  modais com iframe e PDFs.
+- **A tela conferida contra ela mesma.** O robô lê a tabela que a pessoa vê e a
+  compara com a resposta que a página recebeu (`expect_response`,
+  `page.on("response")`), com o rodapé do relatório ou com a consulta do ano
+  inteiro. Se não bate, para: o portal mudou.
+- **Resiliência de coleta longa.** Inventário e retomada sem duplicar, repetição
+  com espera exponencial, erros com tipo (transitório, portal mudou, robots.txt,
+  captcha), evidência no ponto do erro (print, HTML, rastro do Playwright), troca
+  de contexto do navegador e parada antes de o disco acabar.
+- **Dado em que se pode confiar.** Modelo único em pydantic com dinheiro em
+  `Decimal`, conferência **origem = coletado + revisão** em toda fonte, fila de
+  revisão com o motivo em vez de número chutado, original guardado com hash e saída
+  que se repete byte a byte.
+- **Coleta educada e privacidade.** robots.txt e Crawl-delay respeitados, um pedido
+  por vez em cada portal, captcha nunca contornado; CPF lido só na memória e
+  mascarado antes de gravar (inclusive interceptando a resposta com `route.fetch`),
+  nome de servidor descartado na leitura.
+- **Engenharia em volta.** Adaptador por fornecedor e esqueleto de coleta único
+  ([padrões e decisões](docs/arquitetura.md)), testes de unidade, contra portal
+  falso e de contrato com o portal real, CI com ruff, mypy, pytest, axe, prints de
+  referência e Lighthouse.
+
+## Os robôs, por plataforma
+
+| Plataforma | O que cobre | Como | Técnica |
+|---|---|---|---|
+| **Betha Cloud** (Vue) | Curitiba (2026) e outras câmaras do PR | Playwright | A consulta de diárias é achada pelo texto do item no menu (cada câmara monta o seu); cada linha da tabela da tela é conferida com a resposta JSON que a tela recebeu. User-Agent próprio: o portal devolve 403 para "HeadlessChrome". |
+| **Equiplano** | câmaras do PR | Playwright + relatório | Cascata por AJAX com recarga da página, período digitado com máscara (`press_sequentially`), "Visualizar" devolve o relatório como anexo. A resposta é interceptada (`route.fetch`) para tirar CPF e RG antes de o navegador recebê-la. A soma dos empenhos fecha, centavo a centavo, com o rodapé do relatório. |
+| **Govbr Pronim** (ASP clássico) | câmaras do PR | Playwright | Formulário único com AJAX; o robô para se o reCAPTCHA aparecer. A tela mostra CPF inteiro: o documento é lido só na memória e a página é mascarada antes de qualquer gravação. A soma dos meses é conferida contra a consulta do ano. |
+| **Portal da Prefeitura de Curitiba** (ASP.NET WebForms) | Curitiba, 2024–2025 | Playwright | Cada filtro e cada página é um postback, e a paginação não se repete: o robô lê mês a mês, lê duas vezes o mês que pagina e compara com a consulta do ano inteiro. |
+| **Sistema legado da Câmara de Curitiba** (React + PDF) | Curitiba, 2013–2016 | Playwright + PDF | Subpágina não abre direto: o robô navega pelo menu, clica e captura o download (`wait_for_event("download")`), correndo contra o alerta de sessão vencida. O PDF é lido pela grade da tabela (pdfplumber), com layout de 11 e de 15 colunas. |
+| **Frequência da Câmara de Curitiba** (Betha + PDF) | Curitiba, 2019–2026 | Playwright + PDF | O PDF só aparece depois de "Ver arquivos", num link S3 que vence em 24 horas: o robô abre, clica, lê a lista que a tela recebe e baixa na hora. Quatro layouts de tabela em oito anos. |
+| **Assembleias pela tela** | AP, CE, GO e RN; TO, BA e PE em coleta, entram no próximo envio | Playwright | AP: três selects em cascata por AJAX e um iframe por elemento de despesa. CE: lista paginada e modal com iframe, conferida contra o CSV do mês. GO (AngularJS) e RN (Angular Material): o robô lê a resposta que a tela recebe (a API do RN responde 401 fora do app). |
+| **Elotech** | Curitiba (2017–2023) e outras câmaras do PR | API (httpx) | A entidade da Câmara é conferida pelo CNPJ antes de coletar; a diária que vem só com a matrícula ganha o nome pelo quadro de pessoal do mesmo ano. |
+| **SAPL (Interlegis)** | atividade nas sessões de câmaras do PR | API (httpx) | Crawl-delay de 60 s: inventário de páginas com o filtro congelado na descoberta, câmaras em paralelo, respostas gravadas que reproduzem a coleta sem pedido nenhum. |
+| **Câmara dos Deputados** | 57ª legislatura | API + arquivo anual | Arquivo anual para a carga, API para a lista de deputados e para conferir por amostra (o arquivo arredonda alguns valores; a API troca o sinal do valor líquido). |
+| **Assembleia de Minas Gerais** | 2023–2026 | API | Uma chamada por deputado e mês; a soma das notas fecha com o total de cada tipo que a própria API dá. |
+| **Câmara Legislativa do DF** (CKAN) | 2023–2026 | arquivo | CSV e XLSX lidos sem biblioteca; data só quando é inequívoca; CNPJ gravado como número recomposto só quando os dígitos verificadores fecham. |
+| **Assembleia de São Paulo** | 2023–2026 | arquivo (JSON de 160 MB) | Baixa só quando muda (HEAD), guarda comprimido e lê em fluxo, com `Decimal`. Cada linha da fonte já é um agregado, e o site diz isso. |
+| **TSE** | eleições de 2012 a 2024 | arquivo | O partido de cada vereador na eleição do mandato (nenhum sistema das câmaras traz partido). |
+
+Quantas casas cada adaptador atende, e por que as outras ficaram de fora, está na
+[Cobertura](https://rpa-transparencia.vercel.app/cobertura/); o que cada fonte tinha de difícil,
+logo abaixo; como as peças se encaixam, em [`docs/arquitetura.md`](docs/arquitetura.md).
 
 ## O que cada fonte exigiu
 
@@ -306,36 +362,92 @@ npm test
 `npm run build` gera o site estático em `plataforma/out/`; `npm test` confere que todo
 valor em reais nas páginas tem procedência.
 
+## Como pôr uma casa nova
+
+**Num fornecedor que já tem adaptador** (Elotech, Betha, Equiplano, Govbr Pronim,
+SAPL), é um bloco em [`coleta/entidades.toml`](coleta/entidades.toml), sem código.
+O que cada um pede:
+
+| Fornecedor | Campos próprios | De onde sai |
+|---|---|---|
+| Elotech | `host`, `entidade`, `cnpj` | `entidade` é o número da Câmara em `/portaltransparencia-api/api/entidades`; o `descobrir` confere o CNPJ e para se não bater |
+| Betha | `portal`, `de` | o código na URL `transparencia.betha.cloud/#/<portal>`; o `descobrir` confere o IBGE que o portal informa, e a consulta é achada pelo texto do menu |
+| Equiplano | `host` (com a porta), `entidade` | a porta, no link do site da câmara ou da prefeitura; a entidade, no `<select id="formulario.codEntidade">` |
+| Govbr Pronim | `base` | `https://webapp1-<cidade>.cidade360.cloud/pronimtb_cm` |
+| SAPL | `host`, `de`, `lote_presenca` | `https://sapl.<cidade>.pr.leg.br`; `de` é o início da janela |
+
+Todo bloco leva ainda `fonte` (o id, só `[a-z_]`), `casa`, `municipio`, `ibge` e
+`regiao`. Um exemplo, do Equiplano:
+
+```toml
+[[equiplano]]
+fonte = "equiplano_santo_antonio_do_sudoeste"
+casa = "cm-santo-antonio-do-sudoeste"
+municipio = "Santo Antônio do Sudoeste"
+ibge = 4124400
+regiao = "Sudoeste"
+host = "https://santoantoniodosudoestepr.equiplano.com.br:7058"
+entidade = 111
+```
+
+Depois, essa fonte e o TSE (o inventário do TSE lista os municípios, e é dele que vem
+o partido de cada vereador; numa câmara nova, a lista muda e ele coleta de novo):
+
+```bash
+.venv/Scripts/python -m coleta descobrir --fonte equiplano_santo_antonio_do_sudoeste --fonte tse
+.venv/Scripts/python -m coleta coletar --fonte equiplano_santo_antonio_do_sudoeste --fonte tse
+.venv/Scripts/python -m coleta conferir
+.venv/Scripts/python -m coleta publicar
+```
+
+A casa entra sozinha na página Cobertura, no grafo e na busca. Uma câmara que está
+no fornecedor mas não dá para coletar fica no arquivo com `fora` e `detalhe`, e o
+motivo vai para a Cobertura.
+
+**Um fornecedor novo** é uma pasta em `coleta/fontes/<fornecedor>/` com uma classe que
+herda de `Fonte` (API ou arquivo) ou de `FonteNavegador` (Playwright) e implementa
+`descobrir()` e `coletar_item()`; uma linha em `_construir()`, em
+[`coleta/fontes/__init__.py`](coleta/fontes/__init__.py); as categorias da fonte em
+[`coleta/de_para/categorias.csv`](coleta/de_para/categorias.csv) (o que não tiver
+de-para vai para revisão); e os testes: a leitura de uma amostra gravada e um teste
+de contrato com o portal real. O núcleo não muda. O contrato que a classe cumpre e os
+ganchos que ela pode usar estão em [`docs/arquitetura.md`](docs/arquitetura.md).
+
 ## Testes
 
 ```bash
-.venv/Scripts/python -m pytest
+.venv/Scripts/python -m pytest                      # unidade e portal falso, sem rede
+.venv/Scripts/python -m pytest -m contrato          # contra os portais de verdade
 ```
 
-- **Parser:** PDFs, páginas, planilhas e respostas reais, gravados pelo robô em 25 e
-  26/11/2026, em [`coleta/testes/amostras/`](coleta/testes/amostras/) (com nome de
-  servidor tarjado e CPF trocado por número que não fecha o dígito verificador).
-- **Resiliência:** o Playwright serve o portal legado a partir das amostras, sem rede,
-  e injeta erro 500, lentidão e queda de sessão; o resultado tem de ser igual ao da
-  rodada limpa. O mesmo para a API do Elotech, com 503 e timeout, em Curitiba e no
-  adaptador genérico (Maringá).
-- **Retomada:** a coleta é interrompida no meio, retomada, e não duplica nada. No
-  SAPL, a retomada e a descoberta refeita não repetem pedido, e a reprodução da coleta
-  gravada não faz pedido nenhum e mantém hash e data de coleta.
-- **Conferência:** casos montados (total que não fecha, categoria sem de-para, mesmo
-  registro em dois sistemas na fronteira, cargo fora da guarda de privacidade).
-- **Contrato:** um teste por fonte contra o portal de verdade, separado dos outros,
-  avisa quando o layout mudou: `python -m pytest -m contrato`.
+Os testes ficam em [`coleta/testes/`](coleta/testes/), uma pasta por tipo:
+
+- **[`unidade/`](coleta/testes/unidade/)**: a leitura de cada formato a partir de
+  amostras reais gravadas pelo robô (PDF, página, planilha, resposta de API), em
+  [`amostras/`](coleta/testes/amostras/), com nome de servidor tarjado e CPF trocado
+  por número que não fecha o dígito verificador; as regras da conferência em casos
+  montados (total que não fecha, categoria sem de-para, o mesmo registro em dois
+  sistemas na fronteira); o `importar`; e o determinismo (a derivação inteira em dois
+  processos com sementes de hash diferentes, comparada byte a byte).
+- **[`portal_falso/`](coleta/testes/portal_falso/)**: o robô inteiro, sem rede,
+  contra uma API falsa (`httpx.MockTransport`), um portal gravado servido pelo
+  Playwright ou um portal falso local (Equiplano e Pronim). Erro 500, 503, timeout,
+  lentidão e queda de sessão injetados dão o mesmo resultado da rodada limpa; a
+  coleta interrompida no meio retoma sem duplicar; o CPF da tela não chega ao disco.
+- **[`contrato/`](coleta/testes/contrato/)**: um teste por fonte contra o portal de
+  verdade. Avisa quando o layout mudou. Fica fora do `pytest` padrão.
+- [`apoio/`](coleta/testes/apoio/): os portais falsos, a gravação do portal legado e
+  os scripts que geram as amostras.
 
 ## Integração contínua
 
 Cada push roda, no GitHub Actions, o ruff, o mypy e o pytest; o build da plataforma,
-o `tsc` e o teste de procedência; o axe-core em 19 telas do site exportado, no
-desktop e no celular; a comparação com os prints de referência; e o Lighthouse CI
-com orçamento. Toda segunda-feira, o **contrato** roda contra os portais reais: se
-um deles mudar, o workflow abre uma issue sozinho. O que cada job confere, as
-exceções conhecidas do axe e como atualizar os prints estão em
-[`docs/ci.md`](docs/ci.md).
+o `tsc` e o teste de procedência (todo valor em reais na página tem fonte e data de
+coleta); o axe-core em 23 telas do site exportado, no desktop e no celular; a
+comparação com os prints de referência; e o Lighthouse CI com orçamento. Toda
+segunda-feira, o **contrato** roda contra os portais reais: se um deles mudar, o
+workflow abre uma issue sozinho. O que cada job confere e como atualizar os prints
+está em [`docs/ci.md`](docs/ci.md).
 
 ```bash
 .venv/Scripts/python -m pip install -r requirements-dev.txt
@@ -355,31 +467,32 @@ npx lhci autorun               # relatório em testes/lighthouse/
 
 ```
 coleta/
-  entidades.toml  quem coletar: para cada fornecedor, as casas que o adaptador
-               atende (endereço, entidade, CNPJ conferido na fonte, período)
-  nucleo/      inventário, retomada, repetição com espera, evidência no erro,
-               coleta educada (Crawl-delay do robots.txt), conferência, leitura
-               de planilha (não sabe de fonte nenhuma)
-  fontes/      um adaptador por sistema: elotech (qualquer câmara), cldf, almg,
-               betha, equiplano e pronim (qualquer câmara), alesp, camara_deputados, cmc_legado,
-               cmc_prefeitura, cmc_betha, tse; de atividade nas sessões: sapl
-               (qualquer câmara) e cmc_frequencia
-  cobertura/   o levantamento das casas de fora e a malha do IBGE (mapas)
-  modelo.py    o modelo único (pydantic, dinheiro em Decimal exato): N casas,
-               despesa nota a nota ou agregada
-  de_para/     cargos, categorias e regras de valor negativo: o que não tem linha
-               aqui vai para revisão
-  destinos/    JSON da plataforma, CSV, relatório HTML, layout do grafo
-  testes/
-plataforma/    Next.js estático: grafo (sigma.js), partido, parlamentar, casa,
-               Cobertura, "Como os dados chegam aqui", Sobre
-docs/          o levantamento das fontes (etapa 0)
-relatorio/     o relatório de conferência da última rodada
+  entidades.toml   quem coletar: para cada fornecedor, as casas que o adaptador atende
+  entidades.py     lê o entidades.toml em dataclasses imutáveis
+  modelo.py        o modelo único (pydantic, dinheiro em Decimal): despesa, pendência,
+                   atividade, pessoa como a fonte a vê, total que a fonte diz de si
+  fontes/          um adaptador por sistema; base.py tem o contrato (Fonte,
+                   FonteNavegador) e __init__.py, o registro
+  nucleo/
+    execucao.py    o esqueleto de toda coleta: retomada, repetição, evidência
+    repositorio.py o que a coleta grava no SQLite
+    banco.py       esquema, conexão e transação
+    educacao.py    robots.txt, Crawl-delay e um pedido por vez em cada portal
+    evidencia.py   original com hash e evidência no ponto do erro
+    conferencia.py identidade, regras de cada fonte e fila de revisão
+    importar.py    coleta longa de um banco de trabalho para o canônico
+  destinos/        JSON da plataforma, cobertura, layout do grafo, relatório HTML
+  de_para/         cargos, categorias e regras de valor negativo
+  cobertura/       o levantamento das casas de fora e a malha do IBGE (mapas)
+  testes/          unidade/, portal_falso/, contrato/, apoio/, amostras/
+plataforma/        Next.js estático: grafo (sigma.js), partido, parlamentar, casa,
+                   Cobertura, "Como os dados chegam aqui", Sobre
+docs/              arquitetura (padrões e decisões), o levantamento (etapa 0), o CI
+relatorio/         o relatório de conferência da última rodada (também no site, em /conferencia/)
+DESIGN.md          o sistema visual da plataforma; PRODUCT.md, para quem ela é
 ```
 
-Casa nova num fornecedor que já tem adaptador é um bloco em `coleta/entidades.toml`.
-Sistema novo é uma pasta em `coleta/fontes/` e linhas em `coleta/de_para/`; o núcleo
-não muda.
+`dados/` (o banco, os originais e as evidências) fica fora do repositório.
 
 ## Regras do projeto
 
@@ -420,6 +533,6 @@ não muda.
 ## Licença
 
 O código está sob a [licença MIT](LICENSE). Os dados são públicos e vêm das fontes
-citadas acima (Câmara dos Deputados, as câmaras municipais e a Prefeitura de
-Curitiba, as assembleias do DF, de MG e de SP, e o TSE); a malha dos mapas é do IBGE.
+citadas acima (Câmara dos Deputados, as assembleias legislativas, as câmaras
+municipais e a Prefeitura de Curitiba, e o TSE); a malha dos mapas é do IBGE.
 A licença do código não se aplica a eles.
