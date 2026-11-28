@@ -1,10 +1,13 @@
 import GavetaColeta from "@/componentes/GavetaColeta";
 import Grafo from "@/componentes/Grafo";
 import { fontes, grafo } from "@/lib/dados";
+import { noGrafo } from "@/lib/resumo";
 import { TELA_ESTREITA } from "@/lib/telas";
 
 export default function Inicio() {
   const f = fontes();
+  // o que os dois grafos mostram, contado nos próprios grafos: casa nova entra sem editar a frase
+  const { ufsBrasil, camarasParana } = noGrafo();
   // a regra de cada vista vai no HTML: o texto sob o quadro não chega depois e não muda o tamanho dele
   const regras = {
     brasil: { regra: grafo("brasil").regra, tecnica: grafo("brasil").regra_tecnica },
@@ -26,8 +29,8 @@ export default function Inicio() {
             Quem gastou com quem, e de onde vem cada número
           </h1>
           <p className="mt-3 max-w-[62ch] text-[0.98rem] leading-relaxed text-tinta-2">
-            Deputados federais e estaduais (DF, MG e SP) ligados pelos fornecedores que contrataram em comum, e vereadores de 13
-            câmaras do Paraná ligados aos seus partidos. Fornecedor em comum não insinua nada: só mostra que duas pessoas contrataram a mesma empresa.
+            Deputados federais e estaduais ({ufsBrasil}) ligados pelos fornecedores que contrataram em comum, e vereadores de{" "}
+            {camarasParana} câmaras do Paraná ligados aos seus partidos. Fornecedor em comum não insinua nada: só mostra que duas pessoas contrataram a mesma empresa.
           </p>
         </div>
         <div className="flex-1">

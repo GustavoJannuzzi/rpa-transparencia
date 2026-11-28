@@ -4,7 +4,8 @@ import { CarimboRevisao } from "@/componentes/EmRevisao";
 import Valor from "@/componentes/Valor";
 import { fontes, revisao } from "@/lib/dados";
 import { FONTES, MODO } from "@/lib/fontes";
-import { contagem, data, inteiro } from "@/lib/formato";
+import { contagem, data, inteiro, listaE } from "@/lib/formato";
+import { quantasCamaras, ufsDasAssembleias } from "@/lib/resumo";
 import { motivoDaFila } from "@/lib/revisao";
 import { metadadosDaPagina } from "@/lib/site";
 import type { Fonte, GrupoFila } from "@/lib/tipos";
@@ -101,7 +102,8 @@ export default function ComoOsDadosChegam() {
         uma pessoa faria. Tudo vai para um modelo único, passa pela conferência e só então aparece aqui.
       </p>
       <p className="mt-3 max-w-[68ch] text-[0.95rem] leading-relaxed text-tinta-3">
-        As outras casas (as assembleias do DF, de MG e de SP e mais 12 câmaras do Paraná) usam o mesmo modelo e a mesma
+        As outras casas (as assembleias legislativas de {listaE(ufsDasAssembleias())} e mais {quantasCamaras() - 1} câmaras do Paraná) usam o
+        mesmo modelo e a mesma
         conferência. Que casas estão aqui, por qual sistema, e por que as outras ainda não estão:{" "}
         <Link href="/cobertura/" className="text-carimbo-claro underline">
           Cobertura

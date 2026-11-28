@@ -3,13 +3,14 @@ import Link from "next/link";
 import ListaRecolhida, { ABRIR_LISTA_DO_ENDERECO } from "@/componentes/ListaRecolhida";
 import { casas, indice } from "@/lib/dados";
 import { inteiro } from "@/lib/formato";
+import { frasesDasAssembleias } from "@/lib/resumo";
 import { metadadosDaPagina } from "@/lib/site";
 import type { ItemIndice } from "@/lib/tipos";
 
 export const metadata: Metadata = metadadosDaPagina({
   title: "Parlamentares",
   description:
-    "Deputados federais da 57ª legislatura, deputados estaduais do DF, de MG e de SP e vereadores das câmaras do Paraná que a coleta cobre, em ordem alfabética, casa por casa.",
+    `Deputados federais da 57ª legislatura, ${frasesDasAssembleias().texto} e vereadores das câmaras do Paraná que a coleta cobre, em ordem alfabética, casa por casa.`,
   caminho: "/parlamentares/",
 });
 
