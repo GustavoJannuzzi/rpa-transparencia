@@ -492,9 +492,10 @@ coleta/
   testes/          unidade/, portal_falso/, contrato/, apoio/, amostras/
 plataforma/        Next.js estático: grafo (sigma.js), partido, parlamentar, casa,
                    Cobertura, "Como os dados chegam aqui", Sobre
-docs/              arquitetura (padrões e decisões), o levantamento (etapa 0), o CI
+docs/              arquitetura (padrões e decisões), o produto (para quem é o site), o
+                   levantamento (etapa 0), o CI
 relatorio/         o relatório de conferência da última rodada (também no site, em /conferencia/)
-DESIGN.md          o sistema visual da plataforma; PRODUCT.md, para quem ela é
+DESIGN.md          o sistema visual da plataforma
 ```
 
 `dados/` (o banco, os originais e as evidências) fica fora do repositório.
