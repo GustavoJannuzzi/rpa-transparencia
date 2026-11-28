@@ -134,8 +134,9 @@ cada fonte, **origem = coletado + revisão**, e nenhum item com erro em aberto:
 | Assembleia do Ceará (empenhos, pela tela) | 17.316 | 17.246 | 70 |
 | Assembleia de Goiás (lançamentos, pela tela, 2025–2026) | 26.234 | 26.204 | 30 |
 | Assembleia do Rio Grande do Norte (notas, pela tela) | 16.501 | 16.501 | 0 |
+| Assembleia de Pernambuco (notas, pela tela) | 9.876 | 9.874 | 0 (2 de valor zero na fonte, fora da soma) |
 
-São 50 casas, com 1.797 parlamentares na plataforma. Nas câmaras do Elotech, a
+São 51 casas, com 1.865 parlamentares na plataforma. Nas câmaras do Elotech, a
 maior parte do que está em revisão é diária sem cargo cujo nome não está no cadastro
 de vereadores do ano: pode ser de servidor, então o nome é descartado e a linha fica
 de fora, contada. No Betha, 877 das 944 linhas em revisão são de Cornélio Procópio,
@@ -229,6 +230,9 @@ Achados reais, todos visíveis no relatório e na fila de revisão:
   40.486,82 apresentados; as 30 notas desse mês ficam em revisão.
 - **No Rio Grande do Norte, a resposta que a tela recebe e a tabela que ela mostra são
   as mesmas linhas**, nos quatro anos: 16.501 notas, nenhuma em revisão.
+- **Em Pernambuco, as notas de cada pedido somam o total do pedido** nos 3.110 pedidos
+  de 2023 a 2026. A casa manda o valor como texto, sem centavos quando o valor é
+  inteiro ("21880") e com vírgula quando não é ("8372,5" é 8.372,50).
 
 ## Como rodar
 
